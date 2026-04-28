@@ -57,14 +57,15 @@ const verifyOTP = async (req, res) => {
             req.session.otp = null;
             req.session.tempUserData = null;
 
-            // Decision: No automatic login. User must log in manually.
-            return res.json({ success: true, message: "Registration successful!" });
+            // Redirect to login page after successful registration
+            return res.redirect('/login');
         } else {
-            return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
+            // If OTP fails, render the OTP page again with an error
+            return res.render('user/otp', { error: "Invalid OTP. Please try again." });
         }
     } catch (error) {
         console.error("Verification Error:", error);
-        res.status(500).json({ success: false, message: error.message || "Server Error" });
+        res.status(500).send("Internal Server Error");
     }
 };
 
@@ -80,7 +81,8 @@ const handleLogin = async (req, res) => {
         const user = await userService.findUserByEmail(email);
 
         if (!user) {
-            return res.status(404).json({ message: "Email not found in the database" });
+            // Render the login page again with an error message
+            return res.render('user/login', { error: "Email not found in our database" });
         }
 
         // Compare typed password with hashed password in DB
@@ -93,14 +95,16 @@ const handleLogin = async (req, res) => {
                 username: user.username,
                 email: user.email
             };
-            return res.status(200).json({ message: "Login successful" });
+            
+            return res.redirect('/'); 
         } else {
-            return res.status(401).json({ message: "Invalid email or password" });
+            // Wrong password: show error on login page
+            return res.render('user/login', { error: "Invalid email or password" });
         }
 
     } catch (error) {
         console.error("Login Error:", error);
-        res.status(500).json({ message: "An error occurred during login" });
+        res.status(500).send("An error occurred during login");
     }
 };
 
