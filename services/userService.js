@@ -1,34 +1,30 @@
 const User = require('../models/userModel');
 const bcrypt = require('bcrypt');
 
-const registerUser = async (userData) => {
-    try {
-        // Check if user already exists
-        const existingUser = await User.findOne({ 
-            $or: [{ email: userData.email }, { phone: userData.phone }] 
-        });
-
-        if (existingUser) {
-            throw new Error('User with this email or phone already exists');
-        }
-
-        // Hash password (same logic as your previous project)
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-
-        // Create new user with iZen fields
-        const newUser = new User({
-            username: userData.username,
-            email: userData.email,
-            phone: userData.phone,
-            password: hashedPassword
-        });
-
-        return await newUser.save();
-    } catch (error) {
-        throw error;
-    }
+// check if the email is already in the DB
+const findUserByEmail = async (email) => {
+    return await User.findOne({ email });
 };
 
+//  registration logic 
+const registerUser = async (userData) => {
+    const { username, email, phone, password } = userData;
+    
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const newUser = new User({
+        username,
+        email,
+        phone,
+        password: hashedPassword
+    });
+
+    return await newUser.save();
+};
+
+
 module.exports = {
+    findUserByEmail,
     registerUser
 };

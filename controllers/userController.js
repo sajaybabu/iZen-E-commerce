@@ -44,7 +44,40 @@ const handleSignup = async (req, res) => {
     }
 };
 
+const verifyOTP = async (req, res) => {
+    try {
+        const { otp } = req.body;
+        const sessionOtp = req.session.otp;
+
+        // 1. Check if the OTP matches
+        if (otp === sessionOtp) {
+            // SUCCESS! Get the user data we were holding in the session
+            const userData = req.session.tempUserData;
+
+            // 2. Call your service to actually save the user to the Database
+            const newUser = await userService.registerUser(userData);
+
+            // 3. Clear the session 
+            req.session.otp = null;
+            req.session.tempUserData = null;
+
+            // 4. Log the user in automatically
+            req.session.user = newUser;
+
+            return res.json({ success: true, message: "Registration successful!" });
+        } else {
+            // FAILURE: Wrong OTP
+            return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
+        }
+    } catch (error) {
+        console.error("Verification Error:", error);
+        res.status(500).json({ success: false, message: error.message || "Server Error" });
+    }
+};
+
+
 module.exports = {
     getSignupPage,
-    handleSignup
+    handleSignup,
+    verifyOTP 
 };
