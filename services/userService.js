@@ -1,16 +1,16 @@
 const User = require('../models/userModel');
 const bcrypt = require('bcrypt');
 
-// check if the email is already in the DB
+//  Check if the email is already in the DB
 const findUserByEmail = async (email) => {
-    return await User.findOne({ email });
+    return await User.findOne({ email: email });
 };
 
-//  registration logic 
+//  Hash password and save to MongoDB
 const registerUser = async (userData) => {
     const { username, email, phone, password } = userData;
     
-    // Hash the password
+    // Hash the password for security
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const newUser = new User({
@@ -22,7 +22,6 @@ const registerUser = async (userData) => {
 
     return await newUser.save();
 };
-
 
 module.exports = {
     findUserByEmail,

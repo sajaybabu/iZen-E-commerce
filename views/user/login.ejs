@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iZen — Login</title>
+    <link rel="stylesheet" href="/register.css"> 
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #f5f5f7; }
+        .register-form { padding: 20px; width: 100%; max-width: 400px; }
+        .form-field input { 
+            border: none; 
+            border-bottom: 1px solid #d2d2d7; 
+            padding: 10px 0; 
+            outline: none; 
+            background: transparent;
+        }
+        .submit-btn { 
+            background-color: #1d1d1f; 
+            color: white; 
+            padding: 12px; 
+            border: none; 
+            transition: 0.3s; 
+        }
+        .submit-btn:hover { background-color: #000; }
+    </style>
+</head>
+
+<body>
+    <div class="container-lg vh-100 d-flex align-items-center">
+        <div class="row justify-content-center align-items-center w-100">
+            <div class="col-7 d-none d-sm-block text-center">
+                <img src="/images/login1.jpg" alt="login image" style="width: 80%; border-radius: 20px;">
+            </div>
+
+            <div class="col-10 col-sm-5 d-flex justify-content-center">
+                <div class="register-form">
+                    <h1 class="fw-bold">Welcome back</h1>
+                    <p class="text-secondary">Enter your details below</p>
+
+                    <form id="loginForm">
+                        <div class="form-field mt-5 mb-4 position-relative">
+                            <i class="bi bi-envelope-fill position-absolute end-0"></i>
+                            <input class="w-100" type="email" id="email" placeholder="Email" name="email">
+                            <p class="text-danger" id="emailMsg" style="font-size: 12px;"></p>
+                        </div>
+
+                        <div class="form-field mb-3 position-relative">
+                            <i class="bi bi-lock-fill position-absolute end-0"></i>
+                            <input class="w-100" type="password" id="password" placeholder="Password" name="password">
+                            <p class="text-danger" id="passMsg" style="font-size: 12px;"></p>
+                        </div>
+
+                        <div class="mt-2 mb-4 text-end">
+                            <a class="text-decoration-none" href="/forgotPassword" style="font-size: 13px; color: #0071e3;">Forgot password?</a>
+                        </div>
+
+                        <div>
+                            <button id="submitBtn" class="submit-btn w-100 rounded" type="submit">Confirm Login</button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <button id="guestLogin" class="btn btn-outline-dark w-100 rounded" onclick="location.href='/'">Login as Guest</button>
+                    </div>
+
+                    <a href="/auth/google" class="btn border border-secondary mt-4 w-100 py-2 rounded d-flex align-items-center justify-content-center">
+                        <img class="me-2" src="/images/google-logo.png" alt="google logo" style="width: 20px;">
+                        Login with Google
+                    </a>
+
+                    <p class="text-center mt-4" style="font-size: 14px;">
+                        Don't have an account? <a href="/signup" class="text-decoration-none" style="color: #0071e3;">Register</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const loginForm = document.getElementById("loginForm");
+        const emailMsg = document.getElementById("emailMsg");
+        const passMsg = document.getElementById("passMsg");
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        // Adjusted password regex to be a bit more flexible (8-15 chars)
+        const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])(?=.*[A-Za-z])[A-Za-z0-9!@#$%^&*]{8,15}$/;
+
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            // Reset messages
+            emailMsg.textContent = "";
+            passMsg.textContent = "";
+
+            // Client-side Validation
+            let isValid = true;
+            if (!emailRegex.test(email)) {
+                emailMsg.textContent = "Please enter a valid email address.";
+                isValid = false;
+            }
+            if (!passwordRegex.test(password)) {
+                passMsg.textContent = "Password must be 8-15 chars with 1 letter, 1 number, and 1 symbol.";
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
+            try {
+                const res = await fetch('/login', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (res.status === 200) {
+                    window.location.href = "/";
+                } else {
+                    Swal.fire({
+                        title: "Login Failed",
+                        text: data.message || "Invalid credentials",
+                        icon: "error",
+                        confirmButtonColor: "#1d1d1f"
+                    });
+                }
+            } catch (err) {
+                console.error("Login Error:", err);
+                Swal.fire({ title: "Error", text: "Internal Server Error", icon: "error" });
+            }
+        });
+    </script>
+</body>
+</html>

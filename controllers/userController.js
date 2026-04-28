@@ -1,7 +1,8 @@
 const userService = require('../services/userService');
-const sendOTP = require('../utils/sendEmail'); // The tool we created earlier
+const sendOTP = require('../utils/sendEmail');
+const bcrypt = require('bcrypt');
 
-// Function to show the signup page
+// 1. Show the Signup Page
 const getSignupPage = (req, res) => {
     try {
         res.render('user/signup'); 
@@ -10,25 +11,21 @@ const getSignupPage = (req, res) => {
     }
 };
 
-// Function to handle the form submission 
+// 2. Handle Signup Form Submission
 const handleSignup = async (req, res) => {
     try {
         const { username, email, phone, password } = req.body;
 
-        // 1. Check if user already exists 
         const userExists = await userService.findUserByEmail(email);
         if (userExists) {
             return res.render('user/signup', { error: "User already exists with this email" });
         }
 
-        // 2. Generate a 4-digit OTP
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
-        // 3. Store Data in Session 
         req.session.tempUserData = { username, email, phone, password };
         req.session.otp = otp;
 
-        // 4. Send the Email
         const emailSent = await sendOTP(email, otp);
 
         if (emailSent) {
@@ -44,29 +41,25 @@ const handleSignup = async (req, res) => {
     }
 };
 
+// 3. Verify OTP and Register User
 const verifyOTP = async (req, res) => {
     try {
         const { otp } = req.body;
         const sessionOtp = req.session.otp;
 
-        // 1. Check if the OTP matches
         if (otp === sessionOtp) {
-            // SUCCESS! Get the user data we were holding in the session
             const userData = req.session.tempUserData;
 
-            // 2. Call your service to actually save the user to the Database
-            const newUser = await userService.registerUser(userData);
+            // Save user to Database
+            await userService.registerUser(userData);
 
-            // 3. Clear the session 
+            // Clear temporary session data
             req.session.otp = null;
             req.session.tempUserData = null;
 
-            // 4. Log the user in automatically
-            req.session.user = newUser;
-
+            // Decision: No automatic login. User must log in manually.
             return res.json({ success: true, message: "Registration successful!" });
         } else {
-            // FAILURE: Wrong OTP
             return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
         }
     } catch (error) {
@@ -75,9 +68,46 @@ const verifyOTP = async (req, res) => {
     }
 };
 
+// 4. Show the Login Page
+const getLoginPage = (req, res) => {
+    res.render('user/login');
+};
+
+// 5. Handle Login Submission
+const handleLogin = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await userService.findUserByEmail(email);
+
+        if (!user) {
+            return res.status(404).json({ message: "Email not found in the database" });
+        }
+
+        // Compare typed password with hashed password in DB
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (isMatch) {
+            // Success: Create the official user session
+            req.session.user = {
+                id: user._id,
+                username: user.username,
+                email: user.email
+            };
+            return res.status(200).json({ message: "Login successful" });
+        } else {
+            return res.status(401).json({ message: "Invalid email or password" });
+        }
+
+    } catch (error) {
+        console.error("Login Error:", error);
+        res.status(500).json({ message: "An error occurred during login" });
+    }
+};
 
 module.exports = {
     getSignupPage,
     handleSignup,
-    verifyOTP 
+    verifyOTP,
+    getLoginPage,
+    handleLogin
 };
