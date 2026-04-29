@@ -1,52 +1,75 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const userController = require('../controllers/userController');
-const { isLogin, isLogout } = require('../middlewares/auth'); 
+const passport = require("passport");
+const userController = require("../controllers/userController");
+const { isLogin, isLogout } = require("../middlewares/auth");
 
-// Show Signup Page
-router.get('/signup', isLogout, userController.getSignupPage);
+// --- GOOGLE AUTH ---
+router.get(
+  "/auth/google",
+  isLogout,
+  passport.authenticate("google", { scope: ["profile", "email"], prompt: "select_account" }),
+);
 
-// Handle Signup Submission
-router.post('/signup', isLogout, userController.handleSignup);
+router.get(
+  "/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  (req, res) => {
+    if (req.user.isBlocked) {
+      req.logout((err) => {
+        return res.redirect("/login?error=Your account is blocked");
+      });
+    } else {
+      // Set the session user
+      req.session.user = req.user;
 
-// Show OTP Page (with safety check)
-router.get('/verify-otp', isLogout, (req, res) => {
-    // Security: Only allow access if a signup is actually in progress
-    if (!req.session.otp || !req.session.tempUserData) {
-        return res.redirect('/signup');
+      // Ensure the browser doesn't "store" this callback URL in its history
+      res.header('Cache-Control', 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0');
+      
+      // Redirect to home
+      res.redirect("/");
     }
-    res.render('user/otp'); 
+  },
+);
+
+// --- SIGNUP ---
+router.get("/signup", isLogout, userController.getSignupPage);
+router.post("/signup", isLogout, userController.handleSignup);
+
+// --- OTP ---
+router.get("/verify-otp", isLogout, (req, res) => {
+  if (!req.session.otp || !req.session.tempUserData) {
+    return res.redirect("/signup");
+  }
+  res.render("user/otp");
 });
+router.post("/verify-otp", isLogout, userController.verifyOTP);
+router.post("/resend-otp", isLogout, userController.resendOTP);
 
-// Handle OTP Verification
-router.post('/verify-otp', isLogout, userController.verifyOTP);
+// --- LOGIN ---
+router.get("/login", isLogout, userController.getLoginPage);
+router.post("/login", isLogout, userController.handleLogin);
 
-// Handle Resending OTP
-router.post('/resend-otp', isLogout, userController.resendOTP);
-
-// Show Login Page
-router.get('/login', isLogout, userController.getLoginPage);
-
-// Handle Login Submission
-router.post('/login', isLogout, userController.handleLogin);
-
-// Handle Logout
-router.get('/logout', isLogin, (req, res) => {
+// --- LOGOUT ---
+router.get("/logout", (req, res) => {
+  // Clear the session and the passport user
+  req.logout((err) => {
     req.session.destroy((err) => {
-        if (err) {
-            console.error("Session destroy error:", err);
-            return res.redirect('/'); 
-        }
-        res.clearCookie('connect.sid'); 
-        // Redirecting with a query param can help show a "Logged out" message if you want
-        res.redirect('/login?message=Logged%20out%20successfully');
+      if (err) {
+        console.log("Error destroying session:", err);
+      }
+      res.clearCookie("connect.sid"); // Clear the session cookie
+      
+      // Force no-cache on the redirect to login
+      res.header('Cache-Control', 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0');
+      res.redirect("/login");
     });
+  });
 });
 
-
-// Home Page (Middleware handles the caching headers)
-router.get('/', isLogin, (req, res) => {
-    res.render('user/home', { user: req.session.user });
+// --- HOME ---
+router.get("/", isLogin, (req, res) => {
+  res.render("user/home", { user: req.session.user });
 });
 
 module.exports = router;

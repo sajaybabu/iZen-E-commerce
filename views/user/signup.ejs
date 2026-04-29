@@ -212,9 +212,10 @@
                     <button type="submit" class="btn btn-create-account">Create Account</button>
                   </form>
 
-                  <button class="btn btn-google">
+                  <a href="/auth/google" class="btn btn-google" style="text-decoration: none;">
                     <img src="https://www.google.com/favicon.ico" alt="Google" /> Sign up with Google
-                  </button>
+                  </a>
+
                   <p class="login-link">Already have account? <a href="/login">Log in</a></p>
             </div>
           </div>
@@ -231,25 +232,12 @@
       const phone = document.getElementById('phone').value.trim();
       const password = document.getElementById('password').value;
 
-      // Reset errors
       document.querySelectorAll('.error-msg').forEach(el => el.innerText = "");
 
-      if (username === "") {
-        document.getElementById('usernameError').innerText = "Name is required";
-        isValid = false;
-      }
-      if (!/^\S+@\S+\.\S+$/.test(email)) {
-        document.getElementById('emailError').innerText = "Enter a valid email";
-        isValid = false;
-      }
-      if (!/^\d{10}$/.test(phone)) {
-        document.getElementById('phoneError').innerText = "Enter a 10-digit phone number";
-        isValid = false;
-      }
-      if (password.length < 6) {
-        document.getElementById('passwordError').innerText = "Password must be at least 6 characters";
-        isValid = false;
-      }
+      if (username === "") { document.getElementById('usernameError').innerText = "Name is required"; isValid = false; }
+      if (!/^\S+@\S+\.\S+$/.test(email)) { document.getElementById('emailError').innerText = "Enter a valid email"; isValid = false; }
+      if (!/^\d{10}$/.test(phone)) { document.getElementById('phoneError').innerText = "Enter a 10-digit phone number"; isValid = false; }
+      if (password.length < 6) { document.getElementById('passwordError').innerText = "Password must be at least 6 characters"; isValid = false; }
 
       if (!isValid) e.preventDefault();
     });

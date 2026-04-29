@@ -47,7 +47,6 @@
 </head>
 <body>
    
-    <h1>Welcome back, <%= user.username %>!</h1>
     <div class="test-card">
         <div class="user-icon">
             <i class="bi bi-person-check-fill"></i>
@@ -55,11 +54,11 @@
         <h1 class="fw-bold">Login Successful!</h1>
         <p class="text-secondary mb-4">
             Welcome back, <strong><%= user.username %></strong>.<br>
-            Your session is active and the database is connected.
+            
         </p>
 
         <div class="alert alert-info py-2" style="font-size: 14px;">
-            <i class="bi bi-info-circle me-2"></i> This is a temporary UI for testing.
+             Temporary UI for testing.
         </div>
 
         <hr class="my-4">
@@ -70,10 +69,34 @@
     </div>
 
     <script>
-    // This script runs every time the page is shown, even from the "Back" button
+    /**
+     * ADVANCED HISTORY MANAGEMENT
+     * Purpose: Prevent users from "Backing" into the Google Account selection screen
+     */
+
+    // 1. Overwrite the history immediately
+    function preventBack() {
+        // Step A: Replace the callback URL with the Home URL
+        window.history.replaceState(null, null, window.location.href);
+        
+        // Step B: Push an extra state so there is something to "go back" to 
+        // that isn't the Google page
+        window.history.pushState(null, null, window.location.href);
+
+        // Step C: If they hit back, forward them immediately
+        window.onpopstate = function () {
+            window.history.go(1);
+        };
+    }
+
+    // Execute the trap
+    preventBack();
+
+    // 2. Handle the Browser Cache (bfcache)
+    // If the user logs out and then hits back, this forces the page to 
+    // talk to the server again, triggering your isLogin middleware.
     window.addEventListener('pageshow', function (event) {
-        if (event.persisted || (typeof window.performance != "undefined" && window.performance.navigation.type === 2)) {
-            // If the page was loaded from the cache (back button), force a reload
+        if (event.persisted || (performance.getEntriesByType("navigation")[0].type === 'back_forward')) {
             window.location.reload();
         }
     });

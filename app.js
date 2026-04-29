@@ -3,7 +3,8 @@ const connectDB = require('./config/db');
 const dotenv = require('dotenv');
 const path = require('path');
 const session = require('express-session');
-const userRoutes = require('./routes/userRoutes'); 
+const userRoutes = require('./routes/userRoutes');
+const passport = require('./config/passport'); 
 
 dotenv.config();
 const app = express();
@@ -11,22 +12,25 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-// Body Parser Middleware 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session Configuration 
+// 1. SESSION CONFIGURATION (Must come before Passport)
 app.use(session({
     secret: 'izen_secret_key', 
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: true, // Set to false in production for better privacy
     cookie: { 
         maxAge: 1000 * 60 * 60 * 24, // Session valid for 24 hours
         secure: false 
     }
 }));
 
-// This helps your EJS files know if a user is logged in (to show "Logout" vs "Login")
+// 2. PASSPORT INITIALIZATION (Must come after Session)
+app.use(passport.initialize());
+app.use(passport.session());
+
+// 3. LOCALS MIDDLEWARE
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
     next();

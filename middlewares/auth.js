@@ -1,10 +1,11 @@
 // Prevents unauthenticated users from accessing private routes
 const isLogin = (req, res, next) => {
+    // Force the browser to not cache protected pages
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     if (req.session.user) {
-        // Force the browser to not cache protected pages
-        res.header('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-        res.header('Expires', '-1');
-        res.header('Pragma', 'no-cache');
         next();
     } else {
         res.redirect('/login');
@@ -16,9 +17,11 @@ const isLogout = (req, res, next) => {
     if (req.session.user) {
         return res.redirect('/');
     } else {
-        res.header('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-        res.header('Expires', '-1');
-        res.header('Pragma', 'no-cache');
+        // Apply headers here too so login/signup pages aren't cached 
+        // and shown incorrectly after a logout
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
         next();
     }
 };
