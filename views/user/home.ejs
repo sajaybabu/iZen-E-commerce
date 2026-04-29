@@ -69,5 +69,15 @@
         </div>
     </div>
 
+    <script>
+    // This script runs every time the page is shown, even from the "Back" button
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted || (typeof window.performance != "undefined" && window.performance.navigation.type === 2)) {
+            // If the page was loaded from the cache (back button), force a reload
+            window.location.reload();
+        }
+    });
+    </script>
+
 </body>
 </html>

@@ -286,7 +286,7 @@
                         </button>
 
                         <p class="signup-link">
-                            Don't have account? <a href="/register">sign up</a>
+                            Don't have account? <a href="/signup">sign up</a>
                         </p>
                     </div>
                 </div>
@@ -319,6 +319,11 @@
     </footer>
 
     <script>
+        // Prevent going back after login
+          window.history.pushState(null, null, window.location.href);
+          window.onpopstate = function () {
+          window.history.go(1);
+         };
         document.addEventListener("DOMContentLoaded", function () {
             const form = document.getElementById("loginForm");
 

@@ -3,43 +3,48 @@ const router = express.Router();
 const userController = require('../controllers/userController');
 const { isLogin, isLogout } = require('../middlewares/auth'); 
 
-// Route for showing the signup page
+// Show Signup Page
 router.get('/signup', isLogout, userController.getSignupPage);
 
-// Route for submitting the signup form
-router.post('/signup', userController.handleSignup);
+// Handle Signup Submission
+router.post('/signup', isLogout, userController.handleSignup);
 
-// Route to show the OTP page
+// Show OTP Page (with safety check)
 router.get('/verify-otp', isLogout, (req, res) => {
-    // Security: If there's no OTP in session, don't let them stay here
-    if (!req.session.otp) {
+    // Security: Only allow access if a signup is actually in progress
+    if (!req.session.otp || !req.session.tempUserData) {
         return res.redirect('/signup');
     }
     res.render('user/otp'); 
 });
 
-// Route to handle the OTP submission from the frontend
-router.post('/verify-otp', userController.verifyOTP);
+// Handle OTP Verification
+router.post('/verify-otp', isLogout, userController.verifyOTP);
 
+// Handle Resending OTP
+router.post('/resend-otp', isLogout, userController.resendOTP);
 
-// Route to show the Login Page
+// Show Login Page
 router.get('/login', isLogout, userController.getLoginPage);
 
-// Route to handle the Login form submission
-router.post('/login', userController.handleLogin);
+// Handle Login Submission
+router.post('/login', isLogout, userController.handleLogin);
 
-// Route to handle Logout
+// Handle Logout
 router.get('/logout', isLogin, (req, res) => {
     req.session.destroy((err) => {
         if (err) {
-            console.log("Session destroy error", err);
+            console.error("Session destroy error:", err);
+            return res.redirect('/'); 
         }
-        res.redirect('/login');
+        res.clearCookie('connect.sid'); 
+        // Redirecting with a query param can help show a "Logged out" message if you want
+        res.redirect('/login?message=Logged%20out%20successfully');
     });
 });
 
 
-// The Home Page (Only for logged-in users)
+// Home Page (Middleware handles the caching headers)
 router.get('/', isLogin, (req, res) => {
     res.render('user/home', { user: req.session.user });
 });

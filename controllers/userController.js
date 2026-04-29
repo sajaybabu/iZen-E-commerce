@@ -15,63 +15,63 @@ const getSignupPage = (req, res) => {
 const handleSignup = async (req, res) => {
     try {
         const { username, email, phone, password } = req.body;
-
         const userExists = await userService.findUserByEmail(email);
+        
         if (userExists) {
             return res.render('user/signup', { error: "User already exists with this email" });
         }
 
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
-
         req.session.tempUserData = { username, email, phone, password };
         req.session.otp = otp;
 
         const emailSent = await sendOTP(email, otp);
-
         if (emailSent) {
-            console.log(`OTP for ${email}: ${otp}`); 
             res.redirect('/verify-otp'); 
         } else {
             res.render('user/signup', { error: "Failed to send OTP. Please try again." });
         }
-
     } catch (error) {
-        console.error("Signup Error:", error);
         res.render('user/signup', { error: "An error occurred. Please try again." });
     }
 };
 
-// 3. Verify OTP and Register User
+// 3. Verify OTP 
 const verifyOTP = async (req, res) => {
     try {
         const { otp } = req.body;
-        const sessionOtp = req.session.otp;
-
-        if (otp === sessionOtp) {
-            const userData = req.session.tempUserData;
-
-            // Save user to Database
-            await userService.registerUser(userData);
-
-            // Clear temporary session data
+        if (otp === req.session.otp) {
+            await userService.registerUser(req.session.tempUserData);
             req.session.otp = null;
             req.session.tempUserData = null;
-
-            // Redirect to login page after successful registration
-            return res.redirect('/login');
+            
+            //  Moving the user to the next page
+            return res.redirect('/login'); 
         } else {
-            // If OTP fails, render the OTP page again with an error
+            // Keep them on the page with an error message
             return res.render('user/otp', { error: "Invalid OTP. Please try again." });
         }
     } catch (error) {
-        console.error("Verification Error:", error);
-        res.status(500).send("Internal Server Error");
+        res.render('user/otp', { error: "Internal Server Error" });
     }
 };
 
-// 4. Show the Login Page
-const getLoginPage = (req, res) => {
-    res.render('user/login');
+// 4. Resend OTP - Keep as JSON for the Timer
+const resendOTP = async (req, res) => {
+    try {
+        const { email } = req.session.tempUserData;
+        const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+        req.session.otp = newOtp;
+
+        const emailSent = await sendOTP(email, newOtp);
+        if (emailSent) {
+            return res.json({ success: true, message: "A new code has been sent!" });
+        } else {
+            return res.status(500).json({ success: false, message: "Failed to send OTP" });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
 };
 
 // 5. Handle Login Submission
@@ -81,30 +81,18 @@ const handleLogin = async (req, res) => {
         const user = await userService.findUserByEmail(email);
 
         if (!user) {
-            // Render the login page again with an error message
-            return res.render('user/login', { error: "Email not found in our database" });
+            return res.render('user/login', { error: "Email not found" });
         }
 
-        // Compare typed password with hashed password in DB
         const isMatch = await bcrypt.compare(password, user.password);
-
         if (isMatch) {
-            // Success: Create the official user session
-            req.session.user = {
-                id: user._id,
-                username: user.username,
-                email: user.email
-            };
-            
+            req.session.user = { id: user._id, username: user.username, email: user.email };
             return res.redirect('/'); 
         } else {
-            // Wrong password: show error on login page
-            return res.render('user/login', { error: "Invalid email or password" });
+            return res.render('user/login', { error: "Invalid credentials" });
         }
-
     } catch (error) {
-        console.error("Login Error:", error);
-        res.status(500).send("An error occurred during login");
+        res.status(500).send("Login Error");
     }
 };
 
@@ -112,6 +100,7 @@ module.exports = {
     getSignupPage,
     handleSignup,
     verifyOTP,
-    getLoginPage,
+    resendOTP,
+    getLoginPage: (req, res) => res.render('user/login'),
     handleLogin
 };

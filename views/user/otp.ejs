@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -16,7 +17,12 @@
       --error: #ff3b30;
       --success: #34c759;
     }
-    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
     body {
       margin: 0;
       background-color: var(--bg);
@@ -26,19 +32,39 @@
       height: 100vh;
       padding: 20px;
     }
+
     .container {
       width: 100%;
       max-width: 420px;
       padding: 40px;
       border-radius: 20px;
       background: var(--card);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
       text-align: center;
     }
-    .title { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; color: #1d1d1f; }
-    .subtitle { color: var(--muted); font-size: 15px; margin-bottom: 30px; line-height: 1.4; }
-    
-    .otp-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 25px; }
+
+    .title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      color: #1d1d1f;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 15px;
+      margin-bottom: 30px;
+      line-height: 1.4;
+    }
+
+    .otp-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 25px;
+    }
+
     .otp-row input {
       width: 55px;
       height: 65px;
@@ -51,7 +77,11 @@
       outline: none;
       transition: all 0.2s ease;
     }
-    .otp-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0,113,227,0.1); }
+
+    .otp-row input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+    }
 
     .btn {
       width: 100%;
@@ -63,43 +93,106 @@
       font-weight: 600;
       transition: opacity 0.2s;
     }
-    .btn.primary { background: #1d1d1f; color: white; margin-bottom: 12px; }
-    .btn.ghost { background: transparent; color: var(--accent); font-size: 14px; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .message { margin-top: 20px; min-height: 40px; font-size: 14px; border-radius: 8px; padding: 10px; display: none; }
-    .success { background: #f2faf3; color: var(--success); display: block; }
-    .error { background: #fff2f2; color: var(--error); display: block; }
+    .btn.primary {
+      background: #1d1d1f;
+      color: white;
+      margin-bottom: 12px;
+    }
 
-    .timer-text { margin-top: 20px; font-size: 13px; color: var(--muted); }
-    #timer { font-weight: 600; color: #1d1d1f; }
+    .btn.ghost {
+      background: transparent;
+      color: var(--accent);
+      font-size: 14px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .message {
+      margin-top: 20px;
+      min-height: 40px;
+      font-size: 14px;
+      border-radius: 8px;
+      padding: 10px;
+      display: none;
+    }
+
+    .message.success {
+      background: #f2faf3;
+      color: var(--success);
+      display: block;
+    }
+
+    .message.error {
+      background: #fff2f2;
+      color: var(--error);
+      display: block;
+    }
+
+    .timer-text {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    #timer {
+      font-weight: 600;
+      color: #1d1d1f;
+    }
   </style>
 </head>
+
 <body>
 
   <div class="container">
     <h1 class="title">Verify your email</h1>
     <p class="subtitle">Enter the 4-digit code sent to your inbox to complete your iZen registration.</p>
 
-    <div class="otp-row">
-      <input type="text" inputmode="numeric" maxlength="1" class="otp">
-      <input type="text" inputmode="numeric" maxlength="1" class="otp">
-      <input type="text" inputmode="numeric" maxlength="1" class="otp">
-      <input type="text" inputmode="numeric" maxlength="1" class="otp">
-    </div>
+    <% if (typeof error !=='undefined' && error) { %>
+      <div class="message error"><%= error %></div>
+    <% } %>
+    <% if (typeof success !=='undefined' && success) { %>
+      <div class="message success"><%= success %></div>
+    <% } %>
 
-    <button id="verifyBtn" class="btn primary">Verify Account</button>
+    <div id="ajax-message" class="message"></div>
+
+    <form id="otpForm" action="/verify-otp" method="POST">
+      <input type="hidden" name="otp" id="fullOtp">
+      
+      <div class="otp-row">
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-input" required>
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-input" required>
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-input" required>
+        <input type="text" inputmode="numeric" maxlength="1" class="otp-input" required>
+      </div>
+
+      <button type="submit" id="verifyBtn" class="btn primary">Verify Account</button>
+    </form>
+
     <button id="resendBtn" class="btn ghost" disabled>Resend Code</button>
 
-    <div id="message" class="message"></div>
     <p class="timer-text">Resend available in <span id="timer">60</span>s</p>
   </div>
 
   <script>
-    const otpInputs = document.querySelectorAll('.otp');
-    const verifyBtn = document.getElementById('verifyBtn');
+  // Prevents navigating back to Signup after reaching the OTP page
+  
+    (function() {
+        window.history.pushState(null, null, window.location.href);
+        window.onpopstate = function () {
+            window.history.go(1);
+        };
+    })();
+
+    const otpInputs = document.querySelectorAll('.otp-input');
+    const otpForm = document.getElementById('otpForm');
+    const fullOtpHidden = document.getElementById('fullOtp');
     const resendBtn = document.getElementById('resendBtn');
-    const messageEl = document.getElementById('message');
+    const ajaxMessageEl = document.getElementById('ajax-message');
     const timerEl = document.getElementById('timer');
 
     let countdown = 60;
@@ -119,56 +212,54 @@
       }, 1000);
     }
 
-    function showMessage(text, type) {
-      messageEl.textContent = text;
-      messageEl.className = 'message ' + type;
-      messageEl.style.display = 'block';
+    function showAjaxMessage(text, type) {
+      ajaxMessageEl.textContent = text;
+      ajaxMessageEl.className = 'message ' + type;
+      ajaxMessageEl.style.display = 'block';
+      setTimeout(() => { ajaxMessageEl.style.display = 'none'; }, 5000);
     }
 
-    // Auto-focus logic for inputs
+    // Auto-focus logic
     otpInputs.forEach((input, index) => {
       input.addEventListener('input', (e) => {
         if (e.target.value.length > 1) e.target.value = e.target.value.slice(-1);
-        if (e.target.value && index < otpInputs.length - 1) otpInputs[index + 1].focus();
+        if (e.target.value && index < otpInputs.length - 1) {
+            otpInputs[index + 1].focus();
+        }
       });
 
       input.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !e.target.value && index > 0) otpInputs[index - 1].focus();
-      });
-    });
-
-    // Verify Action
-    verifyBtn.addEventListener('click', () => {
-      const otp = Array.from(otpInputs).map(i => i.value).join('');
-      if (otp.length < 4) return showMessage('Please enter all 4 digits.', 'error');
-
-      $.ajax({
-        type: "POST",
-        url: "/verify-otp",
-        data: { otp },
-        success: function(res) {
-          showMessage('Verification successful! Redirecting...', 'success');
-          // Redirect to home or login after a short delay
-          setTimeout(() => window.location.href = '/', 1500); 
-        },
-        error: function(xhr) {
-          const err = xhr.responseJSON ? xhr.responseJSON.message : 'Invalid OTP';
-          showMessage(err, 'error');
+        if (e.key === 'Backspace' && !e.target.value && index > 0) {
+            otpInputs[index - 1].focus();
         }
       });
     });
 
-    // Resend Action
+    // Handle Form Submission
+    otpForm.addEventListener('submit', (e) => {
+      const otpValue = Array.from(otpInputs).map(i => i.value).join('');
+      if (otpValue.length < 4) {
+        e.preventDefault();
+        showAjaxMessage("Please enter all 4 digits", "error");
+        return;
+      }
+      fullOtpHidden.value = otpValue;
+    });
+
+    // Resend Action (AJAX)
     resendBtn.addEventListener('click', () => {
       $.ajax({
         type: "POST",
         url: "/resend-otp",
-        success: function() {
-          showMessage('A new code has been sent.', 'success');
+        success: function (res) {
+          showAjaxMessage(res.message || 'A new code has been sent.', 'success');
           startTimer();
+          otpInputs.forEach(input => input.value = '');
+          otpInputs[0].focus();
         },
-        error: function() {
-          showMessage('Failed to resend. Please try again.', 'error');
+        error: function (xhr) {
+          const err = xhr.responseJSON ? xhr.responseJSON.message : 'Failed to resend';
+          showAjaxMessage(err, 'error');
         }
       });
     });
@@ -176,4 +267,5 @@
     startTimer();
   </script>
 </body>
+
 </html>
