@@ -7,7 +7,7 @@ const passport = require('./config/passport');
 
 // --- ROUTE IMPORTS ---
 const userRoutes = require('./routes/userRoutes');
-const adminRoutes = require('./routes/adminRoute'); // ADDED: Import your admin routes
+const adminRoutes = require('./routes/adminRoute'); 
 
 dotenv.config();
 const app = express();

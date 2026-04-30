@@ -9,7 +9,7 @@ passport.use(new GoogleStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
-        // 1. Check if user already exists by googleId or email
+        //  Check if user already exists by googleId or email
         let user = await User.findOne({ 
             $or: [{ googleId: profile.id }, { email: profile.emails[0].value }] 
         });
@@ -27,7 +27,7 @@ passport.use(new GoogleStrategy({
             }
             return done(null, user);
         } else {
-            //  Create new user (Matching your userModel fields)
+            //  Create new user 
             user = new User({
                 username: profile.displayName, // Match 'username' field in model
                 email: profile.emails[0].value,
