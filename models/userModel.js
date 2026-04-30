@@ -12,17 +12,25 @@ const userSchema = new mongoose.Schema({
     },
     phone: { 
         type: String, 
-        required: false, // Changed from true to support Google Auth
-        unique: false    // Changed because multiple nulls would conflict if true
+        required: false, 
+        unique: false    
     },
     password: { 
         type: String, 
-        required: false // Changed from true because Google users don't have a local password
+        required: false 
     },
-    googleId: {         // Recommended: Add this to track Google users specifically
+    googleId: {         
         type: String,
         unique: true,
-        sparse: true    // This allows regular users to have a "null" googleId without error
+        sparse: true    
+    },
+    isAdmin: { // ADD THIS: This allows Mongoose to "see" the admin flag
+        type: Boolean,
+        default: false
+    },
+    isVerified: { // ADD THIS: To match your Shell insert
+        type: Boolean,
+        default: false
     },
     isBlocked: { 
         type: Boolean, 
