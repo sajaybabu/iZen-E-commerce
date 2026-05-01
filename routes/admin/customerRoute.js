@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const customerController = require('../controllers/customerController');
-const middleware = require('../middlewares/adminAuth');
+const customerController = require('../../controllers/admin/customerController');
+const middleware = require('../../middlewares/adminAuth');
 
 // 1. User Management Main Page
 router.route('/')

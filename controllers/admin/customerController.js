@@ -1,4 +1,4 @@
-const userSchema = require('../models/userModel'); // Adjust path to your user model
+const userSchema = require('../../models/userModel'); // Adjust path to your user model
 const bcrypt = require('bcrypt');
 const salt = 10;
 

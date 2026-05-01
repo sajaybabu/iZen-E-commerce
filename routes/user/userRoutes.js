@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
-const userController = require("../controllers/userController");
-const { isLogin, isLogout } = require("../middlewares/auth");
+const userController = require("../../controllers/user/userController");
+const { isLogin, isLogout } = require("../../middlewares/auth");
 
 // --- GOOGLE AUTH ---
 router.get(

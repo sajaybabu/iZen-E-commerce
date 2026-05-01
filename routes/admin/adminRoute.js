@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const adminController = require('../controllers/adminController');
-const middleware = require('../middlewares/adminAuth'); // We will create this next
+const adminController = require('../../controllers/admin/admincontroller');
+const middleware = require('../../middlewares/adminAuth'); // We will create this next
 const customerRoute = require("./customerRoute"); // For user management
 
 // --- ADMIN AUTH ---

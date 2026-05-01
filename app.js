@@ -6,8 +6,8 @@ const session = require('express-session');
 const passport = require('./config/passport'); 
 
 // --- ROUTE IMPORTS ---
-const userRoutes = require('./routes/userRoutes');
-const adminRoutes = require('./routes/adminRoute'); 
+const userRoutes = require('./routes/user/userRoutes');
+const adminRoutes = require('./routes/admin/adminRoute'); 
 
 dotenv.config();
 const app = express();

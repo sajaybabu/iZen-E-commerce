@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const User = require('../models/userModel'); 
+const User = require('../../models/adminModel'); 
 const bcrypt = require('bcrypt');
 
 /**
@@ -46,7 +46,6 @@ if (!admin) {
     return res.status(404).json({ message: "Admin email not found" });
 }
 
-console.log("Checking isAdmin value:", admin.isAdmin);
 
 if (admin.isAdmin !== true) {
     console.log("FAIL REASON: User found but isAdmin is not true");

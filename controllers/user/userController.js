@@ -1,5 +1,5 @@
-const userService = require("../services/userService");
-const sendOTP = require("../utils/sendEmail");
+const userService = require("../../services/userService");
+const sendOTP = require("../../utils/sendEmail");
 const bcrypt = require("bcrypt");
 
 // 1. Show the Signup Page
