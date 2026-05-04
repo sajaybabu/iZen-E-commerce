@@ -1,8 +1,9 @@
+const User = require("../../models/userModel");
 const userService = require("../../services/userService");
 const sendOTP = require("../../utils/sendEmail");
 const bcrypt = require("bcrypt");
 
-// 1. Show the Signup Page
+//  Show the Signup Page
 const getSignupPage = (req, res) => {
   try {
     res.render("user/signup");
@@ -11,7 +12,7 @@ const getSignupPage = (req, res) => {
   }
 };
 
-// 2. Handle Signup Form Submission
+//  Handle Signup Form Submission
 const handleSignup = async (req, res) => {
   try {
     const { username, email, phone, password } = req.body;
@@ -42,7 +43,7 @@ const handleSignup = async (req, res) => {
   }
 };
 
-// 3. Verify OTP
+//  Verify OTP
 const verifyOTP = async (req, res) => {
   try {
     const { otp } = req.body;
@@ -64,7 +65,7 @@ const verifyOTP = async (req, res) => {
   }
 };
 
-// 4. Resend OTP - Keep as JSON for the Timer
+//  Resend OTP 
 const resendOTP = async (req, res) => {
   try {
     const { email } = req.session.tempUserData;
@@ -84,7 +85,7 @@ const resendOTP = async (req, res) => {
   }
 };
 
-// 5. Handle Login Submission
+// Handle Login Submission
 const handleLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -110,11 +111,57 @@ const handleLogin = async (req, res) => {
   }
 };
 
+const loadHome = async (req, res) => {
+  try {
+    const user = req.session.user || null;
+    const newArrivals = [];
+    const inOffer = [];
+    const wishlist = null;
+
+    res.render("user/home", {
+      user,
+      newArrivals,
+      inOffer,
+      wishlist,
+    });
+  } catch (err) {
+    console.error("Home page load error:", err);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+const loadProfile = async (req, res) => {
+  try {
+    const userData = req.session.user;
+    // Safety check: if no session, they aren't logged in
+    if (!userData) {
+      return res.redirect("/login");
+    }
+
+    // Fetch fresh data using the ID inside that session object
+    const user = await User.findById(userData.id);
+
+    if (!user) {
+      // Handle case where user exists in session but was deleted from DB
+      req.session.destroy();
+      return res.redirect("/login");
+    }
+
+    // Render with the fresh DB data
+    res.render("user/profile", { user });
+  } catch (error) {
+    console.error("Profile Load Error:", error);
+    res.status(500).render("error", { message: "Could not load profile" });
+  }
+};
+
 module.exports = {
+  loadProfile,
   getSignupPage,
   handleSignup,
   verifyOTP,
   resendOTP,
   getLoginPage: (req, res) => res.render("user/login"),
   handleLogin,
+  loadHome,
 };

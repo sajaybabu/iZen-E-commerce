@@ -1,22 +1,19 @@
 const checkSession = (req, res, next) => {
-    if(req.session.admin){
-        next()
+    if (req.session && req.session.admin) {
+        next();
+    } else {
+        res.redirect('/admin/login');
     }
-    else{
-        res.redirect('/admin/login')
-    }
-}
+};
 
 const hasSession = (req, res, next) => {
-    if(req.session.admin){
-        res.redirect('/admin/dashboard')
+    if (req.session && req.session.admin) {
+        return res.redirect('/admin/userManagement');
     }
-    else{
-        next()
-    }
-}
+    next();
+};
 
 module.exports = {
     checkSession,
     hasSession
-}
+};

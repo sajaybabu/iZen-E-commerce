@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>izen | Admin Dashboard</title>
-    <!-- Bootstrap 5.3.3 (Stable) -->
+    <title>iZen | Admin Dashboard</title>
+    <!-- Bootstrap 5.3.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,29 +16,24 @@
             --primary-color: #4361ee;
             --bg-light: #f8f9fa;
         }
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-light);
             overflow-x: hidden;
         }
-
         #wrapper { display: flex; width: 100%; }
-
         #content {
             flex: 1;
             padding: 25px;
             transition: all 0.3s;
             min-height: 100vh;
         }
-
         .card {
             border: none;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             margin-bottom: 20px;
         }
-
         .stat-icon {
             width: 48px;
             height: 48px;
@@ -48,8 +43,6 @@
             justify-content: center;
             font-size: 1.5rem;
         }
-
-        /* Sidebar Responsive Logic */
         @media (max-width: 768px) {
             #sidebar { margin-left: -260px; }
             #sidebar.active { margin-left: 0; }
@@ -59,18 +52,17 @@
 <body>
 
 <div id="wrapper">
-    <!-- Sidebar Partial - Ensure this file exists in views/partials/sidebarLinks.ejs -->
-    <%- include('partials/sidebarLinks') %>
+    
+    <%- include('../partials/admin/sidebarlinks') %>
 
     <div id="content">
-        <!-- Navbar Partial - Ensure this file exists in views/partials/navbar.ejs -->
-        <%- include('partials/navbar') %>
+        
+        <%- include('../partials/admin/navbar') %>
 
         <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="fw-bold">Dashboard Overview</h2>
                 
-                <!-- Filter Section -->
                 <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm border">
                     <label class="me-2 text-muted small fw-bold ms-2">RANGE:</label>
                     <select id="filterRange" class="form-select form-select-sm border-0" style="width: 140px; cursor: pointer;">
@@ -115,7 +107,6 @@
                 </div>
             </div>
 
-            <!-- Charts & Tables -->
             <div class="row mt-2">
                 <div class="col-lg-8">
                     <div class="card p-4">
@@ -161,110 +152,62 @@
     </div>
 </div>
 
+<%- include('../partials/admin/modals') %>
+
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
 <script>
-    // 1. Currency Formatter Configuration
-    const formatter = new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 0
-    });
+    const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 
-    // 2. Safely Parse Backend Data
     const initialChartValues = <%- JSON.stringify(typeof chartValues !== 'undefined' ? chartValues : []) %>;
     const initialChartDates = <%- JSON.stringify(typeof chartDates !== 'undefined' ? chartDates : []) %>;
 
-    // 3. Initialize ApexCharts
     const chartOptions = {
-        series: [{
-            name: 'Revenue',
-            data: initialChartValues
-        }],
-        chart: {
-            type: 'area',
-            height: 350,
-            fontFamily: 'Inter, sans-serif',
-            toolbar: { show: false },
-            zoom: { enabled: false }
-        },
+        series: [{ name: 'Revenue', data: initialChartValues }],
+        chart: { type: 'area', height: 350, toolbar: { show: false } },
         colors: ['#4361ee'],
-        fill: {
-            type: 'gradient',
-            gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 }
-        },
-        dataLabels: { enabled: false },
         stroke: { curve: 'smooth', width: 3 },
-        xaxis: {
-            categories: initialChartDates,
-            labels: { style: { colors: '#a1a1a1', fontSize: '12px' } }
-        },
-        yaxis: {
-            labels: { 
-                formatter: (val) => "₹" + val.toLocaleString('en-IN'),
-                style: { colors: '#a1a1a1' } 
-            }
-        },
-        grid: { borderColor: '#f1f1f1', strokeDashArray: 4 }
+        xaxis: { categories: initialChartDates }
     };
 
     const chart = new ApexCharts(document.querySelector("#salesChart"), chartOptions);
     chart.render();
 
-    // 4. AJAX Filter Logic
     async function applyFilter(event) {
-        event.preventDefault(); // Prevent accidental form submission
-        
+        event.preventDefault();
         const btn = document.getElementById('applyBtn');
         const filterValue = document.getElementById('filterRange').value;
         
-        // Show Loading State
         btn.disabled = true;
-        const originalText = btn.innerText;
-        btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status"></span>`;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
 
         try {
-            // Adjust this URL to match your actual backend route
             const response = await fetch(`/admin/dashboard-filter?filter=${filterValue}`);
-            
-            if (!response.ok) throw new Error('Network response was not ok');
-            
             const res = await response.json();
 
             if (res.success) {
-                // Update Numeric Stats
                 document.getElementById('totalRevenue').innerText = formatter.format(res.totalRevenue || 0);
                 document.getElementById('totalOrders').innerText = res.totalOrders || 0;
 
-                // Update Top Selling Table
                 const tbody = document.getElementById('topSellingBody');
                 if (res.topSellingProducts && res.topSellingProducts.length > 0) {
                     tbody.innerHTML = res.topSellingProducts.map(ele => `
                         <tr>
-                            <td class="small fw-medium text-truncate" style="max-width: 150px;">${ele.productName}</td>
+                            <td class="small fw-medium">${ele.productName}</td>
                             <td class="small text-end">${formatter.format(ele.price)}</td>
                         </tr>`).join('');
-                } else {
-                    tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted small py-4">No data available</td></tr>`;
                 }
 
-                // Update Chart Data
-                chart.updateOptions({
-                    xaxis: { categories: res.chartDates || [] }
-                });
-                chart.updateSeries([{
-                    data: res.chartValues || []
-                }]);
+                chart.updateOptions({ xaxis: { categories: res.chartDates || [] } });
+                chart.updateSeries([{ data: res.chartValues || [] }]);
             }
         } catch (error) {
             console.error("Filter Error:", error);
-            alert("Error updating dashboard. Please try again.");
         } finally {
-            // Restore Button State
             btn.disabled = false;
-            btn.innerText = originalText;
+            btn.innerText = "Apply";
         }
     }
 </script>

@@ -24,11 +24,11 @@ const userSchema = new mongoose.Schema({
         unique: true,
         sparse: true    
     },
-    isAdmin: { // ADD THIS: This allows Mongoose to "see" the admin flag
+    isAdmin: { 
         type: Boolean,
         default: false
     },
-    isVerified: { // ADD THIS: To match your Shell insert
+    isVerified: { 
         type: Boolean,
         default: false
     },

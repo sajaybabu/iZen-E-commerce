@@ -20,13 +20,12 @@ router.get(
         return res.redirect("/login?error=Your account is blocked");
       });
     } else {
-      // Set the session user
-      req.session.user = req.user;
-
-      // Ensure the browser doesn't "store" this callback URL in its history
+      req.session.user = {
+        id: req.user._id,
+        username: req.user.username,
+        email: req.user.email,
+      };
       res.header('Cache-Control', 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0');
-      
-      // Redirect to home
       res.redirect("/");
     }
   },
@@ -35,6 +34,9 @@ router.get(
 // --- SIGNUP ---
 router.get("/signup", isLogout, userController.getSignupPage);
 router.post("/signup", isLogout, userController.handleSignup);
+
+
+router.get('/profile', userController.loadProfile);
 
 // --- OTP ---
 router.get("/verify-otp", isLogout, (req, res) => {
@@ -52,24 +54,16 @@ router.post("/login", isLogout, userController.handleLogin);
 
 // --- LOGOUT ---
 router.get("/logout", (req, res) => {
-  // Clear the session and the passport user
   req.logout((err) => {
     req.session.destroy((err) => {
-      if (err) {
-        console.log("Error destroying session:", err);
-      }
-      res.clearCookie("connect.sid"); // Clear the session cookie
-      
-      // Force no-cache on the redirect to login
+      if (err) console.log("Error destroying session:", err);
+      res.clearCookie("connect.sid");
       res.header('Cache-Control', 'no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0');
       res.redirect("/login");
     });
   });
 });
 
-// --- HOME ---
-router.get("/", isLogin, (req, res) => {
-  res.render("user/home", { user: req.session.user });
-});
+router.get("/", userController.loadHome); 
 
 module.exports = router;

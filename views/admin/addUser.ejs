@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add user page</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <style>
+        .test:hover {
+            background-color: rgb(238, 238, 238);
+        }
+
+        .add-user-btn {
+            background-color: #EF6627;
+            /* border: none; */
+        }
+
+        .active::after {
+            content: '';
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: black;
+            bottom: -7px;
+        }
+
+        .actions {
+            color: #151414;
+        }
+        .sidebar {
+            transition: transform 0.3s ease;
+        }
+        @media (max-width: 767.98px) {
+        .sidebar {
+            position: fixed;
+            top: 56px; /* height of navbar */
+            left: 0;
+            width: 200px;
+            height: 100vh;
+            background-color: #000;
+            color: white;
+            z-index: 1050;
+            transform: translateX(-100%);
+        }
+
+        .sidebar.show {
+            transform: translateX(0);
+        }
+        }   
+    </style>
+</head>
+
+<body>
+
+   <!-- //  ========== NAVBAR ========== -->
+
+    <%- include("../partials/admin/navbar.ejs") %>
+
+    <div class="container px-0 mt-5">
+        <div class="row row-cols-1 justify-content-between">
+            <div class="col col-md-3 col-lg-2 border border-secondary rounded text-secondary sidebar align-self-start p-0"
+                style="padding-bottom: -100px;">
+                
+                <%- include("../partials/admin/sidebarLinks.ejs") %>
+
+            </div>
+            <div class="card col col-md-9  px-0 mx-3">
+
+                <div class="card-body" style="background-color: #edededb8;">
+                    <div class="">
+                        <h1 class="text-center m-b5">Add new user</h1>
+                    </div>
+                    <form action="/admin/addUser" method="post">
+                        <div class="container">
+                            <div class="row row-cols-1 justify-content-center ">
+
+                                <div class="col col-lg-7 my-4">
+                                    <div class="row align-items-center">
+                                        <label for="username" class="col-2 col-form-label">Name</label>
+                                        <div class="col-10">
+                                            <input class="form-control w-100 pe-5 bg-white border-0" id="username"
+                                                type="text" placeholder="John Doe" name="username">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col col-lg-7 my-4">
+                                    <div class="row align-items-center">
+                                        <label for="email" class="col-2 col-form-label">Email</label>
+                                        <div class="col-10">
+                                            <input class="form-control w-100 pe-5 bg-white border-0" id="email" type="text"
+                                                placeholder="john333@gmail.com" name="email">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col col-lg-7 my-4">
+                                    <div class="row align-items-center">
+                                        <label for="status" class="col-2 col-form-label">Status</label>
+                                        <div class="col-10">
+                                            <select class="form-select w-100 pe-5 bg-white border-0" id="status"
+                                                name="status">
+                                                <option value="active">Active</option>
+                                                <option value="blocked">Blocked</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col col-lg-7 my-4">
+                                    <div class="row align-items-center">
+                                        <label for="password" class="col-2 col-form-label">Password</label>
+                                        <div class="col-10">
+                                            <input class="form-control w-100 pe-5 bg-white border-0" id="password"
+                                                type="password" placeholder="Password" name="password">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col col-lg-7 my-4">
+                                    <div class="row align-items-center">
+                                        <label for="confirm" class="col-2 col-form-label">Confirm</label>
+                                        <div class="col-10">
+                                            <input class="form-control w-100 pe-5 bg-white border-0" id="confirm"
+                                                type="password" placeholder="Confirm" name="confirm">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-7 d-flex justify-content-end my-4 gap-3">
+                                    <a role="button" type="submit" href="" class="text-decoration-none text-light px-4 py-1 border-0 rounded bg-black">Cancel</a>
+                                    <button type="submit" class="text-light px-4 py-1 border-0 rounded" style="background-color: #EF6627;">Add user</button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+    </div>
+
+
+        <script>
+            const sidebar = document.querySelector('.sidebar');
+            const toggleBtn = document.getElementById('menuToggle');
+
+            toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+            });
+
+            const statuses = document.querySelectorAll('.status');
+
+            statuses.forEach(status => {
+                status.addEventListener('click', () => {
+                    statuses.forEach(s => s.classList.remove('active'));
+                    status.classList.add('active');
+                });
+            });
+
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+            crossorigin="anonymous"></script>
+
+</body>
+
+</html>
