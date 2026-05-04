@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const passport = require("passport");
 const userController = require("../../controllers/user/userController");
+const upload = require('../../config/multer')
 const { isLogin, isLogout } = require("../../middlewares/auth");
 
 // --- GOOGLE AUTH ---
@@ -37,6 +38,9 @@ router.post("/signup", isLogout, userController.handleSignup);
 
 
 router.get('/profile', userController.loadProfile);
+// The name 'profileImage' must match the name used in your frontend FormData
+router.post('/user/update-avatar', upload.single('profileImage'), userController.updateAvatar);
+
 
 // --- OTP ---
 router.get("/verify-otp", isLogout, (req, res) => {
