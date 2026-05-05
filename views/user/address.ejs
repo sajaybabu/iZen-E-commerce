@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iZen | Manage Addresses</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; font-family: "Titillium Web", sans-serif; }
+        .navbar { background-color: #000 !important; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .btn-dark { background: #000; border-radius: 8px; padding: 10px 20px; }
+        .text-danger { font-size: 0.85rem; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="/"><i class="bi bi-apple me-2"></i> iZen</a>
+      <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav mx-auto">
+          <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="/allProducts">Products</a></li>
+        </ul>
+        <div class="d-flex align-items-center gap-4">
+            <a href="/cart" class="text-light"><i class="bi bi-cart3"></i></a>
+            <a href="/profile" class="text-light"><i class="bi bi-person-circle"></i></a>
+            <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+
+  <div class="container my-5">
+    <div class="row">
+        <!-- Add New Address Form -->
+        <div class="col-lg-7">
+            <div class="card p-4">
+                <h5 class="fw-bold mb-4">Add New Shipping Address</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="fullname" class="form-control" placeholder="John Doe">
+                        <p class="text-danger" id="fullnameMsg"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone Number</label>
+                        <input type="text" id="phone" class="form-control" placeholder="10-digit number">
+                        <p class="text-danger" id="phoneMsg"></p>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Street Address</label>
+                        <textarea id="address" class="form-control" rows="2" placeholder="House No, Building, Street"></textarea>
+                        <p class="text-danger" id="addressMsg"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">City</label>
+                        <input type="text" id="city" class="form-control">
+                        <p class="text-danger" id="cityMsg"></p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Pincode</label>
+                        <input type="text" id="pincode" class="form-control">
+                        <p class="text-danger" id="pincodeMsg"></p>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label d-block">Address Type</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="addressType" id="home" value="Home" checked>
+                            <label class="form-check-label" for="home">Home</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="addressType" id="work" value="Work">
+                            <label class="form-check-label" for="work">Work</label>
+                        </div>
+                    </div>
+                    <div class="col-12 mt-4">
+                        <button class="btn btn-dark w-100" id="submitBtn">Save Address</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Addresses List -->
+        <div class="col-lg-5">
+            <h5 class="fw-bold mb-3">Saved Addresses</h5>
+            <% if(user.addresses && user.addresses.length > 0) { %>
+                <% user.addresses.forEach((ele) => { %>
+                    <div class="card p-3 mb-3 border">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="badge bg-secondary mb-2"><%= ele.addressType %></span>
+                                <h6 class="fw-bold mb-1"><%= ele.fullname %></h6>
+                                <p class="small text-muted mb-1"><%= ele.address %>, <%= ele.city %> - <%= ele.pincode %></p>
+                                <p class="small text-muted mb-0">Phone: <%= ele.phone %></p>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick='deleteAddr("<%= ele._id %>")'>
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div class="text-center p-5 bg-white rounded-3 shadow-sm">
+                    <i class="bi bi-geo-alt text-muted fs-1"></i>
+                    <p class="mt-2 text-muted">No addresses saved yet.</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const submitBtn = document.getElementById("submitBtn");
+
+    submitBtn.addEventListener('click', async () => {
+        // Form Data
+        const data = {
+            fullname: document.getElementById("fullname").value.trim(),
+            phone: document.getElementById("phone").value.trim(),
+            pincode: document.getElementById("pincode").value.trim(),
+            address: document.getElementById("address").value.trim(),
+            city: document.getElementById("city").value.trim(),
+            addressType: document.querySelector('input[name="addressType"]:checked').value
+        };
+
+        // Basic Validation
+        if(!data.fullname || data.phone.length < 10 || !data.pincode || data.address.length < 5) {
+            Swal.fire("Error", "Please fill all fields correctly.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch('/add-address', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+
+            if(response.ok) {
+                Swal.fire("Success", "Address added to your iZen profile!", "success")
+                .then(() => window.location.reload());
+            }
+        } catch(err) {
+            console.error("Add Address Error:", err);
+        }
+    });
+
+    async function deleteAddr(id) {
+        const result = await Swal.fire({
+            title: "Delete Address?",
+            text: "You won't be able to revert this!",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#000",
+            confirmButtonText: "Yes, delete it!"
+        });
+
+        if(result.isConfirmed) {
+            try {
+                const response = await fetch(`/delete-address/${id}`, { method: "DELETE" });
+                if(response.ok) {
+                    window.location.reload();
+                }
+            } catch(err) {
+                console.error("Delete Error:", err);
+            }
+        }
+    }
+</script>
+</body>
+</html>

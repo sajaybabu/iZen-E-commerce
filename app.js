@@ -18,7 +18,7 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 1. SESSION CONFIGURATION
+//  SESSION CONFIGURATION
 app.use(session({
     secret: 'izen_secret_key', 
     resave: false,
@@ -29,11 +29,11 @@ app.use(session({
     }
 }));
 
-// 2. PASSPORT INITIALIZATION
+//  PASSPORT INITIALIZATION
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 3. LOCALS MIDDLEWARE
+//  LOCALS MIDDLEWARE
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
     res.locals.admin = req.session.admin || null; 

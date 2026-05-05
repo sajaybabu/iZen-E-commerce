@@ -1,4 +1,3 @@
-const User = require("../../models/userModel");
 const userService = require("../../services/userService");
 const sendOTP = require("../../utils/sendEmail");
 const bcrypt = require("bcrypt");
@@ -92,10 +91,12 @@ const handleLogin = async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
+            // Storing essential data in session
             req.session.user = {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                image: user.image || null 
             };
             return res.redirect("/");
         } else {
@@ -131,17 +132,26 @@ const loadProfile = async (req, res) => {
         const userData = req.session.user;
         if (!userData) return res.redirect("/login");
 
-        // Calling service layer instead of direct DB call
-        const user = await userService.getUserById(userData.id);
+        // Use the ID from session to get a fresh copy of the user
+        const user = await userService.getUserById(userData.id || userData._id);
 
         if (!user) {
             req.session.destroy();
             return res.redirect("/login");
         }
 
+        // Ensure addresses is at least an empty array so the EJS doesn't crash
+        if (!user.addresses) {
+            user.addresses = [];
+        }
+
         res.render("user/profile", { user });
     } catch (error) {
-        res.status(500).render("error", { message: "Could not load profile" });
+        console.error("Profile Load Error:", error);
+        res.status(500).render("user/profile", { 
+            user: null, 
+            message: "Could not load fresh profile data" 
+        });
     }
 };
 
@@ -151,20 +161,122 @@ const updateAvatar = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No image provided' });
         }
+        // Get User ID from session
+        const userId = req.session.user.id;
+        
+    
+        const imagePath = `uploads/profile/${req.file.filename}`;
 
-        const userId = req.session.user.id || req.session.user._id;
-        const imagePath = `/uploads/profile/${req.file.filename}`;
-
-        // Using service layer
+        // Update Database via Service Layer
         await userService.updateProfileImage(userId, imagePath);
+
+        // Update session data so changes reflect across the site without re login
+        req.session.user.image = imagePath;
 
         res.json({ 
             success: true, 
             message: 'Profile picture updated!',
-            imagePath: imagePath 
+            path: imagePath 
         });
     } catch (error) {
+        console.error("Avatar Upload Error:", error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+// Load Address Page
+const loadAddressPage = async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        // Call the service to get the user including their addresses array
+        const user = await userService.getUserById(userId);
+        
+        res.render("user/address", { 
+            user, 
+            addresses: user.addresses || [] 
+        });
+    } catch (error) {
+        console.error("Load Address Error:", error);
+        res.status(500).send("Error loading addresses");
+    }
+};
+
+// Add New Address
+const addAddress = async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        // Destructure the address fields from the form submission
+        const { fullname, addressType, address, city, pincode, phone } = req.body;
+        const newAddress = { fullname, addressType, address, city, pincode, phone };
+
+        // CALLING THE UPDATED SERVICE:
+        await userService.addAddress(userId, newAddress);
+
+        res.redirect("/address");
+    } catch (error) {
+        console.error("Add Address Error:", error);
+        res.status(500).send("Error adding address");
+    }
+};
+
+const getEditAddress = async (req, res) => {
+    try {
+        const addressId = req.params.id;
+        const user = await User.findById(req.session.user);
+        const address = user.addresses.id(addressId); 
+        res.render('user/editaddress', { user, address });
+    } catch (error) {
+        res.redirect('/address');
+    }
+};
+
+const postEditAddress = async (req, res) => {
+    try {
+        const addressId = req.params.id;
+        const { fullname, phone, address, city, pincode, addressType } = req.body;
+        
+        await User.updateOne(
+            { _id: req.session.user, "addresses._id": addressId },
+            { $set: { "addresses.$": { fullname, phone, address, city, pincode, addressType } } }
+        );
+        res.redirect('/address');
+    } catch (error) {
+        res.status(500).send("Update Failed");
+    }
+};
+
+// Delete Address
+const deleteAddress = async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const addressId = req.params.id;
+
+        // CALLING THE UPDATED SERVICE:
+        await userService.removeAddress(userId, addressId);
+        
+        res.json({ success: true, message: "Address deleted successfully" });
+    } catch (error) {
+        console.error("Delete Address Error:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+
+const handleSetDefaultAddress = async (req, res) => {
+    try {
+        const { addressId } = req.body;
+        const userId = req.session.user.id || req.session.user._id;
+
+        const success = await userService.setDefaultAddress(userId, addressId);
+
+        if (success) {
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ success: false, message: "Address not found" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };
 
@@ -177,5 +289,11 @@ module.exports = {
     getLoginPage: (req, res) => res.render("user/login"),
     handleLogin,
     loadHome,
-    updateAvatar 
+    updateAvatar,
+    loadAddressPage,
+    addAddress,
+    deleteAddress,
+    getEditAddress,
+    postEditAddress,
+    handleSetDefaultAddress
 };

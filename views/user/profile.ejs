@@ -1,305 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Profile | Dashboard</title>
-    <!-- CSS Dependencies -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
+    <title>iZen | Profile Dashboard</title>
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Cropper -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <style>
         body {
-            font-family: 'Titillium+Web', sans-serif;
-            background-color: #f4f7f6;
+            background: #f5f5f7;
+            font-family: "Titillium Web", sans-serif;
+            color: #1d1d1f;
         }
+
+        .navbar {
+            padding: 0.8rem 1rem;
+            background-color: #000 !important;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .content {
+            padding: 40px 25px;
+        }
+
         .profile-card {
             border: none;
-            border-radius: 15px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+            background: #fff;
         }
-        .profile-img-container {
-            position: relative;
-            width: 150px;
-            height: 150px;
-            margin: 0 auto;
-        }
+
         .profile-img {
-            width: 100%;
-            height: 100%;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
             object-fit: cover;
-            border-radius: 50%;
-            border: 4px solid #fff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 3px solid #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        .edit-img-btn {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            background: #007bff;
-            color: white;
-            border-radius: 50%;
-            padding: 8px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .edit-img-btn:hover {
-            transform: scale(1.1);
-        }
-        #imageToCrop {
-            max-width: 100%;
-            display: block;
-        }
-        .sidebar-link {
-            transition: all 0.3s;
+
+        .btn-dark {
+            background-color: #000;
             border-radius: 8px;
-            color: #444;
-            text-decoration: none;
+            padding: 10px 24px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border: none;
+            color: white;
         }
-        .sidebar-link:hover, .sidebar-link.active {
-            background-color: #007bff;
-            color: white !important;
+
+        .btn-dark:hover {
+            background-color: #333;
+            transform: scale(1.02);
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #d2d2d7;
+            background-color: #fff;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+            border-color: #0071e3;
+        }
+
+        .referral-box {
+            background-color: #f5f5f7;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        #imageToCrop {
+            display: block;
+            max-width: 100%;
         }
     </style>
 </head>
+
 <body>
 
-<div class="container py-5">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-lg-3 mb-4">
-            <div class="card profile-card p-3 sticky-top" style="top: 20px;">
-                <div class="text-center mb-4">
-                    <div class="profile-img-container">
-                        <img src="<%= user.profileImage || '/default-avatar.png' %>" alt="Profile" class="profile-img" id="userProfileImage">
-                        <label for="imageInput" class="edit-img-btn" id="editIcon">
-                            <i class="bi bi-camera-fill"></i>
-                        </label>
-                        <button class="edit-img-btn d-none" id="checkIcon" onclick="uploadCroppedImage()">
-                            <i class="bi bi-check-lg"></i>
-                        </button>
-                        <input type="file" id="imageInput" hidden accept="image/*">
+    <nav class="navbar navbar-expand-lg shadow-sm">
+        <div class="container">
+            <a class="navbar-brand text-light d-flex align-items-center" href="/">
+                <i class="bi bi-apple me-2"></i> iZen
+            </a>
+            <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav mx-auto text-center mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link text-light" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link text-light" href="/allProducts">Store</a></li>
+                    <li class="nav-item"><a class="nav-link text-light" href="/mac">Mac</a></li>
+                    <li class="nav-item"><a class="nav-link text-light" href="/iphone">iPhone</a></li>
+                </ul>
+                <div class="d-lg-flex align-items-center gap-4">
+                    <div class="d-flex align-items-center justify-content-center gap-4 text-light">
+                        <a href="/wishlist" class="text-light"><i class="bi bi-heart"></i></a>
+                        <a href="/cart" class="text-light"><i class="bi bi-bag"></i></a>
+                        <a href="/profile" class="text-light"><i class="bi bi-person-circle"></i></a>
                     </div>
-                    <h5 class="mt-3 mb-0"><%= user.username %></h5>
-                    <small class="text-muted"><%= user.email %></small>
+                    <a href="/logout" class="btn btn-outline-light btn-sm ms-lg-3">Logout</a>
                 </div>
-                
-                <nav class="nav flex-column">
-                    <a class="nav-link sidebar-link active mb-2" href="#"><i class="bi bi-person me-2"></i> Profile</a>
-                    <a class="nav-link sidebar-link mb-2" href="/orders"><i class="bi bi-bag me-2"></i> My Orders</a>
-                    <a class="nav-link sidebar-link mb-2" href="/wishlist"><i class="bi bi-heart me-2"></i> Wishlist</a>
-                    <a class="nav-link sidebar-link mb-2" href="/wallet"><i class="bi bi-wallet2 me-2"></i> Wallet</a>
-                    <hr>
-                    <a class="nav-link sidebar-link text-danger" href="/logout"><i class="bi bi-box-arrow-right me-2"></i> Logout</a>
-                </nav>
             </div>
         </div>
+    </nav>
 
-        <!-- Main Content -->
-        <div class="col-lg-9">
-            <div class="card profile-card p-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="mb-0">Profile Settings</h4>
-                    <button class="btn btn-outline-primary btn-sm" id="editProfileBtn" onclick="toggleEdit()">
-                        <i class="bi bi-pencil me-1"></i> Edit Profile
-                    </button>
-                </div>
+    <div class="container">
+        <div class="row">
+            <div class="content col-12 col-xl-10 mx-auto">
+                <header class="mb-5">
+                    <h2 class="fw-bold">Account Settings</h2>
+                    <p class="text-muted">Manage your profile, addresses, and security for your iZen account.</p>
+                </header>
 
-                <form id="profileForm">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small uppercase">Username</label>
-                            <input type="text" class="form-control" id="username" value="<%= user.username %>" disabled>
-                            <div class="invalid-feedback" id="userError"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small uppercase">Phone Number</label>
-                            <input type="text" class="form-control" id="phone" value="<%= user.phone %>" disabled>
-                            <div class="invalid-feedback" id="phoneError"></div>
-                        </div>
-                        <div class="col-md-12">
-                            <label class="form-label text-muted small uppercase">Email Address</label>
-                            <input type="email" class="form-control" value="<%= user.email %>" disabled readonly>
-                            <small class="text-muted">Email cannot be changed.</small>
-                        </div>
-                        
-                        <div class="col-12 mt-4 d-none" id="saveActionContainer">
-                            <button type="button" class="btn btn-primary px-4" onclick="saveProfile()">Save Changes</button>
-                            <button type="button" class="btn btn-light" onclick="toggleEdit()">Cancel</button>
+                <div class="row g-4">
+                    <!-- Left Column -->
+                    <div class="col-lg-4">
+                        <div class="card profile-card p-4 text-center sticky-top" style="top: 2rem; z-index: 10;">
+
+                            <div class="position-relative d-inline-block mx-auto mb-4" id="avatarContainer">
+                                <!-- State 1: Normal Display -->
+                                <div id="displayState">
+
+                                    <!-- Change user.image to user.profileImage to match your schema -->
+                                    <img src="<%= user.profileImage ? '/' + user.profileImage : '/images/user.png' %>"
+                                        id="currentProfileImg" class="profile-img">
+                                    <label for="fileInput"
+                                        class="position-absolute bottom-0 end-0 bg-dark text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                                        style="cursor: pointer; width: 40px; height: 40px; border: 3px solid #fff;">
+                                        <i class="bi bi-camera-fill"></i>
+                                    </label>
+                                    <input type="file" id="fileInput" class="d-none" accept="image/*"
+                                        onchange="prepareCrop(event)">
+                                </div>
+
+                                <!-- State 2: Cropping Mode -->
+                                <div id="cropState" class="d-none">
+                                    <div
+                                        style="width: 240px; height: 240px; overflow: hidden; border-radius: 12px; border: 1px solid #d2d2d7; margin: 0 auto;">
+                                        <img src="" id="imageToCrop">
+                                    </div>
+                                    <div class="mt-3 d-flex gap-2 justify-content-center">
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                            onclick="cancelCrop()">Cancel</button>
+                                        <button class="btn btn-sm btn-primary" onclick="uploadAndSave()">Save</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 class="fw-bold mb-1">
+                                <%= user.username %>
+                            </h4>
+                            <p class="text-muted small mb-4">Member since <%= user.createdAt ? new
+                                    Date(user.createdAt).getFullYear() : 2026 %>
+                            </p>
+
+                            <div class="referral-box text-start mb-2">
+                                <label class="form-label small fw-bold text-uppercase text-muted">Your Referral
+                                    Code</label>
+                                <div class="input-group">
+                                    <input class="form-control border-0 bg-white" id="referral" type="text"
+                                        value="<%= user.referral || 'NOCODE' %>" readonly>
+                                    <button class="btn btn-dark" type="button" onclick="copyBtn()">Copy</button>
+                                </div>
+                                <p class="mt-2 mb-0 text-muted" style="font-size: 0.75rem;">
+                                    <strong>Invite</strong> friends, they <strong>Shop</strong>, you
+                                    <strong>Earn</strong> rewards.
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </form>
 
-                <hr class="my-5">
+                    <!-- Right Column -->
+                    <div class="col-lg-8">
+                        <!-- Personal Info -->
+                        <div class="card profile-card p-4 mb-4">
+                            <h5 class="fw-bold mb-4">Personal Information</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" id="username" class="form-control" value="<%= user.username %>"
+                                        disabled>
+                                    <p class="text-danger mt-1 small" id="usernameMsg"></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="text" id="phone" class="form-control" value="<%= user.phone || '' %>"
+                                        disabled placeholder="Add phone number">
+                                    <p class="text-danger mt-1 small" id="phoneMsg"></p>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="text" class="form-control" value="<%= user.email %>" disabled>
+                                </div>
+                                <div class="col-12 mt-4">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button class="btn btn-dark" id="editProfileBtn"
+                                            onclick="editProfile(event)">Edit Profile</button>
+                                        <button class="btn btn-secondary d-none" id="cancelEditBtn"
+                                            onclick="cancelEdit(event)">Cancel</button>
+                                        <button class="btn btn-primary d-none" id="confirmEditBtn"
+                                            onclick="ConfirmEdit(event)">Save Changes</button>
+                                        <a href="/changeEmail" class="btn btn-outline-dark" id="changeEmailBtn">Update
+                                            Email</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Address Section -->
+                        <div class="card profile-card p-4 mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">Shipping Address</h5>
+                                <a href="/address" class="btn btn-sm btn-outline-dark">Manage</a>
+                            </div>
 
-                <!-- Password Change -->
-                <h4 class="mb-4">Security</h4>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label text-muted small uppercase">New Password</label>
-                        <input type="password" class="form-control" id="password" placeholder="••••••••">
-                        <div class="invalid-feedback" id="passError"></div>
-                    </div>
-                    <div class="col-md-6 d-flex align-items-end">
-                        <button class="btn btn-dark" onclick="updatePassword()">Update Password</button>
+                            <% if (locals.user && user.addresses && user.addresses.length> 0) { %>
+                                <div class="address-container">
+                                    <% user.addresses.forEach((ele)=> { %>
+                                        <div
+                                            class="p-3 border rounded-3 mb-3 position-relative <%= ele.isSelected ? 'bg-light border-primary shadow-sm' : '' %>">
+
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <p class="mb-1 fw-bold">
+                                                        <%= ele.fullname %>
+                                                            <% if (ele.isSelected) { %>
+                                                                <span class="badge bg-primary ms-2"
+                                                                    style="font-size: 0.7rem;">Default</span>
+                                                                <% } %>
+                                                    </p>
+                                                    <p class="mb-1 text-muted small">
+                                                        <%= ele.address %>
+                                                    </p>
+                                                    <p class="mb-1 text-muted small">
+                                                        <%= ele.city %>, <%= ele.pincode %>
+                                                    </p>
+                                                    <span class="badge bg-dark status-badge">
+                                                        <%= ele.addressType %>
+                                                    </span>
+                                                </div>
+
+                                                <div class="text-end">
+                                                    <% if (ele.isSelected) { %>
+                                                        <i class="bi bi-check-circle-fill text-primary fs-5"></i>
+                                                        <% } else { %>
+                                                            <button onclick="makeDefault('<%= ele._id %>')"
+                                                                class="btn btn-sm btn-link p-0 text-decoration-none small">Set
+                                                                as Default</button>
+                                                            <% } %>
+                                                                <div class="mt-2">
+                                                                    <a href="/edit-address/<%= ele._id %>"
+                                                                        class="text-primary small text-decoration-none">Edit</a>
+                                                                </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                        <% }) %>
+                                </div>
+                                <% } else { %>
+                                    <!-- Empty State -->
+                                    <div class="text-center py-3">
+                                        <p class="text-muted small">No addresses saved yet.</p>
+                                        <a href="/address" class="btn btn-dark btn-sm">Add New Address</a>
+                                    </div>
+                                    <% } %>
+                        </div>
+                        <!-- Security -->
+                        <div class="card profile-card p-4">
+                            <h5 class="fw-bold mb-4">Security</h5>
+                            <form id="passwordForm">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Current Password</label>
+                                        <input type="password" id="currentPassword" class="form-control"
+                                            placeholder="••••••••">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">New Password</label>
+                                        <input type="password" id="newPassword" class="form-control"
+                                            placeholder="Min 8 characters">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Confirm Password</label>
+                                        <input type="password" id="confirmPassword" class="form-control"
+                                            placeholder="Re-type password">
+                                    </div>
+                                    <div class="col-12 mt-3">
+                                        <button type="submit" class="btn btn-dark" id="changePassBtn">Update
+                                            Password</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Cropping Modal -->
-<div class="modal fade" id="cropperModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body p-0">
-                <img id="imageToCrop" src="">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="cropDoneBtn">Crop & Preview</button>
-            </div>
+    <footer class="bg-white border-top py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0 text-muted small">&copy; 2026 iZen Apple Premium Reseller. All rights reserved.</p>
         </div>
-    </div>
-</div>
+    </footer>
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
-    let cropper;
-    const imageInput = document.getElementById('imageInput');
-    const imageToCrop = document.getElementById('imageToCrop');
-    const cropperModal = new bootstrap.Modal(document.getElementById('cropperModal'));
-    let croppedBlob = null;
+    <script>
+        const userId = "<%= user._id %>";
+        let cropper;
 
-    // --- Image Handling ---
-    imageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                imageToCrop.src = event.target.result;
-                cropperModal.show();
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    document.getElementById('cropperModal').addEventListener('shown.bs.modal', function() {
-        cropper = new Cropper(imageToCrop, {
-            aspectRatio: 1,
-            viewMode: 2,
-        });
-    });
-
-    document.getElementById('cropperModal').addEventListener('hidden.bs.modal', function() {
-        cropper.destroy();
-    });
-
-    document.getElementById('cropDoneBtn').addEventListener('click', function() {
-        const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
-        document.getElementById('userProfileImage').src = canvas.toDataURL();
-        
-        canvas.toBlob((blob) => {
-            croppedBlob = blob;
-            document.getElementById('editIcon').classList.add('d-none');
-            document.getElementById('checkIcon').classList.remove('d-none');
-        });
-        
-        cropperModal.hide();
-    });
-
-    async function uploadCroppedImage() {
-        if (!croppedBlob) return;
-
-        const formData = new FormData();
-        formData.append('profileImage', croppedBlob, 'profile.jpg');
-
-        try {
-            const response = await fetch('/user/update-avatar', {
-                method: 'POST',
-                body: formData
+        function copyBtn() {
+            const referral = document.getElementById("referral");
+            referral.select();
+            navigator.clipboard.writeText(referral.value);
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'success', title: 'Code copied', showConfirmButton: false, timer: 1500
             });
-            const result = await response.json();
-            if (result.success) {
-                Swal.fire('Success', 'Profile picture updated!', 'success');
-                document.getElementById('editIcon').classList.remove('d-none');
-                document.getElementById('checkIcon').classList.add('d-none');
-            }
-        } catch (err) {
-            Swal.fire('Error', 'Upload failed', 'error');
         }
-    }
 
-    // --- Profile Editing ---
-    function toggleEdit() {
-        const inputs = ['username', 'phone'];
-        const container = document.getElementById('saveActionContainer');
-        const isEditing = !document.getElementById('username').disabled;
+        function editProfile(event) {
+            event.preventDefault();
+            document.getElementById("username").disabled = false;
+            document.getElementById("phone").disabled = false;
+            document.getElementById("editProfileBtn").classList.add("d-none");
+            document.getElementById("changeEmailBtn").classList.add("d-none");
+            document.getElementById("cancelEditBtn").classList.remove("d-none");
+            document.getElementById("confirmEditBtn").classList.remove("d-none");
+        }
 
-        inputs.forEach(id => {
-            document.getElementById(id).disabled = isEditing;
+        function cancelEdit() { location.reload(); }
+
+        async function ConfirmEdit(event) {
+            event.preventDefault();
+            const username = document.getElementById("username").value;
+            const phone = document.getElementById("phone").value;
+
+            if (!/^[A-Za-z\s]{2,20}$/.test(username)) {
+                return Swal.fire("Error", "Invalid name format (2-20 chars)", "error");
+            }
+            if (!/^\d{10}$/.test(phone)) {
+                return Swal.fire("Error", "Enter a valid 10-digit phone number", "error");
+            }
+
+            try {
+                const res = await fetch('/editProfile', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, phone })
+                });
+                if (res.ok) Swal.fire("Success", "Profile updated", "success").then(() => location.reload());
+                else Swal.fire("Error", "Update failed", "error");
+            } catch (err) { console.error(err); }
+        }
+
+
+        async function makeDefault(addressId) {
+            try {
+                const response = await fetch('/set-default-address', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ addressId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Smooth reload to show the new default
+                    window.location.reload();
+                } else {
+                    alert("Failed to update default address. Please try again.");
+                }
+            } catch (error) {
+                console.error("Selection Error:", error);
+                alert("Something went wrong while setting the default address.");
+            }
+        }
+
+        function prepareCrop(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.getElementById('imageToCrop');
+                    img.src = e.target.result;
+                    document.getElementById('displayState').classList.add('d-none');
+                    document.getElementById('cropState').classList.remove('d-none');
+
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(img, { aspectRatio: 1, viewMode: 1 });
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function cancelCrop() {
+            if (cropper) cropper.destroy();
+            document.getElementById('displayState').classList.remove('d-none');
+            document.getElementById('cropState').classList.add('d-none');
+        }
+
+        async function uploadAndSave() {
+            if (!cropper) return;
+            Swal.fire({ title: 'Saving...', didOpen: () => Swal.showLoading() });
+
+            cropper.getCroppedCanvas().toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('profileImage', blob, 'profile.jpg');
+                try {
+                    // Match the route exactly as defined in userRoutes.js
+                    const res = await fetch('/user/update-avatar', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (res.ok) {
+                        location.reload();
+                    } else {
+                        Swal.fire('Error', 'Save failed', 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Error', 'Network error', 'error');
+                }
+            }, 'image/jpeg');
+        }
+
+        document.getElementById("passwordForm").addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById("currentPassword").value;
+            const newPassword = document.getElementById("newPassword").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+
+            if (newPassword !== confirmPassword) return Swal.fire("Error", "Passwords do not match", "error");
+            if (newPassword.length < 8) return Swal.fire("Error", "Password too short", "error");
+
+            const res = await fetch('/updatePassword', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password, newPassword })
+            });
+
+            if (res.ok) Swal.fire("Success", "Password updated", "success").then(() => location.reload());
+            else Swal.fire("Error", "Incorrect current password", "error");
         });
-
-        container.classList.toggle('d-none');
-    }
-
-    async function saveProfile() {
-        const username = document.getElementById('username').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        
-        // Simple Regex Validation
-        if (username.length < 3) {
-            return document.getElementById('userError').innerText = "Username too short";
-        }
-
-        try {
-            const response = await fetch('/user/update-profile', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, phone })
-            });
-            const result = await response.json();
-            if (result.success) {
-                Swal.fire('Saved!', 'Your profile has been updated.', 'success');
-                toggleEdit();
-            }
-        } catch (err) {
-            Swal.fire('Error', 'Update failed', 'error');
-        }
-    }
-
-    async function updatePassword() {
-        const password = document.getElementById('password').value;
-        const passRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/;
-
-        if (!passRegex.test(password)) {
-            document.getElementById('password').classList.add('is-invalid');
-            document.getElementById('passError').innerText = "Password must be 6-16 chars and include a symbol and number.";
-            return;
-        }
-
-        try {
-            const response = await fetch('/user/change-password', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
-            });
-            if (response.ok) {
-                Swal.fire('Updated!', 'Password changed successfully', 'success');
-                document.getElementById('password').value = '';
-            }
-        } catch (err) {
-            Swal.fire('Error', 'Failed to change password', 'error');
-        }
-    }
-</script>
-
+    </script>
 </body>
+
 </html>

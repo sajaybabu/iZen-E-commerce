@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iZen | Edit Address</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; font-family: "Titillium Web", sans-serif; }
+        .navbar { padding: 0.8rem 1rem; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .form-label { font-weight: 600; font-size: 0.9rem; color: #444; }
+        .btn-dark { border-radius: 8px; padding: 10px 20px; font-weight: 600; }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg bg-black shadow-sm">
+        <div class="container">
+            <a class="navbar-brand text-light fw-bold d-flex align-items-center" href="/">
+                <i class="bi bi-apple me-2"></i> iZen
+            </a>
+            <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav mx-auto text-center">
+                    <li class="nav-item"><a class="nav-link text-light" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link text-light" href="/allProducts">Shop</a></li>
+                </ul>
+                <div class="d-flex align-items-center justify-content-center gap-4">
+                    <a href="/wishlist" class="text-light"><i class="bi bi-heart"></i></a>
+                    <a href="/cart" class="text-light"><i class="bi bi-cart3"></i></a>
+                    <a href="/profile" class="text-light"><i class="bi bi-person-circle"></i></a>
+                    <a href="/logout" class="btn btn-sm btn-outline-light">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card p-4">
+                    <div class="d-flex align-items-center mb-4">
+                        <a href="/address" class="text-dark me-3"><i class="bi bi-arrow-left fs-4"></i></a>
+                        <h4 class="fw-bold mb-0">Edit Address</h4>
+                    </div>
+
+                    <form id="editAddressForm">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" id="fullname" class="form-control" value="<%= address.fullname %>" required>
+                                <p class="text-danger small" id="fullnameMsg"></p>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Phone Number</label>
+                                <input type="text" id="phone" class="form-control" value="<%= address.phone %>" required>
+                                <p class="text-danger small" id="phoneMsg"></p>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Pincode</label>
+                                <input type="text" id="pincode" class="form-control" value="<%= address.pincode %>" required>
+                                <p class="text-danger small" id="pincodeMsg"></p>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Address (House No, Building, Street)</label>
+                                <textarea id="address" class="form-control" rows="3" required><%= address.address %></textarea>
+                                <p class="text-danger small" id="addressMsg"></p>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">City / District</label>
+                                <input type="text" id="city" class="form-control" value="<%= address.city %>" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Address Type</label>
+                                <div class="d-flex gap-3 mt-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="addressType" id="home" value="Home" <%= address.addressType === 'Home' ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="home">Home</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="addressType" id="work" value="Work" <%= address.addressType === 'Work' ? 'checked' : '' %>>
+                                        <label class="form-check-label" for="work">Work</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-4">
+                                <button type="submit" class="btn btn-dark w-100 shadow-sm" id="submitBtn">Save Changes</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-black text-white text-center py-4 mt-auto">
+        <p class="mb-0 small text-secondary">&copy; 2026 iZen Apple Premium Reseller. All rights reserved.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const form = document.getElementById("editAddressForm");
+        const addressId = "<%= address._id %>";
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Basic Validation logic
+            const fullname = document.getElementById("fullname").value.trim();
+            const phone = document.getElementById("phone").value.trim();
+            const pincode = document.getElementById("pincode").value.trim();
+            const addressText = document.getElementById("address").value.trim();
+            const city = document.getElementById("city").value.trim();
+            const addressType = document.querySelector('input[name="addressType"]:checked').value;
+
+            // Simple validation check
+            if (fullname.length < 3) {
+                return Swal.fire("Error", "Please enter a valid full name", "error");
+            }
+            if (!/^\d{10}$/.test(phone)) {
+                return Swal.fire("Error", "Please enter a valid 10-digit phone number", "error");
+            }
+
+            try {
+                const response = await fetch(`/edit-address/${addressId}`, {
+                    method: "POST", // Matching the controller route we discussed
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fullname,
+                        phone,
+                        pincode,
+                        address: addressText,
+                        city,
+                        addressType
+                    })
+                });
+
+                if (response.ok) {
+                    await Swal.fire({
+                        icon: "success",
+                        title: "Updated!",
+                        text: "Address details updated successfully.",
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    window.location.href = "/address";
+                } else {
+                    Swal.fire("Error", "Failed to update address", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire("Error", "Something went wrong", "error");
+            }
+        });
+    </script>
+</body>
+</html>
