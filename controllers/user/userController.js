@@ -301,28 +301,40 @@ const verifyEmailUpdateOTP = async (req, res) => {
     }
 };
 
-// Update Profile Avatar
 const updateAvatar = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No image provided' });
         }
+
         const userId = req.session.user.id || req.session.user._id;
         const imagePath = `uploads/profile/${req.file.filename}`;
 
+        // Update the database via service
         await userService.updateProfileImage(userId, imagePath);
+
         req.session.user.image = imagePath;
 
-        res.json({ 
-            success: true, 
-            message: 'Profile picture updated!',
-            path: imagePath 
+        // Save the session explicitly to ensure the navbar reflects changes if redirecting
+        req.session.save((err) => {
+            if (err) {
+                console.error("Session Save Error:", err);
+                return res.status(500).json({ success: false, message: 'Error saving session' });
+            }
+            
+            res.json({ 
+                success: true, 
+                message: 'Profile picture updated!',
+                path: imageImage 
+            });
         });
+
     } catch (error) {
         console.error("Avatar Upload Error:", error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
+
 
 // Address Management functions
 const loadAddressPage = async (req, res) => {
