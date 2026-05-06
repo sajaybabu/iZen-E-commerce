@@ -21,7 +21,6 @@ router.get(
         return res.redirect("/login?error=Your account is blocked");
       });
     } else {
-      // Updated session to match profileImage field name
       req.session.user = {
         id: req.user._id,
         username: req.user.username,
@@ -38,11 +37,26 @@ router.get(
 router.get("/signup", isLogout, userController.getSignupPage);
 router.post("/signup", isLogout, userController.handleSignup);
 
+// --- FORGOT PASSWORD FLOW ---
+//  Page to enter email
+router.get("/forgot-password", isLogout, (req, res) => res.render("user/forgotEmail")); 
+router.post("/forgot-password", isLogout, userController.handleForgotPassword);
+
+// OTP Verification for Forgot Password
+router.get("/forgot-password-otp", isLogout, (req, res) => res.render("user/forgotPassOtp"));
+router.post("/forgot-password-otp", isLogout, userController.verifyOTP); 
+router.post("/resend-forgot-otp", isLogout, userController.resendOTP);
+
+// Password page
+router.get("/changePassword", isLogout, (req, res) => res.render("user/changePassword"));
+
+router.post("/changePassword", isLogout, userController.handleResetPassword); 
+
 // --- PROFILE & AVATAR ---
 router.get('/profile', isLogin, userController.loadProfile);
 router.post('/user/update-avatar', isLogin, upload.single('profileImage'), userController.updateAvatar);
 
-// --- OTP ---
+// --- OTP (Signup) ---
 router.get("/verify-otp", isLogout, (req, res) => {
   if (!req.session.otp || !req.session.tempUserData) {
     return res.redirect("/signup");
@@ -59,9 +73,9 @@ router.post("/login", isLogout, userController.handleLogin);
 // --- ADDRESS MANAGEMENT ---
 router.get('/address', isLogin, userController.loadAddressPage);
 router.post('/add-address', isLogin, userController.addAddress);
-router.get('/edit-address/:id', userController.getEditAddress);
-router.post('/edit-address/:id', userController.postEditAddress);
-router.post('/set-default-address', userController.handleSetDefaultAddress);
+router.get('/edit-address/:id', isLogin, userController.getEditAddress);
+router.post('/edit-address/:id', isLogin, userController.postEditAddress);
+router.post('/set-default-address', isLogin, userController.handleSetDefaultAddress);
 
 // Supported both DELETE (for API/Fetch) and GET (for simple links)
 router.delete('/delete-address/:id', isLogin, userController.deleteAddress);

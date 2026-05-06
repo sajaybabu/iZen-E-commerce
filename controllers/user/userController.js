@@ -42,21 +42,43 @@ const handleSignup = async (req, res) => {
     }
 };
 
-// Verify OTP
+// Verify OTP 
 const verifyOTP = async (req, res) => {
     try {
         const { otp } = req.body;
+        
         if (otp === req.session.otp) {
-            await userService.registerUser(req.session.tempUserData);
-            req.session.otp = null;
-            req.session.tempUserData = null;
-            return res.redirect("/login");
+            // If it's a Signup flow (has tempUserData)
+            if (req.session.tempUserData) {
+                await userService.registerUser(req.session.tempUserData);
+                req.session.otp = null;
+                req.session.tempUserData = null;
+                
+                // If the request is AJAX (from forgotPassOtp.ejs), return JSON
+                if (req.headers['content-type'] === 'application/json') {
+                    return res.json({ success: true });
+                }
+                return res.redirect("/login");
+            } 
+            
+            // If it's a Forgot Password flow
+            req.session.otp = null; 
+            return res.json({ success: true });
+            
         } else {
+            // If it's AJAX, return JSON error
+            if (req.headers['content-type'] === 'application/json') {
+                return res.json({ success: false, message: "Incorrect code." });
+            }
             return res.render("user/otp", {
                 error: "Invalid OTP. Please try again.",
             });
         }
     } catch (error) {
+        console.error("Verify OTP Error:", error);
+        if (req.headers['content-type'] === 'application/json') {
+            return res.status(500).json({ success: false, message: "Internal Server Error" });
+        }
         res.render("user/otp", { error: "Internal Server Error" });
     }
 };
@@ -64,7 +86,13 @@ const verifyOTP = async (req, res) => {
 // Resend OTP 
 const resendOTP = async (req, res) => {
     try {
-        const { email } = req.session.tempUserData;
+        // Try to find email in signup session OR forgot password session
+        const email = req.session.tempUserData ? req.session.tempUserData.email : req.session.forgotPasswordEmail;
+        
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Session expired. Please try again." });
+        }
+
         const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
         req.session.otp = newOtp;
 
@@ -75,6 +103,7 @@ const resendOTP = async (req, res) => {
             return res.status(500).json({ success: false, message: "Failed to send OTP" });
         }
     } catch (error) {
+        console.error("Resend OTP Error:", error);
         res.status(500).json({ success: false });
     }
 };
@@ -91,7 +120,6 @@ const handleLogin = async (req, res) => {
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
-            // Storing essential data in session
             req.session.user = {
                 id: user._id,
                 username: user.username,
@@ -132,7 +160,6 @@ const loadProfile = async (req, res) => {
         const userData = req.session.user;
         if (!userData) return res.redirect("/login");
 
-        // Use the ID from session to get a fresh copy of the user
         const user = await userService.getUserById(userData.id || userData._id);
 
         if (!user) {
@@ -140,7 +167,6 @@ const loadProfile = async (req, res) => {
             return res.redirect("/login");
         }
 
-        // Ensure addresses is at least an empty array so the EJS doesn't crash
         if (!user.addresses) {
             user.addresses = [];
         }
@@ -161,16 +187,10 @@ const updateAvatar = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No image provided' });
         }
-        // Get User ID from session
         const userId = req.session.user.id;
-        
-    
         const imagePath = `uploads/profile/${req.file.filename}`;
 
-        // Update Database via Service Layer
         await userService.updateProfileImage(userId, imagePath);
-
-        // Update session data so changes reflect across the site without re login
         req.session.user.image = imagePath;
 
         res.json({ 
@@ -188,7 +208,6 @@ const updateAvatar = async (req, res) => {
 const loadAddressPage = async (req, res) => {
     try {
         const userId = req.session.user.id;
-        // Call the service to get the user including their addresses array
         const user = await userService.getUserById(userId);
         
         res.render("user/address", { 
@@ -205,13 +224,10 @@ const loadAddressPage = async (req, res) => {
 const addAddress = async (req, res) => {
     try {
         const userId = req.session.user.id;
-        // Destructure the address fields from the form submission
         const { fullname, addressType, address, city, pincode, phone } = req.body;
         const newAddress = { fullname, addressType, address, city, pincode, phone };
 
-        // CALLING THE UPDATED SERVICE:
         await userService.addAddress(userId, newAddress);
-
         res.redirect("/address");
     } catch (error) {
         console.error("Add Address Error:", error);
@@ -251,9 +267,7 @@ const deleteAddress = async (req, res) => {
         const userId = req.session.user.id;
         const addressId = req.params.id;
 
-        // CALLING THE UPDATED SERVICE:
         await userService.removeAddress(userId, addressId);
-        
         res.json({ success: true, message: "Address deleted successfully" });
     } catch (error) {
         console.error("Delete Address Error:", error);
@@ -280,6 +294,65 @@ const handleSetDefaultAddress = async (req, res) => {
     }
 };
 
+const handleResetPassword = async (req, res) => {
+    try {
+        // Use the email saved during the OTP step
+        const email = req.session.forgotPasswordEmail;
+        const { password } = req.body;
+
+        if (!email) {
+            return res.json({ success: false, message: "Session expired. Please start over." });
+        }
+
+        // The service now handles the hashing
+        const result = await userService.updatePassword(email, password);
+
+        if (result.modifiedCount > 0) {
+            // Success! Clear the forgot password session data
+            delete req.session.forgotPasswordEmail;
+            delete req.session.otp;
+            
+            return res.json({ success: true, message: "Password updated successfully!" });
+        } else {
+            return res.json({ success: false, message: "No changes made. Try a different password." });
+        }
+    } catch (error) {
+        console.error("Reset Password Controller Error:", error);
+        res.status(500).json({ success: false });
+    }
+};
+
+// Handle initial email submission
+const handleForgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await userService.findUserByEmail(email);
+
+        if (!user) {
+            // use your filename forgotEmail.ejs
+            return res.render("user/forgotEmail", { 
+                error: "No account found with that email address." 
+            });
+        }
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        req.session.forgotPasswordEmail = email; // Save for resendOTP and handleResetPassword
+        req.session.otp = otp;
+
+        const emailSent = await sendOTP(email, otp);
+        if (emailSent) {
+            res.redirect("/forgot-password-otp");
+        } else {
+            res.render("user/forgotEmail", { 
+                error: "Failed to send verification code. Try again." 
+            });
+        }
+    } catch (error) {
+        console.error("Forgot Password Error:", error);
+        res.status(500).render("user/forgotEmail", { error: "An internal error occurred." });
+    }
+};
+
 module.exports = {
     loadProfile,
     getSignupPage,
@@ -295,5 +368,7 @@ module.exports = {
     deleteAddress,
     getEditAddress,
     postEditAddress,
-    handleSetDefaultAddress
+    handleSetDefaultAddress,
+    handleResetPassword,
+    handleForgotPassword
 };

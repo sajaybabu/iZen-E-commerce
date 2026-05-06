@@ -79,6 +79,26 @@ const setDefaultAddress = async (userId, addressId) => {
     }
 };
 
+const updatePassword = async (email, password) => {
+    try {
+        //  Hash the new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        //  Update the user record
+        const result = await User.updateOne(
+            { email: email },
+            { $set: { password: hashedPassword } }
+        );
+        
+        return result;
+    } catch (error) {
+        console.error("Service Error updating password:", error);
+        throw error;
+    }
+}
+
+
 module.exports = {
     findUserByEmail,
     registerUser,
@@ -86,5 +106,6 @@ module.exports = {
     updateProfileImage,
     addAddress,    
     removeAddress,
-    setDefaultAddress 
+    setDefaultAddress,
+    updatePassword
 };
