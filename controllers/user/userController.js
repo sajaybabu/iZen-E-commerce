@@ -1,6 +1,7 @@
 const userService = require("../../services/userService");
 const sendOTP = require("../../utils/sendEmail");
 const bcrypt = require("bcrypt");
+const User = require("../../models/userModel");
 
 // Show the Signup Page
 const getSignupPage = (req, res) => {
@@ -48,25 +49,21 @@ const verifyOTP = async (req, res) => {
         const { otp } = req.body;
         
         if (otp === req.session.otp) {
-            // If it's a Signup flow (has tempUserData)
             if (req.session.tempUserData) {
                 await userService.registerUser(req.session.tempUserData);
                 req.session.otp = null;
                 req.session.tempUserData = null;
                 
-                // If the request is AJAX (from forgotPassOtp.ejs), return JSON
                 if (req.headers['content-type'] === 'application/json') {
                     return res.json({ success: true });
                 }
                 return res.redirect("/login");
             } 
             
-            // If it's a Forgot Password flow
             req.session.otp = null; 
             return res.json({ success: true });
             
         } else {
-            // If it's AJAX, return JSON error
             if (req.headers['content-type'] === 'application/json') {
                 return res.json({ success: false, message: "Incorrect code." });
             }
@@ -86,8 +83,8 @@ const verifyOTP = async (req, res) => {
 // Resend OTP 
 const resendOTP = async (req, res) => {
     try {
-        // Try to find email in signup session OR forgot password session
-        const email = req.session.tempUserData ? req.session.tempUserData.email : req.session.forgotPasswordEmail;
+        const email = req.session.tempUserData ? req.session.tempUserData.email : 
+                     (req.session.pendingEmailUpdate ? req.session.pendingEmailUpdate.newEmail : req.session.forgotPasswordEmail);
         
         if (!email) {
             return res.status(400).json({ success: false, message: "Session expired. Please try again." });
@@ -118,27 +115,52 @@ const handleLogin = async (req, res) => {
             return res.render("user/login", { error: "Email not found" });
         }
 
+        // BLOCK CHECK (from admin side) 
+        if (user.isBlocked) {
+            return res.render("user/login", { 
+                error: "Your account has been suspended. Please contact support." 
+            });
+        }
+        
+
+        if (user.googleId && !user.password) {
+            return res.render("user/login", { 
+                error: "This email is linked to Google Sign-In. Please use the 'Sign in with Google' button." 
+            });
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
         if (isMatch) {
             req.session.user = {
                 id: user._id,
                 username: user.username,
                 email: user.email,
-                image: user.image || null 
+                image: user.profileImage || null 
             };
             return res.redirect("/");
         } else {
             return res.render("user/login", { error: "Invalid credentials" });
         }
     } catch (error) {
-        res.status(500).send("Login Error");
+        console.error("Login Error:", error);
+        res.status(500).render("user/login", { error: "An internal server error occurred." });
     }
 };
 
 // Load Home Page
 const loadHome = async (req, res) => {
     try {
-        const user = req.session.user || null;
+        let user = req.session.user || null;
+
+        // Security: verify session user is not blocked
+        if (user) {
+            const dbUser = await User.findById(user.id || user._id);
+            if (!dbUser || dbUser.isBlocked) {
+                req.session.destroy();
+                return res.redirect("/login");
+            }
+        }
+
         const newArrivals = [];
         const inOffer = [];
         const wishlist = null;
@@ -162,7 +184,8 @@ const loadProfile = async (req, res) => {
 
         const user = await userService.getUserById(userData.id || userData._id);
 
-        if (!user) {
+        // Security: Check if user exists and is not blocked
+        if (!user || user.isBlocked) {
             req.session.destroy();
             return res.redirect("/login");
         }
@@ -181,13 +204,110 @@ const loadProfile = async (req, res) => {
     }
 };
 
+// Render the separate Edit Profile Page
+const getEditProfile = async (req, res) => {
+    try {
+        if (!req.session.user) return res.redirect("/login");
+        
+        const userId = req.session.user.id || req.session.user._id;
+        const user = await userService.getUserById(userId);
+        
+        res.render("user/edit-profile", { user });
+    } catch (error) {
+        console.error("Error rendering edit profile:", error);
+        res.redirect("/profile");
+    }
+};
+
+// Handle the Profile Update POST request
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.session.user.id || req.session.user._id;
+        const { username, phone, email } = req.body;
+        
+        const user = await userService.getUserById(userId);
+
+        if (user.googleId && email !== user.email) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Email cannot be changed for Google accounts." 
+            });
+        }
+
+        if (email !== user.email) {
+            const emailTaken = await userService.isEmailTakenByAnother(email, userId);
+            if (emailTaken) {
+                return res.status(400).json({ success: false, message: "This email is already in use." });
+            }
+
+            const otp = Math.floor(1000 + Math.random() * 9000).toString();
+            
+            req.session.pendingEmailUpdate = { userId, newEmail: email, username, phone };
+            req.session.otp = otp;
+
+            const emailSent = await sendOTP(email, otp);
+            if (emailSent) {
+                return res.json({ 
+                    success: true, 
+                    requiresOTP: true, 
+                    message: "Verification code sent to your new email." 
+                });
+            } else {
+                return res.status(500).json({ success: false, message: "Failed to send verification code." });
+            }
+        }
+
+        const updatedUser = await userService.updateUserDetails(userId, { username, phone });
+
+        if (updatedUser) {
+            req.session.user.username = updatedUser.username;
+            return res.json({ success: true, message: "Profile updated successfully!" });
+        }
+        
+        res.status(400).json({ success: false, message: "Failed to update profile." });
+
+    } catch (error) {
+        console.error("Update Profile Error:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
+// Finalize Email Change after OTP verification
+const verifyEmailUpdateOTP = async (req, res) => {
+    try {
+        const { otp } = req.body;
+        const pending = req.session.pendingEmailUpdate;
+
+        if (!pending || otp !== req.session.otp) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+        }
+
+        await userService.updateUserEmail(pending.userId, pending.newEmail);
+        await userService.updateUserDetails(pending.userId, { 
+            username: pending.username, 
+            phone: pending.phone 
+        });
+
+        req.session.user.email = pending.newEmail;
+        req.session.user.username = pending.username;
+
+        delete req.session.otp;
+        delete req.session.pendingEmailUpdate;
+
+        res.json({ success: true, message: "Email and profile updated successfully!" });
+    } catch (error) {
+        console.error("Verify Email OTP Error:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+};
+
 // Update Profile Avatar
 const updateAvatar = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ success: false, message: 'No image provided' });
         }
-        const userId = req.session.user.id;
+        const userId = req.session.user.id || req.session.user._id;
         const imagePath = `uploads/profile/${req.file.filename}`;
 
         await userService.updateProfileImage(userId, imagePath);
@@ -204,33 +324,24 @@ const updateAvatar = async (req, res) => {
     }
 };
 
-// Load Address Page
+// Address Management functions
 const loadAddressPage = async (req, res) => {
     try {
-        const userId = req.session.user.id;
+        const userId = req.session.user.id || req.session.user._id;
         const user = await userService.getUserById(userId);
-        
-        res.render("user/address", { 
-            user, 
-            addresses: user.addresses || [] 
-        });
+        res.render("user/address", { user, addresses: user.addresses || [] });
     } catch (error) {
-        console.error("Load Address Error:", error);
         res.status(500).send("Error loading addresses");
     }
 };
 
-// Add New Address
 const addAddress = async (req, res) => {
     try {
-        const userId = req.session.user.id;
+        const userId = req.session.user.id || req.session.user._id;
         const { fullname, addressType, address, city, pincode, phone } = req.body;
-        const newAddress = { fullname, addressType, address, city, pincode, phone };
-
-        await userService.addAddress(userId, newAddress);
+        await userService.addAddress(userId, { fullname, addressType, address, city, pincode, phone });
         res.redirect("/address");
     } catch (error) {
-        console.error("Add Address Error:", error);
         res.status(500).send("Error adding address");
     }
 };
@@ -238,7 +349,8 @@ const addAddress = async (req, res) => {
 const getEditAddress = async (req, res) => {
     try {
         const addressId = req.params.id;
-        const user = await User.findById(req.session.user);
+        const userId = req.session.user.id || req.session.user._id;
+        const user = await User.findById(userId);
         const address = user.addresses.id(addressId); 
         res.render('user/editaddress', { user, address });
     } catch (error) {
@@ -249,112 +361,110 @@ const getEditAddress = async (req, res) => {
 const postEditAddress = async (req, res) => {
     try {
         const addressId = req.params.id;
+        const userId = req.session.user.id || req.session.user._id;
         const { fullname, phone, address, city, pincode, addressType } = req.body;
         
         await User.updateOne(
-            { _id: req.session.user, "addresses._id": addressId },
+            { _id: userId, "addresses._id": addressId },
             { $set: { "addresses.$": { fullname, phone, address, city, pincode, addressType } } }
         );
+        
         res.redirect('/address');
     } catch (error) {
         res.status(500).send("Update Failed");
     }
 };
 
-// Delete Address
 const deleteAddress = async (req, res) => {
     try {
-        const userId = req.session.user.id;
+        const userId = req.session.user.id || req.session.user._id;
         const addressId = req.params.id;
-
         await userService.removeAddress(userId, addressId);
         res.json({ success: true, message: "Address deleted successfully" });
     } catch (error) {
-        console.error("Delete Address Error:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
-
 
 const handleSetDefaultAddress = async (req, res) => {
     try {
         const { addressId } = req.body;
         const userId = req.session.user.id || req.session.user._id;
-
         const success = await userService.setDefaultAddress(userId, addressId);
-
-        if (success) {
-            return res.json({ success: true });
-        } else {
-            return res.status(404).json({ success: false, message: "Address not found" });
-        }
+        res.json({ success });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server Error" });
+        res.status(500).json({ success: false });
+    }
+};
+
+// Password Reset Flow
+const handleForgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await userService.findUserByEmail(email);
+        if (!user) return res.render("user/forgotEmail", { error: "No account found." });
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        req.session.forgotPasswordEmail = email; 
+        req.session.otp = otp;
+        await sendOTP(email, otp);
+        res.redirect("/forgot-password-otp");
+    } catch (error) {
+        res.status(500).render("user/forgotEmail", { error: "Internal Error" });
     }
 };
 
 const handleResetPassword = async (req, res) => {
     try {
-        // Use the email saved during the OTP step
         const email = req.session.forgotPasswordEmail;
         const { password } = req.body;
-
-        if (!email) {
-            return res.json({ success: false, message: "Session expired. Please start over." });
-        }
-
-        // The service now handles the hashing
+        if (!email) return res.json({ success: false, message: "Session expired." });
         const result = await userService.updatePassword(email, password);
-
         if (result.modifiedCount > 0) {
-            // Success! Clear the forgot password session data
             delete req.session.forgotPasswordEmail;
-            delete req.session.otp;
-            
-            return res.json({ success: true, message: "Password updated successfully!" });
-        } else {
-            return res.json({ success: false, message: "No changes made. Try a different password." });
+            return res.json({ success: true });
         }
+        res.json({ success: false });
     } catch (error) {
-        console.error("Reset Password Controller Error:", error);
         res.status(500).json({ success: false });
     }
 };
 
-// Handle initial email submission
-const handleForgotPassword = async (req, res) => {
+const changePassword = async (req, res) => {
     try {
-        const { email } = req.body;
-        const user = await userService.findUserByEmail(email);
+        const userId = req.session.user.id || req.session.user._id;
+        const { currentPassword, newPassword } = req.body;
 
-        if (!user) {
-            // use your filename forgotEmail.ejs
-            return res.render("user/forgotEmail", { 
-                error: "No account found with that email address." 
+        const user = await userService.getUserById(userId);
+
+        if (user.googleId && !user.password) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Password management is handled by Google for this account." 
             });
         }
 
-        const otp = Math.floor(1000 + Math.random() * 9000).toString();
-        req.session.forgotPasswordEmail = email; // Save for resendOTP and handleResetPassword
-        req.session.otp = otp;
-
-        const emailSent = await sendOTP(email, otp);
-        if (emailSent) {
-            res.redirect("/forgot-password-otp");
-        } else {
-            res.render("user/forgotEmail", { 
-                error: "Failed to send verification code. Try again." 
-            });
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ success: false, message: "Incorrect current password." });
         }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        await User.updateOne({ _id: userId }, { $set: { password: hashedPassword } });
+
+        res.json({ success: true, message: "Password updated successfully!" });
     } catch (error) {
-        console.error("Forgot Password Error:", error);
-        res.status(500).render("user/forgotEmail", { error: "An internal error occurred." });
+        res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
 
 module.exports = {
     loadProfile,
+    getEditProfile,
+    updateProfile,
+    verifyEmailUpdateOTP, 
     getSignupPage,
     handleSignup,
     verifyOTP,
@@ -370,5 +480,6 @@ module.exports = {
     postEditAddress,
     handleSetDefaultAddress,
     handleResetPassword,
-    handleForgotPassword
+    handleForgotPassword,
+    changePassword
 };

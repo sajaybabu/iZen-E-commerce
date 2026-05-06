@@ -1,12 +1,16 @@
 const User = require('../../models/adminModel');
 const bcrypt = require('bcrypt');
 
+
 // AUTH FUNCTIONS 
+
+
 const loadLogin = async (req, res) => {
     try {
         res.render('admin/login'); 
     } catch (error) {
         console.error(error);
+        res.status(500).send("Internal Server Error");
     }
 };
 
@@ -28,14 +32,21 @@ const loginVerify = async (req, res) => {
 
 const logout = async (req, res) => {
     try {
-        req.session.destroy();
-        res.redirect('/admin/login');
+        req.session.destroy((err) => {
+            if (err) console.log("Session destroy error:", err);
+            res.clearCookie('connect.sid'); 
+            res.redirect('/admin/login');
+        });
     } catch (error) {
         console.error(error);
+        res.redirect('/admin/login');
     }
 };
 
-//  USER MANAGEMENT 
+
+// USER MANAGEMENT 
+
+
 const loadUsers = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -65,7 +76,8 @@ const loadUsers = async (req, res) => {
 
 const addUserPage = async (req, res) => {
     try {
-        res.render('admin/addUser'); 
+        // Render the page with no message initially
+        res.render('admin/addUser', { message: null }); 
     } catch (error) {
         res.redirect('/admin/userManagement');
     }
@@ -74,12 +86,16 @@ const addUserPage = async (req, res) => {
 const addUser = async (req, res) => {
     try {
         const { username, email, password, phone } = req.body;
+        
+        //  Check if user already exists
         const existingUser = await User.findOne({ email: email });
         
         if (existingUser) {
-            return res.status(400).send("User already exists");
+            //  we render the EJS with a message variable
+            return res.render('admin/addUser', { message: "User already exists with this email" });
         }
 
+        // 2. Hash Password and Save
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             username,
@@ -91,10 +107,14 @@ const addUser = async (req, res) => {
         });
 
         await newUser.save();
+        
+        // Success: Redirect back to the list
         res.redirect('/admin/userManagement');
+
     } catch (error) {
-        console.error(error);
-        res.status(500).send("Failed to add user");
+        console.error("Add User Error:", error);
+        // Render with a general error message if something fails in the DB
+        res.render('admin/addUser', { message: "Failed to add user. Please try again." });
     }
 };
 
@@ -102,7 +122,6 @@ const searchUser = async (req, res) => {
     try {
         const { username } = req.body;
 
-        //$or allows us to check multiple fields at once
         const userData = await User.find({
             isAdmin: false,
             $or: [
@@ -129,17 +148,13 @@ const searchUser = async (req, res) => {
 const blockUser = async (req, res) => {
     try {
         const { id } = req.body;
-        console.log("Blocking user with ID:", id);
-        
-        // Use returnDocument: 'after' to see the changes in the 'updated' variable
         const updated = await User.findByIdAndUpdate(
             id, 
             { $set: { isBlocked: true } }, 
-            { returnDocument: 'after' } 
+            { new: true } 
         );
 
         if (updated) {
-            console.log("User status in DB now:", updated.isBlocked); 
             res.status(200).json({ success: true, message: "User Blocked" });
         } else {
             res.status(404).json({ success: false, message: "User not found" });
@@ -156,7 +171,7 @@ const unBlockUser = async (req, res) => {
         const updated = await User.findByIdAndUpdate(
             id, 
             { $set: { isBlocked: false } }, 
-            { returnDocument: 'after' }
+            { new: true }
         );
 
         if (updated) {
@@ -170,6 +185,8 @@ const unBlockUser = async (req, res) => {
 };
 
 // PLACEHOLDERS FOR DASHBOARD 
+
+
 const loadDashboard = async (req, res) => {
     res.render('admin/dashboard'); 
 };

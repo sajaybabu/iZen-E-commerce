@@ -22,8 +22,10 @@ const userSchema = new mongoose.Schema({
     },
     phone: { 
         type: String, 
-        required: false, 
-        unique: false    
+        required: false,
+        // sparse allows multiple 'null' values if an index exists
+        sparse: true,
+        default: null
     },
     password: { 
         type: String, 
@@ -50,7 +52,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "" 
     },
-    // field for Address Management
     addresses: [addressSchema] 
 }, { timestamps: true });
 

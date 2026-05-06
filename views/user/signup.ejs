@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Welcome to iZen</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     * {
       margin: 0;
@@ -14,8 +15,7 @@
       box-sizing: border-box;
     }
 
-    html,
-    body {
+    html, body {
       font-family: "Inter", sans-serif;
       background-color: #fff;
       min-height: 100vh;
@@ -32,7 +32,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 5px;
+      gap: 8px;
       padding: 20px 0;
     }
 
@@ -62,13 +62,6 @@
       justify-content: center;
     }
 
-    .illustration-container {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 10px;
-    }
-
     .illustration-img {
       max-width: 100%;
       height: auto;
@@ -78,49 +71,97 @@
 
     .form-section {
       padding: 30px;
-      max-width: 360px;
+      width: 100%;
+      max-width: 380px;
       border: 1px solid #e0e0e0;
-      border-radius: 10px;
+      border-radius: 12px;
       background-color: #fff;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     }
 
     .form-section h5 {
-      color: #333;
-      font-size: 0.85rem;
+      color: #1a1a1a;
+      font-size: 0.95rem;
       margin-bottom: 20px;
-      font-weight: 400;
-      text-decoration: underline;
+      font-weight: 700;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #f0f0f0;
+      text-decoration: none;
     }
 
     .form-control {
       border: none;
       border-bottom: 1px solid #ccc;
       border-radius: 0;
-      padding: 8px 0;
+      padding: 10px 0;
       font-size: 0.85rem;
       background: transparent;
+      transition: border-color 0.3s ease;
     }
 
     .form-control:focus {
       box-shadow: none;
-      border-bottom-color: #333;
+      border-bottom-color: #1a1a1a;
       background: transparent;
     }
 
+    .input-error {
+      border-bottom: 1px solid #dc3545 !important;
+    }
+
+    .password-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 5px;
+      top: 12px;
+      cursor: pointer;
+      color: #888;
+      font-size: 1rem;
+      z-index: 10;
+    }
+
+    .error-msg {
+      font-size: 0.7rem;
+      color: #dc3545;
+      display: block;
+      min-height: 16px;
+      margin-top: 4px;
+    }
+
+    .validation-hint {
+      font-size: 0.65rem;
+      color: #dc3545;
+      margin-top: 5px;
+      display: block;
+      line-height: 1.3;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .validation-hint.visible {
+      opacity: 1;
+    }
+
     .btn-create-account {
-      background-color: #333;
+      background-color: #1a1a1a;
       color: #fff;
       border-radius: 25px;
-      padding: 10px 30px;
+      padding: 12px 30px;
       font-size: 0.9rem;
+      font-weight: 500;
       width: 100%;
-      margin-top: 18px;
+      margin-top: 10px;
       border: none;
+      transition: background 0.2s;
     }
 
     .btn-create-account:hover {
-      background-color: #222;
+      background-color: #000;
       color: #fff;
     }
 
@@ -129,40 +170,32 @@
       color: #333;
       border: 1px solid #ddd;
       border-radius: 25px;
-      padding: 8px 30px;
+      padding: 10px 30px;
       font-size: 0.85rem;
       width: 100%;
-      margin-top: 10px;
+      margin-top: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 10px;
+      text-decoration: none;
     }
 
     .login-link {
       text-align: center;
-      margin-top: 14px;
+      margin-top: 18px;
       color: #666;
       font-size: 0.8rem;
     }
 
     .login-link a {
-      color: #333;
+      color: #1a1a1a;
       text-decoration: underline;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .mb-custom {
-      margin-bottom: 0.7rem;
-      position: relative;
-    }
-
-    .error-msg {
-      font-size: 0.7rem;
-      color: #dc3545;
-      display: block;
-      height: 12px;
-      margin-top: 2px;
+      margin-bottom: 1rem;
     }
   </style>
 </head>
@@ -178,45 +211,53 @@
     <div class="content-wrapper">
       <div class="container-fluid">
         <div class="row justify-content-center align-items-center">
-          <div class="col-lg-4 col-md-5 illustration-container d-none d-md-flex">
+          <div class="col-lg-4 col-md-5 d-none d-md-flex justify-content-center">
             <img src="/images/signup.png" alt="Sign up illustration" class="illustration-img" />
           </div>
 
-          <div class="col-lg-3 col-md-5 col-sm-8 col-10">
+          <div class="col-lg-3 col-md-5 col-sm-8 col-11">
             <div class="form-section">
               <h5>Enter your details below</h5>
 
               <% if (locals.error) { %>
-                <div class="alert alert-danger p-2" style="font-size: 0.75rem;">
-                  <%= error %>
+                <div class="alert alert-danger py-2 px-3 mb-3" style="font-size: 0.75rem; border-radius: 8px;">
+                  <i class="bi bi-exclamation-circle me-2"></i><%= error %>
                 </div>
-                <% } %>
+              <% } %>
 
-                  <form action="/signup" method="POST" id="registerForm">
-                    <div class="mb-custom">
-                      <input type="text" class="form-control" name="username" id="username" placeholder="User name">
-                      <small id="usernameError" class="error-msg"></small>
-                    </div>
-                    <div class="mb-custom">
-                      <input type="email" class="form-control" name="email" id="email" placeholder="Email">
-                      <small id="emailError" class="error-msg"></small>
-                    </div>
-                    <div class="mb-custom">
-                      <input type="tel" class="form-control" name="phone" id="phone" placeholder="Phone">
-                      <small id="phoneError" class="error-msg"></small>
-                    </div>
-                    <div class="mb-custom">
-                      <input type="password" class="form-control" name="password" id="password" placeholder="Password">
-                      <small id="passwordError" class="error-msg"></small>
-                    </div>
-                    <button type="submit" class="btn btn-create-account">Create Account</button>
-                  </form>
+              <form action="/signup" method="POST" id="registerForm" novalidate>
+                <div class="mb-custom">
+                  <input type="text" class="form-control" name="username" id="username" placeholder="User name">
+                  <small id="usernameError" class="error-msg"></small>
+                </div>
+                
+                <div class="mb-custom">
+                  <input type="email" class="form-control" name="email" id="email" placeholder="Email">
+                  <small id="emailError" class="error-msg"></small>
+                </div>
+                
+                <div class="mb-custom">
+                  <input type="tel" class="form-control" name="phone" id="phone" placeholder="Phone">
+                  <small id="phoneError" class="error-msg"></small>
+                </div>
+                
+                <div class="mb-custom password-wrapper">
+                  <input type="password" class="form-control" name="password" id="password" placeholder="Password">
+                  <i class="bi bi-eye toggle-password" id="togglePassword"></i>
+                  <small id="passwordError" class="error-msg"></small>
+                  <small id="passHint" class="validation-hint">
+                    Must have 8+ characters, one uppercase letter, and one special character.
+                  </small>
+                </div>
+                
+                <button type="submit" class="btn btn-create-account">Create Account</button>
+              </form>
 
-                  <a href="/auth/google" class="btn btn-google" style="text-decoration: none;">
-                    <img src="https://www.google.com/favicon.ico" alt="Google" /> Sign up with Google
-                  </a>
+              <a href="/auth/google" class="btn btn-google">
+                <img src="https://www.google.com/favicon.ico" width="16" alt="Google" /> Sign up with Google
+              </a>
 
-                  <p class="login-link">Already have account? <a href="/login">Log in</a></p>
+              <p class="login-link">Already have account? <a href="/login">Log in</a></p>
             </div>
           </div>
         </div>
@@ -225,21 +266,86 @@
   </div>
 
   <script>
-    document.getElementById('registerForm').addEventListener('submit', function (e) {
-      let isValid = true;
-      const username = document.getElementById('username').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const password = document.getElementById('password').value;
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.getElementById('registerForm');
+      const passwordInput = document.getElementById('password');
+      const togglePassword = document.getElementById('togglePassword');
+      const passHint = document.getElementById('passHint');
 
-      document.querySelectorAll('.error-msg').forEach(el => el.innerText = "");
+      // Password Toggle
+      togglePassword.addEventListener('click', function () {
+        const isPassword = passwordInput.getAttribute('type') === 'password';
+        passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+        this.classList.toggle('bi-eye');
+        this.classList.toggle('bi-eye-slash');
+      });
 
-      if (username === "") { document.getElementById('usernameError').innerText = "Name is required"; isValid = false; }
-      if (!/^\S+@\S+\.\S+$/.test(email)) { document.getElementById('emailError').innerText = "Enter a valid email"; isValid = false; }
-      if (!/^\d{10}$/.test(phone)) { document.getElementById('phoneError').innerText = "Enter a 10-digit phone number"; isValid = false; }
-      if (password.length < 6) { document.getElementById('passwordError').innerText = "Password must be at least 6 characters"; isValid = false; }
+      // Dynamic Password Hint Logic
+      passwordInput.addEventListener('input', function () {
+        const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
+        
+        if (this.value.length > 0 && !strongPasswordRegex.test(this.value)) {
+          passHint.classList.add('visible');
+          this.classList.add('input-error');
+        } else {
+          passHint.classList.remove('visible');
+          this.classList.remove('input-error');
+          document.getElementById('passwordError').innerText = "";
+        }
+      });
 
-      if (!isValid) e.preventDefault();
+      // Form Submit Validation
+      form.addEventListener('submit', function (e) {
+        let isValid = true;
+        const username = document.getElementById('username');
+        const email = document.getElementById('email');
+        const phone = document.getElementById('phone');
+        const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
+
+        // Reset errors
+        document.querySelectorAll('.error-msg').forEach(el => el.innerText = "");
+        document.querySelectorAll('.form-control').forEach(el => el.classList.remove('input-error'));
+
+        // Username
+        if (username.value.trim() === "") {
+          document.getElementById('usernameError').innerText = "Name is required";
+          username.classList.add('input-error');
+          isValid = false;
+        }
+
+        // Email
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+          document.getElementById('emailError').innerText = "Enter a valid email address";
+          email.classList.add('input-error');
+          isValid = false;
+        }
+
+        // Phone
+        if (!/^\d{10}$/.test(phone.value.trim())) {
+          document.getElementById('phoneError').innerText = "Enter a valid 10-digit phone number";
+          phone.classList.add('input-error');
+          isValid = false;
+        }
+
+        // Strong Password
+        if (!strongPasswordRegex.test(passwordInput.value)) {
+          document.getElementById('passwordError').innerText = "Security requirements not met.";
+          passwordInput.classList.add('input-error');
+          passHint.classList.add('visible');
+          isValid = false;
+        }
+
+        if (!isValid) e.preventDefault();
+      });
+
+      // Clear errors as user types
+      document.querySelectorAll('.form-control').forEach(input => {
+        input.addEventListener('input', function() {
+          this.classList.remove('input-error');
+          const errorId = this.id + "Error";
+          if(document.getElementById(errorId)) document.getElementById(errorId).innerText = "";
+        });
+      });
     });
   </script>
 </body>

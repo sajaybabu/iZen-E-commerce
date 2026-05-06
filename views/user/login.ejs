@@ -15,21 +15,17 @@
             box-sizing: border-box;
         }
 
-        html,
-        body {
+        html, body {
             font-family: 'Inter', sans-serif;
             background-color: #fff;
             min-height: 100vh;
         }
 
+        /* Navbar & Nav Links */
         .navbar {
             padding: 12px 0;
             border-bottom: 1px solid #eee;
             background-color: #2a2a2a;
-        }
-
-        .navbar-brand img {
-            height: 35px;
         }
 
         .nav-link {
@@ -52,6 +48,7 @@
             font-size: 1.1rem;
         }
 
+        /* Brand Title Section */
         .brand-title {
             display: flex;
             justify-content: center;
@@ -76,6 +73,7 @@
             width: auto;
         }
 
+        /* Content Wrapper */
         .content-wrapper {
             display: flex;
             align-items: center;
@@ -85,76 +83,112 @@
         }
 
         .form-section {
-            padding: 25px;
+            padding: 30px;
             width: 100%;
-            max-width: 350px;
+            max-width: 380px;
             border: 1px solid #e0e0e0;
-            border-radius: 10px;
+            border-radius: 12px;
             background-color: #fff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .form-section h5 {
-            color: #333;
-            font-size: 0.8rem;
-            margin-bottom: 18px;
-            font-weight: 400;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #ccc;
+            color: #1a1a1a;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+            font-weight: 700; /* Enhanced Boldness */
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
         }
 
+        /* Inputs */
         .form-control {
             border: none;
             border-bottom: 1px solid #ccc;
             border-radius: 0;
-            padding: 8px 0;
-            font-size: 0.8rem;
+            padding: 10px 0;
+            font-size: 0.85rem;
             background: transparent;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
+            transition: border-color 0.3s ease;
         }
 
         .form-control:focus {
             box-shadow: none;
-            border-bottom-color: #333;
+            border-bottom-color: #1a1a1a;
             background: transparent;
-        }
-
-        .error-text {
-            color: #d93025;
-            font-size: 0.7rem;
-            min-height: 15px;
-            margin-bottom: 10px;
-            display: block;
         }
 
         .input-error {
             border-bottom: 1px solid #d93025 !important;
         }
 
+        /* Password Wrapper & Toggle */
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 5px;
+            top: 12px;
+            cursor: pointer;
+            color: #888;
+            font-size: 1rem;
+            z-index: 10;
+        }
+
+        /* Validation & Hints */
+        .error-text {
+            color: #d93025;
+            font-size: 0.7rem;
+            min-height: 16px;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .validation-hint {
+            font-size: 0.65rem;
+            color: #d93025; /* Alert red */
+            margin-top: 5px;
+            display: block;
+            line-height: 1.3;
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .validation-hint.visible {
+            opacity: 1; /* Fade in when active */
+        }
+
+        /* Buttons */
         .form-actions {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            margin-top: 10px;
+            margin: 25px 0 15px;
         }
 
         .btn-login {
-            background-color: #333;
+            background-color: #1a1a1a;
             color: #fff;
             border: none;
-            border-radius: 20px;
-            padding: 10px 28px;
+            border-radius: 25px;
+            padding: 10px 35px;
             font-size: 0.85rem;
+            font-weight: 500;
             cursor: pointer;
+            transition: background 0.2s;
         }
 
         .btn-login:hover {
-            background-color: #222;
+            background-color: #000;
         }
 
         .forgot-password {
-            color: #333;
+            color: #555;
             text-decoration: none;
             font-size: 0.75rem;
         }
@@ -162,16 +196,22 @@
         .btn-google {
             background-color: #fff;
             border: 1px solid #ddd;
-            border-radius: 20px;
-            padding: 9px 28px;
+            border-radius: 25px;
+            padding: 10px 28px;
             font-size: 0.8rem;
             width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            margin-bottom: 14px;
-            cursor: pointer;
+            gap: 10px;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: #333;
+            transition: background 0.2s;
+        }
+
+        .btn-google:hover {
+            background-color: #f9f9f9;
         }
 
         .signup-link {
@@ -181,11 +221,12 @@
         }
 
         .signup-link a {
-            color: #333;
+            color: #1a1a1a;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
         }
 
+        /* Footer */
         footer {
             background-color: #1a1a1a;
             color: #fff;
@@ -193,26 +234,13 @@
             margin-top: 40px;
         }
 
-        .footer-heading {
-            font-size: 0.95rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .footer-link,
-        .footer-text {
-            color: #aaa;
-            text-decoration: none;
-            font-size: 0.75rem;
-            display: block;
-            margin-bottom: 6px;
-        }
-
         .footer-bottom {
             border-top: 1px solid #333;
             margin-top: 25px;
             padding-top: 12px;
             text-align: center;
+            font-size: 0.75rem;
+            color: #aaa;
         }
     </style>
 </head>
@@ -220,7 +248,6 @@
 <body>
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid px-3">
-          <!--  <a class="navbar-brand" href="/"><img src="/public/images/blackkkkk.png" alt="iZen Logo"></a> !-->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/contact">Contact</a></li>
@@ -257,33 +284,42 @@
                 <div class="col-lg-4 col-md-5 col-sm-8 col-11 mx-auto">
                     <div class="form-section">
                         <h5>Enter your details below</h5>
-                        <% if (typeof error !=='undefined' ) { %>
-                            <div class="alert alert-danger" style="font-size: 0.8rem;">
-                                <%= error %>
+                        
+                        <% if (typeof error !== 'undefined') { %>
+                            <div class="alert alert-danger py-2 px-3 mb-3" style="font-size: 0.75rem; border-radius: 8px;">
+                                <i class="bi bi-exclamation-circle me-2"></i><%= error %>
                             </div>
-                            <% } %>
-                                <form id="loginForm" action="/login" method="POST">
-                                    <input type="email" id="email" name="email" class="form-control"
-                                        placeholder="Email">
-                                    <span id="emailError" class="error-text"></span>
-                                    <input type="password" id="password" name="password" class="form-control"
-                                        placeholder="Password">
-                                    <span id="passwordError" class="error-text"></span>
-                                    <div class="form-actions">
-                                        <button type="submit" class="btn-login">Log In</button>
-                                        <a href="/forgot-password" class="forgot-password">Forgot Password?</a>
-                                    </div>
-                                </form>
+                        <% } %>
 
-                                <a href="/auth/google" class="btn-google"
-                                    style="text-decoration: none; color: inherit;">
-                                    <img src="https://www.google.com/favicon.ico" alt="Google">
-                                    Login with Google
-                                </a>
+                        <form id="loginForm" action="/login" method="POST" novalidate>
+                            <div class="mb-3">
+                                <input type="email" id="email" name="email" class="form-control" placeholder="Email">
+                                <span id="emailError" class="error-text"></span>
+                            </div>
 
-                                <p class="signup-link">
-                                    Don't have account? <a href="/signup">sign up</a>
-                                </p>
+                            <div class="mb-2 password-wrapper">
+                                <input type="password" id="password" name="password" class="form-control" placeholder="Password">
+                                <i class="bi bi-eye toggle-password" id="togglePassword"></i>
+                                <span id="passwordError" class="error-text"></span>
+                                <small id="passHint" class="validation-hint">
+                                    Must have 8+ characters, one uppercase letter, and one special character.
+                                </small>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn-login">Log In</button>
+                                <a href="/forgot-password" class="forgot-password">Forgot Password?</a>
+                            </div>
+                        </form>
+
+                        <a href="/auth/google" class="btn-google">
+                            <img src="https://www.google.com/favicon.ico" width="16" alt="Google">
+                            Login with Google
+                        </a>
+
+                        <p class="signup-link">
+                            Don't have account? <a href="/signup">sign up</a>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -293,7 +329,7 @@
     <footer>
         <div class="container">
             <div class="footer-bottom">
-                <p class="footer-text">&copy; Copyright iZen 2026. All rights reserved</p>
+                <p>&copy; Copyright iZen 2026. All rights reserved</p>
             </div>
         </div>
     </footer>
@@ -301,14 +337,66 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const form = document.getElementById("loginForm");
+            const passwordInput = document.getElementById("password");
+            const togglePassword = document.getElementById("togglePassword");
+            const passHint = document.getElementById("passHint");
+            
+            // Password Visibility Toggle
+            togglePassword.addEventListener("click", function () {
+                const isPassword = passwordInput.getAttribute("type") === "password";
+                passwordInput.setAttribute("type", isPassword ? "text" : "password");
+                this.classList.toggle("bi-eye");
+                this.classList.toggle("bi-eye-slash");
+            });
+
+            //  Show while typing if criteria aren't met
+            passwordInput.addEventListener("input", function() {
+                const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
+                
+                if (this.value.length > 0 && !strongPasswordRegex.test(this.value)) {
+                    passHint.classList.add("visible");
+                } else {
+                    passHint.classList.remove("visible");
+                }
+                
+                // Reset error state
+                this.classList.remove("input-error");
+                document.getElementById("passwordError").textContent = "";
+            });
+
+            // Form Submit Validation
             form.addEventListener("submit", function (e) {
                 e.preventDefault();
-                let email = document.getElementById("email");
-                let password = document.getElementById("password");
+                
+                const email = document.getElementById("email");
+                const emailError = document.getElementById("emailError");
+                const passwordError = document.getElementById("passwordError");
+                const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
+                
                 let isValid = true;
-                if (email.value.trim() === "") isValid = false;
-                if (password.value.trim() === "") isValid = false;
+
+                // Email Validation
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+                    emailError.textContent = "Please enter a valid email address.";
+                    email.classList.add("input-error");
+                    isValid = false;
+                }
+
+                // Password Validation
+                if (!strongPasswordRegex.test(passwordInput.value)) {
+                    passwordError.textContent = "Security requirements not met.";
+                    passwordInput.classList.add("input-error");
+                    passHint.classList.add("visible"); // Force hint on failed submit
+                    isValid = false;
+                }
+
                 if (isValid) form.submit();
+            });
+
+            // Clear email error on type
+            document.getElementById("email").addEventListener("input", function() {
+                this.classList.remove("input-error");
+                document.getElementById("emailError").textContent = "";
             });
         });
     </script>

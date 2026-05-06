@@ -5,165 +5,169 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add user page</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.min.css">
     <style>
-        .test:hover {
-            background-color: rgb(238, 238, 238);
+        .card-body { background-color: #edededb8; border-radius: 12px; }
+
+
+        .form-label-custom {
+            display: flex;
+            align-items: center;    
+            justify-content: flex-end; 
+            height: 38px;          
+            font-weight: 500;
+            margin-bottom: 0;       
         }
 
-        .add-user-btn {
-            background-color: #EF6627;
-            /* border: none; */
-        }
-
-        .active::after {
-            content: '';
-            display: block;
+        .error-msg { font-size: 0.75rem; color: #dc3545; min-height: 18px; margin-bottom: 0; }
+        .input-error { border: 1px solid #dc3545 !important; }
+        
+        .password-container { position: relative; }
+        .toggle-password {
             position: absolute;
-            width: 100%;
-            height: 3px;
-            background: black;
-            bottom: -7px;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #6c757d;
         }
 
-        .actions {
-            color: #151414;
-        }
-        .sidebar {
-            transition: transform 0.3s ease;
-        }
         @media (max-width: 767.98px) {
-        .sidebar {
-            position: fixed;
-            top: 56px; /* height of navbar */
-            left: 0;
-            width: 200px;
-            height: 100vh;
-            background-color: #000;
-            color: white;
-            z-index: 1050;
-            transform: translateX(-100%);
+            .form-label-custom { justify-content: flex-start; height: auto; margin-bottom: 5px; }
         }
-
-        .sidebar.show {
-            transform: translateX(0);
-        }
-        }   
     </style>
 </head>
 
-<body>
-
-   <!-- //  ========== NAVBAR ========== -->
-
+<body class="bg-light">
     <%- include("../partials/admin/navbar.ejs") %>
 
-    <div class="container px-0 mt-5">
-        <div class="row row-cols-1 justify-content-between">
-            <div class="col col-md-3 col-lg-2 border border-secondary rounded text-secondary sidebar align-self-start p-0"
-                style="padding-bottom: -100px;">
-                
+    <div class="container-fluid mt-5 px-4">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 border rounded bg-white p-0 shadow-sm">
                 <%- include("../partials/admin/sidebarLinks.ejs") %>
-
             </div>
-            <div class="card col col-md-9  px-0 mx-3">
 
-                <div class="card-body" style="background-color: #edededb8;">
-                    <div class="">
-                        <h1 class="text-center m-b5">Add new user</h1>
-                    </div>
-                    <form action="/admin/addUser" method="post">
-                        <div class="container">
-                            <div class="row row-cols-1 justify-content-center ">
-
-                                <div class="col col-lg-7 my-4">
-                                    <div class="row align-items-center">
-                                        <label for="username" class="col-2 col-form-label">Name</label>
-                                        <div class="col-10">
-                                            <input class="form-control w-100 pe-5 bg-white border-0" id="username"
-                                                type="text" placeholder="John Doe" name="username">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col col-lg-7 my-4">
-                                    <div class="row align-items-center">
-                                        <label for="email" class="col-2 col-form-label">Email</label>
-                                        <div class="col-10">
-                                            <input class="form-control w-100 pe-5 bg-white border-0" id="email" type="text"
-                                                placeholder="john333@gmail.com" name="email">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col col-lg-7 my-4">
-                                    <div class="row align-items-center">
-                                        <label for="status" class="col-2 col-form-label">Status</label>
-                                        <div class="col-10">
-                                            <select class="form-select w-100 pe-5 bg-white border-0" id="status"
-                                                name="status">
-                                                <option value="active">Active</option>
-                                                <option value="blocked">Blocked</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col col-lg-7 my-4">
-                                    <div class="row align-items-center">
-                                        <label for="password" class="col-2 col-form-label">Password</label>
-                                        <div class="col-10">
-                                            <input class="form-control w-100 pe-5 bg-white border-0" id="password"
-                                                type="password" placeholder="Password" name="password">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col col-lg-7 my-4">
-                                    <div class="row align-items-center">
-                                        <label for="confirm" class="col-2 col-form-label">Confirm</label>
-                                        <div class="col-10">
-                                            <input class="form-control w-100 pe-5 bg-white border-0" id="confirm"
-                                                type="password" placeholder="Confirm" name="confirm">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-lg-7 d-flex justify-content-end my-4 gap-3">
-                                    <a role="button" type="submit" href="" class="text-decoration-none text-light px-4 py-1 border-0 rounded bg-black">Cancel</a>
-                                    <button type="submit" class="text-light px-4 py-1 border-0 rounded" style="background-color: #EF6627;">Add user</button>
-                                </div>
-
+            <div class="col-md-9 col-lg-10">
+                <div class="card border-0 shadow-sm mx-md-3">
+                    <div class="card-body p-5">
+                        
+                        <% if (locals.message) { %>
+                            <div class="alert alert-danger text-center mb-4 py-2" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i><%= message %>
                             </div>
-                        </div>
+                        <% } %>
 
-                    </form>
+                        <h1 class="text-center mb-5 fw-bold">Add new user</h1>
+
+                        <form action="/admin/addUser" method="post" id="addUserForm" novalidate>
+                            
+                            <div class="row mb-3 justify-content-center">
+                                <label for="username" class="col-sm-3 form-label-custom">Name</label>
+                                <div class="col-sm-6">
+                                    <input type="text" class="form-control border-0 py-2 shadow-sm" id="username" name="username" placeholder="John Doe">
+                                    <small id="nameError" class="error-msg"></small>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3 justify-content-center">
+                                <label for="email" class="col-sm-3 form-label-custom">Email</label>
+                                <div class="col-sm-6">
+                                    <input type="email" class="form-control border-0 py-2 shadow-sm" id="email" name="email" placeholder="john333@gmail.com">
+                                    <small id="emailError" class="error-msg"></small>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3 justify-content-center">
+                                <label for="status" class="col-sm-3 form-label-custom">Status</label>
+                                <div class="col-sm-6">
+                                    <select class="form-select border-0 py-2 shadow-sm" id="status" name="status">
+                                        <option value="active">Active</option>
+                                        <option value="blocked">Blocked</option>
+                                    </select>
+                                    <small class="error-msg"></small>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3 justify-content-center">
+                                <label for="password" class="col-sm-3 form-label-custom">Password</label>
+                                <div class="col-sm-6">
+                                    <div class="password-container">
+                                        <input type="password" class="form-control border-0 py-2 shadow-sm pe-5" id="password" name="password" placeholder="Password">
+                                        <i class="bi bi-eye toggle-password" data-target="password"></i>
+                                    </div>
+                                    <small id="passwordError" class="error-msg"></small>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3 justify-content-center">
+                                <label for="confirm" class="col-sm-3 form-label-custom">Confirm</label>
+                                <div class="col-sm-6">
+                                    <div class="password-container">
+                                        <input type="password" class="form-control border-0 py-2 shadow-sm pe-5" id="confirm" name="confirm" placeholder="Confirm">
+                                        <i class="bi bi-eye toggle-password" data-target="confirm"></i>
+                                    </div>
+                                    <small id="confirmError" class="error-msg"></small>
+                                </div>
+                            </div>
+
+                            <div class="row mt-4 justify-content-center">
+                                <div class="col-sm-6 d-flex justify-content-end gap-3 px-0">
+                                    <a href="/admin/userManagement" class="btn btn-dark px-4 py-2 shadow-sm">Cancel</a>
+                                    <button type="submit" class="btn text-white px-4 py-2 shadow-sm" style="background-color: #EF6627;">Add user</button>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
                 </div>
             </div>
+        </div>
     </div>
 
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const form = document.getElementById('addUserForm');
 
-        <script>
-            const sidebar = document.querySelector('.sidebar');
-            const toggleBtn = document.getElementById('menuToggle');
-
-            toggleBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('show');
-            });
-
-            const statuses = document.querySelectorAll('.status');
-
-            statuses.forEach(status => {
-                status.addEventListener('click', () => {
-                    statuses.forEach(s => s.classList.remove('active'));
-                    status.classList.add('active');
+            // Eye Toggle
+            document.querySelectorAll('.toggle-password').forEach(icon => {
+                icon.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const input = document.getElementById(targetId);
+                    input.type = input.type === 'password' ? 'text' : 'password';
+                    this.classList.toggle('bi-eye');
+                    this.classList.toggle('bi-eye-slash');
                 });
             });
 
-        </script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-            crossorigin="anonymous"></script>
+            // Validation
+            form.addEventListener('submit', function(e) {
+                let isValid = true;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                
+                document.querySelectorAll('.error-msg').forEach(m => m.innerText = "");
+                document.querySelectorAll('.form-control').forEach(i => i.classList.remove('input-error'));
 
+                if (document.getElementById('username').value.trim() === "") {
+                    document.getElementById('nameError').innerText = "Name is required";
+                    isValid = false;
+                }
+                if (!emailRegex.test(document.getElementById('email').value.trim())) {
+                    document.getElementById('emailError').innerText = "Valid email required";
+                    isValid = false;
+                }
+                if (document.getElementById('password').value.length < 8) {
+                    document.getElementById('passwordError').innerText = "Minimum 8 characters";
+                    isValid = false;
+                }
+                if (document.getElementById('password').value !== document.getElementById('confirm').value) {
+                    document.getElementById('confirmError').innerText = "Passwords do not match";
+                    isValid = false;
+                }
+
+                if (!isValid) e.preventDefault();
+            });
+        });
+    </script>
 </body>
-
 </html>
