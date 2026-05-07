@@ -17,7 +17,6 @@
 </head>
 <body>
 
-  <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark shadow-sm">
     <div class="container">
       <a class="navbar-brand fw-bold" href="/"><i class="bi bi-apple me-2"></i> iZen</a>
@@ -38,7 +37,6 @@
 
   <div class="container my-5">
     <div class="row">
-        <!-- Add New Address Form -->
         <div class="col-lg-7">
             <div class="card p-4">
                 <h5 class="fw-bold mb-4">Add New Shipping Address</h5>
@@ -86,7 +84,6 @@
             </div>
         </div>
 
-        <!-- Saved Addresses List -->
         <div class="col-lg-5">
             <h5 class="fw-bold mb-3">Saved Addresses</h5>
             <% if(user.addresses && user.addresses.length > 0) { %>
@@ -143,12 +140,25 @@
                 body: JSON.stringify(data)
             });
 
-            if(response.ok) {
-                Swal.fire("Success", "Address added to your iZen profile!", "success")
-                .then(() => window.location.reload());
+            const result = await response.json();
+
+            if(response.ok && result.success) {
+                Swal.fire({
+                    title: "Success",
+                    text: "Address added to your iZen profile!",
+                    icon: "success",
+                    confirmButtonColor: "#000"
+                })
+                .then(() => {
+                    // Redirect to profile to see updated list
+                    window.location.href = "/profile";
+                });
+            } else {
+                Swal.fire("Error", result.message || "Failed to add address", "error");
             }
         } catch(err) {
             console.error("Add Address Error:", err);
+            Swal.fire("Error", "Internal server error", "error");
         }
     });
 
@@ -165,11 +175,25 @@
         if(result.isConfirmed) {
             try {
                 const response = await fetch(`/delete-address/${id}`, { method: "DELETE" });
-                if(response.ok) {
-                    window.location.reload();
+                const resData = await response.json();
+                
+                if(response.ok && resData.success) {
+                    await Swal.fire({
+                        title: "Deleted!",
+                        text: "Address removed successfully.",
+                        icon: "success",
+                        timer: 1000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Redirect to profile automatically so UI updates without manual refresh
+                        window.location.href = "/profile";
+                    });
+                } else {
+                    Swal.fire("Error", resData.message || "Delete failed", "error");
                 }
             } catch(err) {
                 console.error("Delete Error:", err);
+                Swal.fire("Error", "Something went wrong", "error");
             }
         }
     }

@@ -53,6 +53,7 @@ router.post('/change-password', userController.changePassword);
 // --- PROFILE & AVATAR ---
 router.get('/profile', isLogin, userController.loadProfile);
 router.post('/user/update-avatar', isLogin, upload.single('profileImage'), userController.updateAvatar);
+router.post('/remove-avatar', userController.removeAvatar);
 
 // --- EDIT PROFILE (Separate Page) ---
 router.get('/edit-profile', isLogin, userController.getEditProfile);

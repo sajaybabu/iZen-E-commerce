@@ -88,11 +88,10 @@
             max-width: 100%;
         }
 
-        /* Improved Hint Styling */
         .password-hint {
             font-size: 0.75rem;
             margin-top: 5px;
-            display: none; /* Hidden by default */
+            display: none;
             transition: color 0.3s ease;
         }
 
@@ -108,6 +107,18 @@
             cursor: pointer;
             color: #6e6e73;
             z-index: 10;
+        }
+
+        /* Custom Dropdown Styling */
+        .dropdown-menu-dark {
+            background-color: #1d1d1f;
+            border-radius: 12px;
+            padding: 8px;
+        }
+
+        .dropdown-item {
+            border-radius: 6px;
+            font-size: 0.85rem;
         }
     </style>
 </head>
@@ -153,11 +164,32 @@
                     <div class="col-lg-4">
                         <div class="card profile-card p-4 text-center sticky-top" style="top: 2rem; z-index: 10;">
                             <div class="position-relative d-inline-block mx-auto mb-4" id="avatarContainer">
-                                <div id="displayState">
+                                
+                                <div id="displayState" class="position-relative">
                                     <img src="<%= user.profileImage ? '/' + user.profileImage : '/images/user.png' %>" id="currentProfileImg" class="profile-img">
-                                    <label for="fileInput" class="position-absolute bottom-0 end-0 bg-dark text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="cursor: pointer; width: 40px; height: 40px; border: 3px solid #fff;">
-                                        <i class="bi bi-camera-fill"></i>
-                                    </label>
+                                    
+                                    <div class="dropdown position-absolute bottom-0 end-0">
+                                        <button class="btn bg-dark text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm p-0" 
+                                                type="button" data-bs-toggle="dropdown" aria-expanded="false" 
+                                                style="width: 38px; height: 38px; border: 3px solid #fff;">
+                                            <i class="bi bi-pencil-fill" style="font-size: 0.85rem;"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-dark shadow border-0">
+                                            <li>
+                                                <label class="dropdown-item py-2" for="fileInput" style="cursor: pointer;">
+                                                    <i class="bi bi-upload me-2"></i> Update Photo
+                                                </label>
+                                            </li>
+                                            <% if (user.profileImage) { %>
+                                            <li><hr class="dropdown-divider opacity-25"></li>
+                                            <li>
+                                                <button class="dropdown-item py-2 text-danger" onclick="removeProfilePic()">
+                                                    <i class="bi bi-trash3 me-2"></i> Remove Photo
+                                                </button>
+                                            </li>
+                                            <% } %>
+                                        </ul>
+                                    </div>
                                     <input type="file" id="fileInput" class="d-none" accept="image/*" onchange="prepareCrop(event)">
                                 </div>
 
@@ -317,14 +349,12 @@
         }
     }
 
-    // Dynamic Password Hint Logic
     const newPasswordInput = document.getElementById('newPassword');
     const passwordHint = document.getElementById('passwordHint');
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
     newPasswordInput.addEventListener('input', () => {
-        passwordHint.style.display = 'block'; // Show hint when typing
-        
+        passwordHint.style.display = 'block';
         if (strongPasswordRegex.test(newPasswordInput.value)) {
             passwordHint.classList.remove('text-danger', 'text-muted');
             passwordHint.classList.add('text-success');
@@ -336,7 +366,6 @@
         }
     });
 
-    // Referral Code Copy Logic
     function copyBtn() {
         const referral = document.getElementById("referral");
         referral.select();
@@ -346,7 +375,6 @@
         });
     }
 
-    // Address Management logic
     async function makeDefault(addressId) {
         try {
             const response = await fetch('/set-default-address', {
@@ -361,7 +389,6 @@
         }
     }
 
-    // Profile Image Crop logic (Keep your original code)
     function prepareCrop(event) {
         const file = event.target.files[0];
         if (file && file.type.startsWith("image/")) {
@@ -400,7 +427,26 @@
         }, 'image/jpeg');
     }
 
-    // Submit Logic
+    async function removeProfilePic() {
+        const result = await Swal.fire({
+            title: 'Remove photo?',
+            text: "Revert to default profile icon?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#000',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, remove'
+        });
+
+        if (result.isConfirmed) {
+            const response = await fetch('/remove-avatar', { method: 'POST' });
+            const data = await response.json();
+            if (data.success) {
+                window.location.reload();
+            }
+        }
+    }
+
     document.getElementById("passwordForm").addEventListener('submit', async (e) => {
         e.preventDefault();
         const currentPassword = document.getElementById("currentPassword").value;
@@ -433,6 +479,6 @@
             Swal.fire("Error", "Network error. Please try again.", "error");
         }
     });
-</script>
+    </script>
 </body>
 </html>

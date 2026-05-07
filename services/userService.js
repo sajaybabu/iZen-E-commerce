@@ -17,7 +17,7 @@ const updateUserEmail = async (userId, newEmail) => {
     return await User.findByIdAndUpdate(
         userId,
         { $set: { email: newEmail } },
-        { new: true }
+        { returnDocument: 'after' }
     );
 };
 
@@ -47,7 +47,7 @@ const updateUserDetails = async (userId, updateData) => {
         return await User.findByIdAndUpdate(
             userId,
             { $set: updateData },
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
     } catch (error) {
         throw new Error("Service Error: Unable to update user");
@@ -59,7 +59,7 @@ const updateProfileImage = async (userId, imagePath) => {
     return await User.findByIdAndUpdate(
         userId, 
         { profileImage: imagePath }, 
-        { new: true }
+        { returnDocument: 'after' }
     );
 };
 
@@ -68,7 +68,7 @@ const addAddress = async (userId, addressData) => {
     return await User.findByIdAndUpdate(
         userId,
         { $push: { addresses: addressData } },
-        { new: true }
+        { returnDocument: 'after' }
     );
 };
 
@@ -77,7 +77,7 @@ const removeAddress = async (userId, addressId) => {
     return await User.findByIdAndUpdate(
         userId,
         { $pull: { addresses: { _id: addressId } } },
-        { new: true }
+        { returnDocument: 'after' }
     );
 };
 

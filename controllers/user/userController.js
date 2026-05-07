@@ -325,13 +325,33 @@ const updateAvatar = async (req, res) => {
             res.json({ 
                 success: true, 
                 message: 'Profile picture updated!',
-                path: imageImage 
+                path: imagePath
             });
         });
 
     } catch (error) {
         console.error("Avatar Upload Error:", error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+const removeAvatar = async (req, res) => {
+    try {
+        const userId = req.session.user.id || req.session.user._id;
+
+        // Update database to remove the image path
+        await User.updateOne({ _id: userId }, { $set: { profileImage: null } });
+
+        // Update the session so the navbar reverts to the default icon
+        req.session.user.image = null;
+
+        req.session.save((err) => {
+            if (err) return res.status(500).json({ success: false });
+            res.json({ success: true, message: "Profile picture removed" });
+        });
+    } catch (error) {
+        console.error("Remove Avatar Error:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
 
@@ -351,21 +371,38 @@ const addAddress = async (req, res) => {
     try {
         const userId = req.session.user.id || req.session.user._id;
         const { fullname, addressType, address, city, pincode, phone } = req.body;
+        
+        // Ensure this is awaited so the DB write completes before we respond
         await userService.addAddress(userId, { fullname, addressType, address, city, pincode, phone });
-        res.redirect("/address");
+        
+        // Sending JSON allows the Frontend's SweetAlert to handle the redirect
+        res.json({ success: true, message: "Address added successfully" });
     } catch (error) {
-        res.status(500).send("Error adding address");
+        console.error("Add Address Error:", error);
+        res.status(500).json({ success: false, message: "Error adding address" });
     }
 };
+
 
 const getEditAddress = async (req, res) => {
     try {
         const addressId = req.params.id;
         const userId = req.session.user.id || req.session.user._id;
+        
         const user = await User.findById(userId);
-        const address = user.addresses.id(addressId); 
+        
+        // Use find to manually search the array if .id() fails
+        const address = user.addresses.find(addr => addr._id.toString() === addressId);
+
+        // SAFETY CHECK: If address is not found, don't try to render the page
+        if (!address) {
+            console.log("Address not found for ID:", addressId);
+            return res.redirect('/address'); 
+        }
+
         res.render('user/editaddress', { user, address });
     } catch (error) {
+        console.error("Error fetching address:", error);
         res.redirect('/address');
     }
 };
@@ -376,14 +413,19 @@ const postEditAddress = async (req, res) => {
         const userId = req.session.user.id || req.session.user._id;
         const { fullname, phone, address, city, pincode, addressType } = req.body;
         
-        await User.updateOne(
+        const result = await User.updateOne(
             { _id: userId, "addresses._id": addressId },
             { $set: { "addresses.$": { fullname, phone, address, city, pincode, addressType } } }
         );
         
-        res.redirect('/address');
+        if (result.modifiedCount > 0) {
+            res.json({ success: true, message: "Address updated successfully" });
+        } else {
+            res.status(400).json({ success: false, message: "No changes made or address not found" });
+        }
     } catch (error) {
-        res.status(500).send("Update Failed");
+        console.error("Update Address Error:", error);
+        res.status(500).json({ success: false, message: "Update Failed" });
     }
 };
 
@@ -485,6 +527,7 @@ module.exports = {
     handleLogin,
     loadHome,
     updateAvatar,
+    removeAvatar,
     loadAddressPage,
     addAddress,
     deleteAddress,
@@ -494,4 +537,5 @@ module.exports = {
     handleResetPassword,
     handleForgotPassword,
     changePassword
+
 };

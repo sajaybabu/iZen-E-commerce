@@ -114,59 +114,64 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        const form = document.getElementById("editAddressForm");
-        const addressId = "<%= address._id %>";
+    const form = document.getElementById("editAddressForm");
+    const addressId = "<%= address._id %>";
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-            // Basic Validation logic
-            const fullname = document.getElementById("fullname").value.trim();
-            const phone = document.getElementById("phone").value.trim();
-            const pincode = document.getElementById("pincode").value.trim();
-            const addressText = document.getElementById("address").value.trim();
-            const city = document.getElementById("city").value.trim();
-            const addressType = document.querySelector('input[name="addressType"]:checked').value;
+        // Basic Validation logic
+        const fullname = document.getElementById("fullname").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const pincode = document.getElementById("pincode").value.trim();
+        const addressText = document.getElementById("address").value.trim();
+        const city = document.getElementById("city").value.trim();
+        const addressType = document.querySelector('input[name="addressType"]:checked').value;
 
-            // Simple validation check
-            if (fullname.length < 3) {
-                return Swal.fire("Error", "Please enter a valid full name", "error");
-            }
-            if (!/^\d{10}$/.test(phone)) {
-                return Swal.fire("Error", "Please enter a valid 10-digit phone number", "error");
-            }
+        // Simple validation check
+        if (fullname.length < 3) {
+            return Swal.fire("Error", "Please enter a valid full name", "error");
+        }
+        if (!/^\d{10}$/.test(phone)) {
+            return Swal.fire("Error", "Please enter a valid 10-digit phone number", "error");
+        }
 
-            try {
-                const response = await fetch(`/edit-address/${addressId}`, {
-                    method: "POST", // Matching the controller route we discussed
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        fullname,
-                        phone,
-                        pincode,
-                        address: addressText,
-                        city,
-                        addressType
-                    })
+        try {
+            const response = await fetch(`/edit-address/${addressId}`, {
+                method: "POST", 
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fullname,
+                    phone,
+                    pincode,
+                    address: addressText,
+                    city,
+                    addressType
+                })
+            });
+
+            // Parse the JSON response from the controller
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                await Swal.fire({
+                    icon: "success",
+                    title: "Updated!",
+                    text: result.message || "Address details updated successfully.",
+                    timer: 1500,
+                    showConfirmButton: false
                 });
-
-                if (response.ok) {
-                    await Swal.fire({
-                        icon: "success",
-                        title: "Updated!",
-                        text: "Address details updated successfully.",
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                    window.location.href = "/address";
-                } else {
-                    Swal.fire("Error", "Failed to update address", "error");
-                }
-            } catch (err) {
-                console.error(err);
-                Swal.fire("Error", "Something went wrong", "error");
+                
+                // FIX: Redirect to profile so you see the changes automatically
+                window.location.href = "/profile";
+            } else {
+                Swal.fire("Error", result.message || "Failed to update address", "error");
             }
-        });
-    </script>
+        } catch (err) {
+            console.error(err);
+            Swal.fire("Error", "Something went wrong", "error");
+        }
+    });
+</script>
 </body>
 </html>
