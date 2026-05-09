@@ -23,17 +23,14 @@
 
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
             <div class="col-md-2 sidebar p-0">
                 <%- include("../partials/admin/sidebarLinks.ejs") %>
             </div>
 
-            <!-- Main Content -->
             <div class="col-md-10 p-4">
                 <div class="card shadow-sm">
                     <div class="card-header bg-white py-3">
                         <div class="d-flex justify-content-between align-items-center">
-                            <!-- SEARCH FORM WITH CLEAR LOGIC -->
                             <form action="/admin/searchUser" method="POST" class="w-50">
                                 <div class="input-group">
                                     <input type="text" name="username" class="form-control" placeholder="Search by name or email..." value="<%= search %>">
@@ -69,7 +66,9 @@
                                 <% if (users && users.length > 0) { %>
                                     <% users.forEach((user, i) => { %>
                                         <tr>
-                                            <td class="ps-3 fw-bold"><%= i + 1 %></td>
+                                            <td class="ps-3 fw-bold">
+                                                <%= ((currentPage - 1) * (locals.limit || 10)) + (i + 1) %>
+                                            </td>
                                             <td><%= user.username %></td>
                                             <td><%= user.email %></td>
                                             <td>
@@ -104,7 +103,6 @@
                         </table>
                     </div>
 
-                    <!-- PAGINATION -->
                     <div class="card-footer bg-white d-flex justify-content-center border-0 py-3">
                         <nav aria-label="Page navigation">
                             <ul class="pagination mb-0">
@@ -125,7 +123,6 @@
         </div>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         async function toggleUser(userId, action) {

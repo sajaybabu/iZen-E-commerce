@@ -179,8 +179,6 @@
   </div>
 
   <script>
-  // Prevents navigating back to Signup after reaching the OTP page
-  
     (function() {
         window.history.pushState(null, null, window.location.href);
         window.onpopstate = function () {
@@ -233,6 +231,27 @@
             otpInputs[index - 1].focus();
         }
       });
+    });
+
+    // NEW: OTP Paste logic integrated here
+    otpInputs[0].addEventListener('paste', (e) => {
+      e.preventDefault();
+      const pasteData = e.clipboardData.getData('text').trim();
+      
+      // Filter out non-digits and convert to array
+      const digits = pasteData.replace(/\D/g, '').split(''); 
+
+      otpInputs.forEach((input, index) => {
+        if (digits[index]) {
+          input.value = digits[index];
+        }
+      });
+
+      // Focus the last filled box or the final one
+      const lastIndex = Math.min(digits.length - 1, otpInputs.length - 1);
+      if (lastIndex >= 0) {
+        otpInputs[lastIndex].focus();
+      }
     });
 
     // Handle Form Submission

@@ -1,15 +1,13 @@
 const User = require('../../models/adminModel');
 const bcrypt = require('bcrypt');
 
-
-// AUTH FUNCTIONS 
-
+// --- AUTH FUNCTIONS ---
 
 const loadLogin = async (req, res) => {
     try {
         res.render('admin/login'); 
     } catch (error) {
-        console.error(error);
+        console.error("Admin Login Load Error:", error);
         res.status(500).send("Internal Server Error");
     }
 };
@@ -26,6 +24,7 @@ const loginVerify = async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid Email or Password" });
         }
     } catch (error) {
+        console.error("Admin Login Verify Error:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
@@ -33,19 +32,17 @@ const loginVerify = async (req, res) => {
 const logout = async (req, res) => {
     try {
         req.session.destroy((err) => {
-            if (err) console.log("Session destroy error:", err);
+            if (err) console.error("Admin Session destroy error:", err);
             res.clearCookie('connect.sid'); 
             res.redirect('/admin/login');
         });
     } catch (error) {
-        console.error(error);
+        console.error("Logout Error:", error);
         res.redirect('/admin/login');
     }
 };
 
-
-// USER MANAGEMENT 
-
+// --- USER MANAGEMENT ---
 
 const loadUsers = async (req, res) => {
     try {
@@ -59,24 +56,26 @@ const loadUsers = async (req, res) => {
             .limit(limit);
 
         const count = await User.countDocuments({ isAdmin: false });
+        const totalPages = Math.ceil(count / limit);
 
         res.render('admin/userManagement', {
             users: userData,
             currentPage: page,
+            limit: limit,
             nextPage: page + 1,
             prevPage: page - 1,
             prevDisable: page <= 1 ? "disabled" : "",
-            nextDisable: page >= Math.ceil(count / limit) ? "disabled" : "",
+            nextDisable: page >= totalPages ? "disabled" : "",
             search: ""
         });
     } catch (err) {
+        console.error("Load Users Error:", err);
         res.status(500).send("Error loading users");
     }
 };
 
 const addUserPage = async (req, res) => {
     try {
-        // Render the page with no message initially
         res.render('admin/addUser', { message: null }); 
     } catch (error) {
         res.redirect('/admin/userManagement');
@@ -87,15 +86,11 @@ const addUser = async (req, res) => {
     try {
         const { username, email, password, phone } = req.body;
         
-        //  Check if user already exists
         const existingUser = await User.findOne({ email: email });
-        
         if (existingUser) {
-            //  we render the EJS with a message variable
             return res.render('admin/addUser', { message: "User already exists with this email" });
         }
 
-        // 2. Hash Password and Save
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({
             username,
@@ -107,13 +102,10 @@ const addUser = async (req, res) => {
         });
 
         await newUser.save();
-        
-        // Success: Redirect back to the list
         res.redirect('/admin/userManagement');
 
     } catch (error) {
         console.error("Add User Error:", error);
-        // Render with a general error message if something fails in the DB
         res.render('admin/addUser', { message: "Failed to add user. Please try again." });
     }
 };
@@ -160,7 +152,7 @@ const blockUser = async (req, res) => {
             res.status(404).json({ success: false, message: "User not found" });
         }
     } catch (err) {
-        console.error(err);
+        console.error("Block User Error:", err);
         res.status(500).json({ success: false });
     }
 };
@@ -180,19 +172,28 @@ const unBlockUser = async (req, res) => {
             res.status(404).json({ success: false, message: "User not found" });
         }
     } catch (err) {
+        console.error("Unblock User Error:", err);
         res.status(500).json({ success: false });
     }
 };
 
-// PLACEHOLDERS FOR DASHBOARD 
-
+// --- DASHBOARD FUNCTIONS ---
 
 const loadDashboard = async (req, res) => {
-    res.render('admin/dashboard'); 
+    try {
+        res.render('admin/dashboard'); 
+    } catch (error) {
+        console.error("Dashboard Load Error:", error);
+        res.status(500).send("Internal Server Error");
+    }
 };
 
 const getFilterData = async (req, res) => {
-    res.json({ success: true });
+    try {
+        res.json({ success: true, message: "Filter data fetched" });
+    } catch (error) {
+        res.status(500).json({ success: false });
+    }
 };
 
 module.exports = {

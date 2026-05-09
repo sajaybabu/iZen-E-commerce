@@ -11,16 +11,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { background: #f8f9fa; font-family: "Titillium Web", sans-serif; }
+        body { background: #f8f9fa; font-family: "Titillium Web", sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
         .navbar { padding: 0.8rem 1rem; }
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .form-label { font-weight: 600; font-size: 0.9rem; color: #444; }
-        .btn-dark { border-radius: 8px; padding: 10px 20px; font-weight: 600; }
+        .btn-dark { border-radius: 8px; padding: 10px 20px; font-weight: 600; background-color: #000; }
+        .text-danger.small { font-size: 0.75rem; height: 18px; margin-top: 4px; display: block; }
+        .form-control.is-invalid { border-color: #dc3545; }
     </style>
 </head>
 
 <body>
-    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg bg-black shadow-sm">
         <div class="container">
             <a class="navbar-brand text-light fw-bold d-flex align-items-center" href="/">
@@ -49,39 +50,40 @@
             <div class="col-md-8 col-lg-6">
                 <div class="card p-4">
                     <div class="d-flex align-items-center mb-4">
-                        <a href="/address" class="text-dark me-3"><i class="bi bi-arrow-left fs-4"></i></a>
+                        <a href="/profile" class="text-dark me-3"><i class="bi bi-arrow-left fs-4"></i></a>
                         <h4 class="fw-bold mb-0">Edit Address</h4>
                     </div>
 
                     <form id="editAddressForm">
-                        <div class="row g-3">
+                        <div class="row g-2">
                             <div class="col-12">
                                 <label class="form-label">Full Name</label>
-                                <input type="text" id="fullname" class="form-control" value="<%= address.fullname %>" required>
-                                <p class="text-danger small" id="fullnameMsg"></p>
+                                <input type="text" id="fullname" class="form-control" value="<%= address.fullname %>" placeholder="Enter your full name">
+                                <p class="text-danger small" id="fullnameError"></p>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Phone Number</label>
-                                <input type="text" id="phone" class="form-control" value="<%= address.phone %>" required>
-                                <p class="text-danger small" id="phoneMsg"></p>
+                                <input type="text" id="phone" class="form-control" value="<%= address.phone %>" placeholder="10-digit mobile number">
+                                <p class="text-danger small" id="phoneError"></p>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">Pincode</label>
-                                <input type="text" id="pincode" class="form-control" value="<%= address.pincode %>" required>
-                                <p class="text-danger small" id="pincodeMsg"></p>
+                                <input type="text" id="pincode" class="form-control" value="<%= address.pincode %>" placeholder="6-digit pincode">
+                                <p class="text-danger small" id="pincodeError"></p>
                             </div>
 
                             <div class="col-12">
                                 <label class="form-label">Address (House No, Building, Street)</label>
-                                <textarea id="address" class="form-control" rows="3" required><%= address.address %></textarea>
-                                <p class="text-danger small" id="addressMsg"></p>
+                                <textarea id="address" class="form-control" rows="3" placeholder="Detailed address information"><%= address.address %></textarea>
+                                <p class="text-danger small" id="addressError"></p>
                             </div>
 
                             <div class="col-md-6">
                                 <label class="form-label">City / District</label>
-                                <input type="text" id="city" class="form-control" value="<%= address.city %>" required>
+                                <input type="text" id="city" class="form-control" value="<%= address.city %>" placeholder="Enter city">
+                                <p class="text-danger small" id="cityError"></p>
                             </div>
 
                             <div class="col-md-6">
@@ -98,7 +100,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-12 mt-4">
+                            <div class="col-12 mt-3">
                                 <button type="submit" class="btn btn-dark w-100 shadow-sm" id="submitBtn">Save Changes</button>
                             </div>
                         </div>
@@ -114,64 +116,100 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-    const form = document.getElementById("editAddressForm");
-    const addressId = "<%= address._id %>";
+        const form = document.getElementById("editAddressForm");
+        const addressId = "<%= address._id %>";
 
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        // Basic Validation logic
-        const fullname = document.getElementById("fullname").value.trim();
-        const phone = document.getElementById("phone").value.trim();
-        const pincode = document.getElementById("pincode").value.trim();
-        const addressText = document.getElementById("address").value.trim();
-        const city = document.getElementById("city").value.trim();
-        const addressType = document.querySelector('input[name="addressType"]:checked').value;
-
-        // Simple validation check
-        if (fullname.length < 3) {
-            return Swal.fire("Error", "Please enter a valid full name", "error");
-        }
-        if (!/^\d{10}$/.test(phone)) {
-            return Swal.fire("Error", "Please enter a valid 10-digit phone number", "error");
-        }
-
-        try {
-            const response = await fetch(`/edit-address/${addressId}`, {
-                method: "POST", 
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    fullname,
-                    phone,
-                    pincode,
-                    address: addressText,
-                    city,
-                    addressType
-                })
+        // Validation Helper: Clear error on input
+        const inputs = ['fullname', 'phone', 'pincode', 'address', 'city'];
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                document.getElementById(id + 'Error').innerText = "";
+                this.classList.remove('is-invalid');
             });
+        });
 
-            // Parse the JSON response from the controller
-            const result = await response.json();
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-            if (response.ok && result.success) {
-                await Swal.fire({
-                    icon: "success",
-                    title: "Updated!",
-                    text: result.message || "Address details updated successfully.",
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-                
-                // FIX: Redirect to profile so you see the changes automatically
-                window.location.href = "/profile";
-            } else {
-                Swal.fire("Error", result.message || "Failed to update address", "error");
+            // Values
+            const fullname = document.getElementById("fullname").value.trim();
+            const phone = document.getElementById("phone").value.trim();
+            const pincode = document.getElementById("pincode").value.trim();
+            const addressText = document.getElementById("address").value.trim();
+            const city = document.getElementById("city").value.trim();
+            const addressType = document.querySelector('input[name="addressType"]:checked').value;
+
+            let isValid = true;
+
+            // Fullname Validation
+            if (fullname === "") {
+                document.getElementById("fullnameError").innerText = "Name is required.";
+                isValid = false;
+            } else if (!/^[a-zA-Z\s]{3,20}$/.test(fullname)) {
+                document.getElementById("fullnameError").innerText = "Enter a valid name (3-20 letters).";
+                isValid = false;
             }
-        } catch (err) {
-            console.error(err);
-            Swal.fire("Error", "Something went wrong", "error");
-        }
-    });
-</script>
+
+            // Phone Validation
+            if (!/^[6-9]\d{9}$/.test(phone)) {
+                document.getElementById("phoneError").innerText = "Enter a valid 10-digit phone number.";
+                isValid = false;
+            }
+
+            // Pincode Validation
+            if (!/^\d{6}$/.test(pincode)) {
+                document.getElementById("pincodeError").innerText = "Enter a valid 6-digit pincode.";
+                isValid = false;
+            }
+
+            // Address Validation
+            if (addressText.length < 10) {
+                document.getElementById("addressError").innerText = "Please provide a detailed address (min 10 chars).";
+                isValid = false;
+            }
+
+            // City Validation
+            if (city === "") {
+                document.getElementById("cityError").innerText = "City is required.";
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
+            // Submit Data
+            try {
+                const response = await fetch(`/edit-address/${addressId}`, {
+                    method: "POST", 
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fullname,
+                        phone,
+                        pincode,
+                        address: addressText,
+                        city,
+                        addressType
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    await Swal.fire({
+                        icon: "success",
+                        title: "Updated!",
+                        text: "Address details updated successfully.",
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    window.location.href = "/profile";
+                } else {
+                    Swal.fire("Error", result.message || "Failed to update address", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire("Error", "Network error occurred. Try again.", "error");
+            }
+        });
+    </script>
 </body>
 </html>

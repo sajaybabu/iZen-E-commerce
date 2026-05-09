@@ -87,16 +87,18 @@
                     <div class="text-danger small mt-1" id="phoneError"></div>
                 </div>
 
-                <div class="col-md-12 mb-3">
-                    <label class="form-label fw-600">Email Address</label>
-                    <input type="email" name="email" id="email" class="form-control" value="<%= user.email %>"
-                        <%= user.googleId ? 'readonly' : '' %>
-                    >
-                    <% if (user.googleId) { %>
-                        <small class="text-muted">Email is managed by Google and cannot be changed.</small>
-                    <% } %>
-                    <div class="text-danger small mt-1" id="emailError"></div>
-                </div>
+               <div class="col-md-12 mb-3">
+    <label class="form-label fw-600">Email Address</label>
+    <% if (user.googleId) { %>
+        <p class="form-control-plaintext border p-2 bg-light rounded">
+            <%= user.email %> <span class="badge bg-secondary ms-2"><i class="bi bi-google"></i> Google Verified</span>
+        </p>
+        <input type="hidden" id="email" value="<%= user.email %>">
+    <% } else { %>
+        <input type="email" name="email" id="email" class="form-control" value="<%= user.email %>">
+        <div class="text-danger small mt-1" id="emailError"></div>
+    <% } %>
+</div>
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
                     <a href="/profile" class="btn btn-outline-secondary px-4">Cancel</a>
@@ -108,96 +110,108 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        document.getElementById("editProfileForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
+    document.getElementById("editProfileForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-            const username = document.getElementById("username").value.trim();
-            const phone = document.getElementById("phone").value.trim();
-            const email = document.getElementById("email").value.trim();
+        // Elements are now guaranteed to exist
+        const username = document.getElementById("username").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const email = document.getElementById("email").value.trim();
 
-            // Validation Logic
-            let isValid = true;
-            
-            // Matches userModel: 2-20 chars, letters, numbers, and spaces
-            if (!/^[A-Za-z0-9\s]{2,20}$/.test(username)) {
-                document.getElementById("nameError").innerText = "Name must be 2-20 characters (letters/numbers).";
+        let isValid = true;
+
+        // 1. Username Validation
+        if (!/^[A-Za-z0-9\s]{2,20}$/.test(username)) {
+            document.getElementById("nameError").innerText = "Name must be 2-20 characters (letters/numbers).";
+            isValid = false;
+        } else {
+            document.getElementById("nameError").innerText = "";
+        }
+
+        // 2. Phone Validation
+        if (!/^\d{10}$/.test(phone)) {
+            document.getElementById("phoneError").innerText = "Enter a valid 10-digit number.";
+            isValid = false;
+        } else {
+            document.getElementById("phoneError").innerText = "";
+        }
+
+        // 3. Email Validation (Only if error element exists - i.e., not a Google User)
+        const emailErrorEl = document.getElementById("emailError");
+        if (emailErrorEl) {
+            if (!/^\S+@\S+\.\S+$/.test(email)) {
+                emailErrorEl.innerText = "Please enter a valid email address.";
                 isValid = false;
             } else {
-                document.getElementById("nameError").innerText = "";
+                emailErrorEl.innerText = "";
             }
+        }
 
-            if (!/^\d{10}$/.test(phone)) {
-                document.getElementById("phoneError").innerText = "Enter a valid 10-digit number.";
-                isValid = false;
-            } else {
-                document.getElementById("phoneError").innerText = "";
-            }
+        if (!isValid) return;
 
-            if (!isValid) return;
+        try {
+            const response = await fetch('/edit-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, phone, email })
+            });
 
-            try {
-                const response = await fetch('/edit-profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, phone, email })
-                });
+            const data = await response.json();
 
-                const data = await response.json();
-
-                if (data.success) {
-                    if (data.requiresOTP) {
-                        // Handle Email Change OTP
-                        Swal.fire({
-                            title: 'Verify New Email',
-                            text: data.message,
-                            input: 'text',
-                            inputPlaceholder: 'Enter 4-digit OTP',
-                            showCancelButton: true,
-                            confirmButtonText: 'Verify',
-                            confirmButtonColor: '#000',
-                            preConfirm: (otp) => {
-                                if (!otp || otp.length !== 4) {
-                                    Swal.showValidationMessage('Please enter a valid 4-digit OTP');
-                                }
-                                return otp;
+            if (data.success) {
+                if (data.requiresOTP) {
+                    // Handle Email Change OTP
+                    Swal.fire({
+                        title: 'Verify New Email',
+                        text: data.message,
+                        input: 'text',
+                        inputPlaceholder: 'Enter 4-digit OTP',
+                        showCancelButton: true,
+                        confirmButtonText: 'Verify',
+                        confirmButtonColor: '#000',
+                        preConfirm: (otp) => {
+                            if (!otp || otp.length !== 4) {
+                                Swal.showValidationMessage('Please enter a valid 4-digit OTP');
                             }
-                        }).then(async (result) => {
-                            if (result.isConfirmed) {
-                                const otpRes = await fetch('/verify-email-otp', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ otp: result.value })
-                                });
-                                const otpData = await otpRes.json();
-                                
-                                if (otpData.success) {
-                                    Swal.fire('Updated!', 'Your profile and email have been updated.', 'success')
-                                        .then(() => window.location.href = '/profile');
-                                } else {
-                                    Swal.fire('Error', otpData.message, 'error');
-                                }
+                            return otp;
+                        }
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            const otpRes = await fetch('/verify-email-otp', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ otp: result.value })
+                            });
+                            const otpData = await otpRes.json();
+
+                            if (otpData.success) {
+                                Swal.fire('Updated!', 'Your profile and email have been updated.', 'success')
+                                    .then(() => window.location.href = '/profile');
+                            } else {
+                                Swal.fire('Error', otpData.message, 'error');
                             }
-                        });
-                    } else {
-                        // Standard Update Success
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Profile Updated',
-                            showConfirmButton: false,
-                            timer: 1500
-                        }).then(() => {
-                            window.location.href = '/profile';
-                        });
-                    }
+                        }
+                    });
                 } else {
-                    Swal.fire('Error', data.message || 'Update failed', 'error');
+                    // Standard Update Success
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Profile Updated',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        window.location.href = '/profile';
+                    });
                 }
-            } catch (error) {
-                console.error(error);
-                Swal.fire('Error', 'Something went wrong while connecting to the server.', 'error');
+            } else {
+                Swal.fire('Error', data.message || 'Update failed', 'error');
             }
-        });
-    </script>
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error', 'Something went wrong while connecting to the server.', 'error');
+        }
+    });
+</script>
 </body>
 
 </html>

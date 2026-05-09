@@ -285,7 +285,7 @@
                                 </div>
                             <% } %>
                         </div>
-
+                       <% if (!user.googleId) { %>
                         <div class="card profile-card p-4">
                             <h5 class="fw-bold mb-4">Security</h5>
                             <form id="passwordForm">
@@ -318,6 +318,7 @@
                                 </div>
                             </form>
                         </div>
+                       <% } %>
                     </div>
                 </div>
             </div>
