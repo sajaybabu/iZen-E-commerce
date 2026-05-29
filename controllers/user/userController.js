@@ -279,8 +279,8 @@ const loadHome = async (req, res) => {
             const dbUser = await User.findById(user.id || user._id);
             if (!dbUser || dbUser.isBlocked) {
                 req.session.destroy();
-                return res.redirect("/login");
-            }
+               return res.redirect("/login");
+           }
         }
         res.render("user/home", { user, newArrivals: [], inOffer: [], wishlist: null });
     } catch (err) {

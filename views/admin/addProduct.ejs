@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iZen | Add Product</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+    <style>
+        .no-spinners::-webkit-outer-spin-button,
+        .no-spinners::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .no-spinners {
+            -moz-appearance: textfield;
+        }
+        .test:hover {
+            background-color: rgb(238, 238, 238);
+        }
+        .add-user-btn {
+            background-color: #EF6627;
+        }
+        .active::after {
+            content: '';
+            display: block;
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: black;
+            bottom: -7px;
+        }
+        .actions {
+            color: #151414;
+        }
+        .image-label {
+            border: black dashed 2px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .sidebar {
+            transition: transform 0.3s ease;
+        }
+        .variant-card {
+            border: 1px solid #7a7a7a;
+            background-color: #ffffff;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .add-attribute-link {
+            color: #EF6627;
+            text-decoration: underline;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .confirm-btn {
+            background-color: #000000;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 20px;
+            font-weight: 500;
+        }
+        .confirm-btn:hover {
+            background-color: #222222;
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                left: 0;
+                width: 200px;
+                height: 100vh;
+                background-color: #000;
+                color: white;
+                z-index: 1050;
+                transform: translateX(-100%);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include("../partials/admin/navbar.ejs") %>
+        <div class="container px-0 mt-5">
+            <div class="row row-cols-1 justify-content-between mx-0">
+                <div class="col col-md-2 col-lg-2 border border-secondary rounded text-secondary sidebar align-self-start p-0">
+                    <%- include("../partials/admin/sidebarLinks.ejs") %>
+                </div>
+                <div class="card col col-md-9 px-0 mx-md-3 border-0 bg-transparent">
+                    <div class="card-body p-4" style="background-color: #ffffff;" id="card">
+                        <form id="productForm">
+                            <div class="border border-dark text-center py-2 mb-5">
+                                <h2 class="m-0 fs-4 fw-bold">Add Product</h2>
+                            </div>
+                            <div class="container px-0" id="form-container">
+                                <div class="row my-4">
+                                    <div class="col col-md-6">
+                                        <label class="d-block mb-2 fw-semibold" for="name">Name of the product</label>
+                                        <input class="form-control border-secondary rounded-0 p-2" name="name" type="text" id="name" placeholder="Type here">
+                                        <p class="text-danger" id="productNameMsg" style="font-size: small;"></p>
+                                    </div>
+                                    <div class="col col-md-6">
+                                        <label class="d-block mb-2 fw-semibold" for="discount">Discount (%)</label>
+                                        <input class="form-control border-secondary rounded-0 p-2" name="discount" type="number" id="discount" min="0" max="100" placeholder="Type here">
+                                        <p class="text-danger" id="discountMsg" style="font-size: small;"></p>
+                                    </div>
+                                </div>
+                                <div class="row my-4">
+                                    <div class="col-12">
+                                        <label class="d-block mb-2 fw-semibold" for="description">Description</label>
+                                        <textarea class="form-control border-secondary rounded-0 p-2" name="description" id="description" rows="4" placeholder="Type here"></textarea>
+                                        <p class="text-danger" id="descriptionMsg" style="font-size: small;"></p>
+                                    </div>
+                                </div>
+                                <div class="row my-4">
+                                    <div class="col col-md-6 d-none"> 
+                                        <label class="d-block mb-2 fw-semibold" for="brand">Brand name</label>
+                                        <select class="form-select border-secondary rounded-0 p-2" id="brand" name="brand">
+                                            <option value="Apple" selected>Apple</option>
+                                        </select>
+                                    </div>
+                                    <div class="col col-md-6">
+                                        <label class="d-block mb-2 fw-semibold" for="category">Category</label>
+                                        <select class="form-select border-secondary rounded-0 p-2" id="category" name="category">
+                                            <option value="" hidden selected>Select Category</option>
+                                            <% categories.forEach(function(cat) { %>
+                                                <option value="<%= cat.name %>"><%= cat.name %></option>
+                                            <% }); %>
+                                        </select>
+                                        <p class="text-danger" id="categoryMsg" style="font-size: small;"></p>
+                                    </div>
+                                </div>
+                                <div id="variants-wrapper">
+                                    <p class="text-secondary mb-2 fs-5">Add variants</p>
+                                    <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-1">
+                                        <div class="row">
+                                            <div class="col-md-7">
+                                                <div class="row g-2">
+                                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute type</span></div>
+                                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                                                </div>
+                                                <div id="attributes-container-1">
+                                                    <div class="row g-2 my-1 attribute-row">
+                                                        <div class="col-6">
+                                                            <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="e.g., Color">
+                                                        </div>
+                                                        <div class="col-6">
+                                                            <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="e.g., Space Grey">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span class="add-attribute-link mt-2 d-inline-block" onclick="addNewAttributeRow(1)">+ add another attribute</span>
+                                                <p class="text-danger small targetAttrMsg" id="attrError-1"></p>
+                                            </div>
+                                            <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
+                                                <div class="mb-3">
+                                                    <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
+                                                    <div class="input-group" style="width: 160px;">
+                                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(1, -1)">◀</button>
+                                                        <input type="number" id="quantity-1" class="form-control text-center rounded-0 border-secondary no-spinners" value="1" min="0">
+                                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(1, 1)">▶</button>
+                                                    </div>
+                                                    <p class="text-danger dynamic-msg" id="quantityMsg-1" style="font-size: small;"></p>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
+                                                    <input type="text" id="price-1" class="form-control rounded-0 border-secondary" placeholder="Type price here">
+                                                    <p class="text-danger dynamic-msg" id="priceMsg-1" style="font-size: small;"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-4 pt-3 border-top">
+                                            <p class="fw-semibold small text-muted mb-2">Variant Images (Minimum 3 Required)</p>
+                                            <div class="row row-cols-2 row-cols-md-4 g-3 mb-3" id="imageRow-1"></div>
+                                            <div class="d-flex justify-content-start" id="image-input-1">
+                                                <label for="image-1" class="image-label border-secondary bg-light p-3 text-center small fw-semibold">
+                                                    <i class="bi bi-image fs-5 d-block text-danger mb-1"></i> Add Image
+                                                </label>
+                                                <input id="image-1" type="file" accept="image/*" multiple onchange="newFile(1)" class="d-none">
+                                            </div>
+                                            <p class="text-danger small mt-1" id="imageMsg-1"></p>
+                                        </div>
+                                        <div class="text-end mt-3 pt-2">
+                                            <button type="button" class="confirm-btn" onclick="saveVariantState(1)">confirm</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-5">
+                                    <div class="dropdown">
+                                        <button class="btn btn-white border border-dark rounded-0 dropdown-toggle px-3 py-2" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Add more variants
+                                        </button>
+                                        <ul class="dropdown-menu rounded-0 border-dark" aria-labelledby="dropdownMenuButton">
+                                            <li><a class="dropdown-menu-item dropdown-item" href="#" onclick="appendVariantCard(event)">+ Add New Variant Card</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="row justify-content-center mt-5" id="publishBtn">
+                                    <div class="col-md-4">
+                                        <button type="button" class="btn w-100 text-white fw-bold py-2 fs-5" id="publish" style="background-color: #EF6627; border-radius: 4px;">Publish Product</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script>
+    const sidebar = document.querySelector('.sidebar');
+    const toggleBtn = document.getElementById('menuToggle');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => { sidebar.classList.toggle('show'); });
+    }
+
+    let variantCount = 1;
+    let count = 0;
+    let imageCount = {};
+    let cropCount = {};
+    let croppedBlobs = [];
+    let confirmedVariants = {}; // Tracks confirmed status per variant card ID
+
+    function stepQuantity(cardNumber, change) {
+        const inputField = document.getElementById(`quantity-${cardNumber}`);
+        if (inputField) {
+            let currentValue = parseInt(inputField.value, 10) || 0;
+            let newValue = currentValue + change;
+            if (newValue >= 0) {
+                inputField.value = newValue;
+            }
+        }
+    }
+
+    // Input Validation Helpers
+    function validateInputBox(inputEl, msgEl, condition, errorMsg) {
+        if (!inputEl || condition) {
+            msgEl.textContent = errorMsg;
+            return false;
+        }
+        msgEl.textContent = "";
+        return true;
+    }
+
+    function addNewAttributeRow(variantId) {
+        const container = document.getElementById(`attributes-container-${variantId}`);
+        if (!container) return;
+        const htmlRow = `
+        <div class="row g-2 my-1 attribute-row">
+            <div class="col-6">
+                <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="Type here">
+            </div>
+            <div class="col-6">
+                <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="Type here">
+            </div>
+        </div>`;
+        container.insertAdjacentHTML('beforeend', htmlRow);
+        confirmedVariants[variantId] = false; // reset confirmation on structural changes
+    }
+
+    function appendVariantCard(event) {
+        if (event) event.preventDefault();
+        variantCount++;
+        const wrapper = document.getElementById("variants-wrapper");
+        const variantCardHTML = `
+        <div class="variant-card position-relative shadow-sm my-4 p-3 border bg-white" id="variant-session-${variantCount}">
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-2 small" onclick="removeVariantCard(${variantCount})"></button>
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="row g-2">
+                        <div class="col-6"><span class="small fw-semibold text-muted">Attribute type</span></div>
+                        <div class="col-6"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                    </div>
+                    <div id="attributes-container-${variantCount}">
+                        <div class="row g-2 my-1 attribute-row">
+                            <div class="col-6">
+                                <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="Type here">
+                            </div>
+                            <div class="col-6">
+                                <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="Type here">
+                            </div>
+                        </div>
+                    </div>
+                    <span class="add-attribute-link mt-2 d-inline-block" onclick="addNewAttributeRow(${variantCount})">+ add another attribute</span>
+                    <p class="text-danger small targetAttrMsg mt-1" id="attrError-${variantCount}"></p>
+                </div>
+                <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
+                    <div class="mb-3">
+                        <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
+                        <div class="input-group" style="width: 140px;">
+                            <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${variantCount}, -1)">◀</button>
+                            <input type="number" id="quantity-${variantCount}" class="form-control text-center rounded-0 border-secondary" value="1" min="0">
+                            <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${variantCount}, 1)">▶</button>
+                        </div>
+                        <p class="text-danger dynamic-msg" id="quantityMsg-${variantCount}" style="font-size: small;"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
+                        <input type="text" id="price-${variantCount}" class="form-control rounded-0 border-secondary" placeholder="Type here">
+                        <p class="text-danger dynamic-msg" id="priceMsg-${variantCount}" style="font-size: small;"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-top">
+                <p class="fw-semibold small text-muted mb-2">Variant Images (Minimum 3 Required)</p>
+                <div class="row row-cols-2 row-cols-md-4 g-3 mb-3" id="imageRow-${variantCount}"></div>
+                <div class="d-flex justify-content-start" id="image-input-${variantCount}">
+                    <label style="cursor: pointer;" for="image-${variantCount}" class="image-label border border-secondary border-dashed bg-light p-3 text-center small fw-semibold">
+                         Add Image
+                    </label>
+                    <input id="image-${variantCount}" type="file" accept="image/*" multiple onchange="newFile(${variantCount})" class="d-none">
+                </div>
+                <p class="text-danger small mt-1" id="imageMsg-${variantCount}"></p>
+            </div>
+            <div class="text-end mt-4">
+                <button type="button" class="confirm-btn" onclick="saveVariantState(${variantCount})">confirm</button>
+            </div>
+        </div>`;
+        wrapper.insertAdjacentHTML('beforeend', variantCardHTML);
+        confirmedVariants[variantCount] = false;
+    }
+
+    function removeVariantCard(id) {
+        const el = document.getElementById(`variant-session-${id}`);
+        if (el) el.remove();
+        delete imageCount[id];
+        delete cropCount[id];
+        delete confirmedVariants[id];
+        croppedBlobs = croppedBlobs.filter(blob => blob.variant !== id);
+    }
+
+    function saveVariantState(variantNumber) {
+        let isCardValid = true;
+
+        // 1. Validate Input Box Configurations for Attributes
+        const types = document.querySelectorAll(`#attributes-container-${variantNumber} .attr-type`);
+        const vals = document.querySelectorAll(`#attributes-container-${variantNumber} .attr-val`);
+        const errField = document.getElementById(`attrError-${variantNumber}`);
+        
+        types.forEach((el, idx) => {
+            if (!el.value.trim() || !vals[idx].value.trim()) {
+                isCardValid = false;
+            }
+        });
+
+        if (!isCardValid) {
+            errField.textContent = "All attribute type and value input boxes must be filled out completely.";
+        } else {
+            errField.textContent = "";
+        }
+
+        // 2. Validate Quantity Box Input
+        const qtyEl = document.getElementById(`quantity-${variantNumber}`);
+        const qtyMsgEl = document.getElementById(`quantityMsg-${variantNumber}`);
+        if (!validateInputBox(qtyEl, qtyMsgEl, (!qtyEl.value.trim() || parseInt(qtyEl.value, 10) < 0), "Quantity must be a positive number.")) {
+            isCardValid = false;
+        }
+
+        // 3. Validate Price Box Input
+        const priceEl = document.getElementById(`price-${variantNumber}`);
+        const priceMsgEl = document.getElementById(`priceMsg-${variantNumber}`);
+        if (!validateInputBox(priceEl, priceMsgEl, (!priceEl.value.trim() || !/^\d+(\.\d{1,2})?$/.test(priceEl.value) || parseFloat(priceEl.value) <= 0), "Enter a valid positive numeric price.")) {
+            isCardValid = false;
+        }
+
+        // 4. Validate Minimum Upload Crops Count
+        const imgMsgEl = document.getElementById(`imageMsg-${variantNumber}`);
+        if (!cropCount[variantNumber] || cropCount[variantNumber] < 3) {
+            imgMsgEl.textContent = "Minimum 3 image crops are required to confirm this variant card.";
+            isCardValid = false;
+        } else {
+            imgMsgEl.textContent = "";
+        }
+
+        if (!isCardValid) {
+            confirmedVariants[variantNumber] = false;
+            return false;
+        }
+
+        confirmedVariants[variantNumber] = true;
+        Swal.fire({ icon: 'success', title: 'Card Validated', text: 'Variant input fields passed checks!', timer: 1200, showConfirmButton: false });
+        return true;
+    }
+
+    function newFile(id) {
+        const imageInput = document.getElementById("image-" + id);
+        const imageRow = document.getElementById("imageRow-" + id);
+        const files = imageInput.files;
+        if (!files.length) return;
+        
+        confirmedVariants[id] = false; // Reset verification on new file additions
+        let allowedLength = (files.length > 5) ? 5 : files.length;
+        
+        for (let i = 0; i < allowedLength; i++) {
+            if (!files[i].type.startsWith("image/")) {
+                Swal.fire({ icon: "error", title: "Invalid File", text: "Only image formats are accepted" });
+                continue;
+            }
+            if (imageCount[id] === undefined) imageCount[id] = 0;
+            if (imageCount[id] >= 5) {
+                Swal.fire({ icon: "warning", title: "Limit Exceeded", text: "Maximum 5 images allowed per variant." });
+                break;
+            }
+            imageCount[id]++;
+            if (imageCount[id] >= 5) {
+                document.getElementById(`image-input-${id}`).classList.add("d-none");
+            }
+            count++;
+            
+            const targetContainerId = `imgContainer${count}`;
+            imageRow.insertAdjacentHTML('beforeend', `
+            <div class="position-relative pb-5 col-6 col-md-3 text-center border py-2 bg-white" id="${targetContainerId}">
+                <div class="d-flex gap-1 position-absolute bottom-0 start-50 translate-middle-x mb-1" style="z-index:100; width: 90%;">
+                    <button type="button" class="btn btn-dark btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="cropperBtn${count}" onclick="cropImg(this, ${id})">Crop</button>
+                    <button type="button" class="btn btn-danger btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="deleteBtn${count}" onclick="deleteImg(this, ${id})">Del</button>
+                </div> 
+            </div>`);
+            
+            const imgContainer = document.getElementById(targetContainerId);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'img-fluid imageContainer';
+                img.style.maxHeight = '150px';
+                img.onload = function () {
+                    imgContainer.prepend(img);
+                    img.cropperInstance = new Cropper(img, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        autoCropArea: 1
+                    });
+                };
+            };
+            reader.readAsDataURL(files[i]);
+        }
+        imageInput.value = '';
+    }
+
+    async function cropImg(element, variantNumber) {
+        const container = element.parentElement.parentElement;
+        const img = container.querySelector("img");   
+        if (!img || !img.cropperInstance) return;
+        
+        confirmedVariants[variantNumber] = false;
+        const cropper = img.cropperInstance;
+        const croppedCanvas = cropper.getCroppedCanvas();
+        img.src = croppedCanvas.toDataURL('image/jpeg', 0.9);
+        img.classList.remove("cropper-hidden");
+        
+        const cropperContainer = container.querySelector(".cropper-container");
+        if (cropperContainer) cropperContainer.classList.add("d-none");
+        
+        const croppedBlob = await new Promise(resolve => croppedCanvas.toBlob(resolve, "image/jpeg", 0.9));
+        croppedBlob.variant = variantNumber;
+        croppedBlobs.push(croppedBlob);
+        
+        if (cropCount[variantNumber] === undefined) cropCount[variantNumber] = 1;
+        else cropCount[variantNumber]++;
+        
+        cropper.destroy();
+        delete img.cropperInstance;
+        element.disabled = true;
+    }
+
+    function deleteImg(element, variantNumber) {
+        confirmedVariants[variantNumber] = false;
+        const container = element.parentElement.parentElement;
+        const img = container.querySelector("img");        
+        if (img && img.cropperInstance) {
+            img.cropperInstance.destroy();
+        }
+        container.remove();
+        if (imageCount[variantNumber] > 0) imageCount[variantNumber]--;
+        if (cropCount[variantNumber] > 0) cropCount[variantNumber]--;
+        if (imageCount[variantNumber] < 5) {
+            document.getElementById(`image-input-${variantNumber}`).classList.remove("d-none");
+        }
+    }
+
+    // Form Submission & Verification Execution
+    document.getElementById("publish").addEventListener('click', async (event) => {
+        event.preventDefault();
+        
+        const name = document.getElementById("name");
+        const discount = document.getElementById("discount");
+        const description = document.getElementById("description");
+        const category = document.getElementById("category");
+        
+        const productNameMsg = document.getElementById("productNameMsg");
+        const discountMsg = document.getElementById("discountMsg");
+        const descriptionMsg = document.getElementById("descriptionMsg");
+        const categoryMsg = document.getElementById("categoryMsg");
+
+        const nameRegex = /^(?!\s*$)(?!\d+$)(?=(?:[^A-Za-z]*[A-Za-z]){3})[A-Za-z0-9][A-Za-z0-9 \-\._+]*$/;
+        const descriptionRegex = /^(?=\D*\S)(?=(?:[^A-Za-z]*[A-Za-z]){2}).+$/;
+
+        let isPrimaryFormValid = true;
+
+        // Base input validations
+        if (!validateInputBox(name, productNameMsg, (!name.value.trim() || !nameRegex.test(name.value)), "Field required. Minimum 3 characters containing letters.")) {
+            isPrimaryFormValid = false;
+        }
+        if (!validateInputBox(discount, discountMsg, (discount.value.trim() === "" || isNaN(discount.value) || parseFloat(discount.value) < 0 || parseFloat(discount.value) > 100), "Discount must be between 0 and 100.")) {
+            isPrimaryFormValid = false;
+        }
+        if (!validateInputBox(description, descriptionMsg, (!description.value.trim() || !descriptionRegex.test(description.value)), "Provide a valid description with minimum 2 letters.")) {
+            isPrimaryFormValid = false;
+        }
+        if (!validateInputBox(category, categoryMsg, (category.value === ""), "Please select an active product category from the dropdown menu.")) {
+            isPrimaryFormValid = false;
+        }
+
+        if (!isPrimaryFormValid) {
+            document.getElementById("productForm").scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+
+        const activeCards = document.querySelectorAll('.variant-card');
+        if (activeCards.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Missing Variants', text: 'Please configure at least one product variant card block before publishing.' });
+            return;
+        }
+
+        // Loop through all cards and force calculation check
+        let areAllCardsValid = true;
+        let finalVariantsArray = [];
+
+        for (let i = 0; i < activeCards.length; i++) {
+            const card = activeCards[i];
+            const cardId = parseInt(card.id.split('-')[2], 10);
+            
+            // Re-run save checking validation loops
+            const processingResult = saveVariantState(cardId);
+            if (!processingResult) {
+                areAllCardsValid = false;
+                card.scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+
+            // Extract variant fields for clean backend transport serialization
+            const quantityVal = parseInt(document.getElementById(`quantity-${cardId}`).value, 10);
+            const priceVal = parseFloat(document.getElementById(`price-${cardId}`).value);
+            
+            const attributesMap = {};
+            const subTypes = card.querySelectorAll('.attr-type');
+            const subVals = card.querySelectorAll('.attr-val');
+            subTypes.forEach((typeInput, idx) => {
+                attributesMap[typeInput.value.trim()] = subVals[idx].value.trim();
+            });
+
+            finalVariantsArray.push({
+                attributes: attributesMap,
+                quantity: quantityVal,
+                price: priceVal
+            });
+        }
+
+        if (!areAllCardsValid) return;
+
+        // Build FormData payload container matching controller structural design keys
+        const dataPayload = new FormData();
+        dataPayload.append('name', name.value.trim());
+        dataPayload.append('discount', discount.value.trim());
+        dataPayload.append('description', description.value.trim());
+        dataPayload.append('category', category.value);
+        dataPayload.append('brand', 'Apple');
+        
+        // Critical Harmonization fix variable name strings matching controller loops
+        dataPayload.append('variantsDataJSON', JSON.stringify(finalVariantsArray));
+
+        // Append corresponding cropped variant images tracked by dynamic index loops
+        finalVariantsArray.forEach((variantObj, variantIndex) => {
+            const cardElementId = parseInt(activeCards[variantIndex].id.split('-')[2], 10);
+            const targetBlobs = croppedBlobs.filter(b => b.variant === cardElementId);
+            
+            targetBlobs.forEach((blobFile) => {
+                dataPayload.append(`variantImages_${variantIndex}`, blobFile, `variant-${variantIndex}-image.jpeg`);
+            });
+        });
+
+        try {
+            Swal.fire({ title: 'Publishing Product...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            
+            const res = await fetch('/admin/products/add', {
+                method: "POST",
+                body: dataPayload
+            });
+            
+            const responseData = await res.json().catch(() => ({}));
+            
+            if (res.ok && responseData.success) {
+                Swal.fire({ title: "Success", text: "Product entries added successfully!", icon: "success", timer: 1500 })
+                    .then(() => window.location.href = "/admin/products");
+            } else {
+                Swal.fire({ title: "Error", text: responseData.message || "Failed to finalize structural product compilation.", icon: "error" });
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire({ title: "Transmission Error", text: "An unexpected connection breakdown occurred during data sync.", icon: "error" });
+        }
+    });
+</script>
+</body>
+</html>

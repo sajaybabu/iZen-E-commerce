@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iZen Admin - Edit Product</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        .variant-card { 
+            background-color: #fdfdfd; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+        }
+        .no-spinners::-webkit-outer-spin-button, 
+        .no-spinners::-webkit-inner-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        .no-spinners { 
+            -moz-appearance: textfield; 
+        }
+        .image-preview { 
+            width: 80px; 
+            height: 80px; 
+            object-fit: contain; 
+            border: 1px solid #ddd; 
+            padding: 4px; 
+            background: #fff; 
+        }
+        .image-label {
+            cursor: pointer;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        .image-label:hover {
+            background-color: #f1f5f9 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <%- include("../partials/admin/navbar.ejs") %>
+
+    <div class="container my-5" style="max-width: 900px;">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <a href="/admin/products" class="btn btn-outline-dark btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+            <h1 class="h3 mb-0">Modify Apple Device</h1>
+        </div>
+
+        <form id="editProductForm" action="/admin/updateProduct/<%= product._id %>" method="POST" enctype="multipart/form-data">
+            
+            <div class="card p-4 shadow-sm mb-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">Device Name</label>
+                    <input type="text" name="name" class="form-control" value="<%= product.name %>" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-muted">Description</label>
+                    <textarea name="description" class="form-control" rows="4" required><%= product.description %></textarea>
+                </div>
+
+                <div class="row row-cols-1 row-cols-md-2 g-3">
+                    <div>
+                        <label class="form-label fw-bold small text-muted">Category</label>
+                        <select name="category" class="form-select" required>
+                            <option value="iPhone" <%= product.category === 'iPhone' ? 'selected' : '' %>>iPhone</option>
+                            <option value="iPad" <%= product.category === 'iPad' ? 'selected' : '' %>>iPad</option>
+                            <option value="MacBook" <%= product.category === 'MacBook' ? 'selected' : '' %>>MacBook</option>
+                            <option value="Watch" <%= product.category === 'Watch' ? 'selected' : '' %>>Apple Watch</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold small text-muted">Discount (%)</label>
+                        <input type="number" name="discount" class="form-control" value="<%= product.discount || 0 %>" min="0" max="99">
+                    </div>
+                </div>
+            </div>
+
+            <div id="variants-wrapper">
+                <p class="text-secondary mb-3 fs-5">Product Variants</p>
+
+                <% product.variants.forEach((variant, index) => { 
+                    let cardNumber = index + 1;
+                %>
+                    <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-<%= cardNumber %>">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute type</span></div>
+                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                                </div>
+
+                                <div id="attributes-container-<%= cardNumber %>">
+                                    <% Object.entries(variant.attributes).forEach(([type, val]) => { %>
+                                        <div class="row g-2 my-1 attribute-row">
+                                            <div class="col-6">
+                                                <input type="text" name="attributeType_<%= cardNumber %>" class="form-control rounded-0 border-secondary attr-type" value="<%= type %>" required>
+                                            </div>
+                                            <div class="col-6">
+                                                <input type="text" name="attributeValue_<%= cardNumber %>" class="form-control rounded-0 border-secondary attr-val" value="<%= val %>" required>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                                <p class="text-danger small targetAttrMsg" id="attrError-<%= cardNumber %>"></p>
+                            </div>
+
+                            <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
+                                <div class="mb-3">
+                                    <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
+                                    <div class="input-group" style="width: 160px;"> 
+                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= cardNumber %>, -1)">◀</button>
+                                        <input type="number" name="quantity_<%= cardNumber %>" id="quantity-<%= cardNumber %>" class="form-control text-center rounded-0 border-secondary no-spinners" value="<%= variant.quantity %>" min="0">
+                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= cardNumber %>, 1)">▶</button>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
+                                    <input type="text" name="price_<%= cardNumber %>" id="price-<%= cardNumber %>" class="form-control rounded-0 border-secondary" value="<%= variant.price %>" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-top">
+                            <p class="fw-semibold small text-muted mb-2">Current Saved Images</p>
+                            <div class="d-flex flex-wrap gap-2 mb-3" id="imageRow-<%= cardNumber %>">
+                                
+                                <% if (variant.images && variant.images.length > 0) { %>
+                                    <% variant.images.forEach(img => { %>
+                                        <img src="<%= img %>" class="image-preview rounded" alt="variant item asset">
+                                    <% }) %>
+                                <% } else if (product.images && product.images.length > 0) { %>
+                                    <% product.images.forEach(img => { %>
+                                        <img src="<%= img %>" class="image-preview rounded shadow-sm" alt="global product asset">
+                                    <% }) %>
+                                <% } else { %>
+                                    <span class="text-muted small"><i class="bi bi-exclamation-circle text-warning"></i> No images found in database records.</span>
+                                <% } %>
+
+                            </div>
+
+                            <div class="d-flex justify-content-start" id="image-input-<%= cardNumber %>">
+                                <label for="image-<%= cardNumber %>" class="image-label bg-light p-3 text-center small fw-semibold">
+                                    <i class="bi bi-upload fs-5 d-block text-primary mb-1"></i> Upload New Images
+                                </label>
+                                <input id="image-<%= cardNumber %>" type="file" name="variantImages" accept="image/*" multiple class="d-none">
+                            </div>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+
+            <div class="d-flex justify-content-end gap-3 mt-4">
+                <a href="/admin/products" class="btn btn-secondary px-4 py-2 rounded-0">Cancel</a>
+                <button type="submit" class="btn btn-success px-5 py-2 rounded-0">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+<script>
+    // Quantities Stepper Functionality
+    function stepQuantity(cardNumber, change) {
+        const inputField = document.getElementById(`quantity-${cardNumber}`);
+        if (inputField) {
+            let currentValue = parseInt(inputField.value, 10) || 0;
+            let newValue = currentValue + change;
+            if (newValue >= 0) {
+                inputField.value = newValue;
+            }
+        }
+    }
+
+    // Intercept Master Submit Event Payload
+    document.getElementById('editProductForm').addEventListener('submit', async function(e) {
+        e.preventDefault(); 
+
+        const formData = new FormData();
+        
+        formData.append('name', this.name.value);
+        formData.append('description', this.description.value);
+        formData.append('category', this.category.value);
+        formData.append('discount', this.discount.value);
+
+        const variantCards = document.querySelectorAll('.variant-card');
+        const variantsData = [];
+
+        variantCards.forEach((card, index) => {
+            const cardNumber = index + 1;
+
+            const quantity = document.getElementById(`quantity-${cardNumber}`).value;
+            const price = document.getElementById(`price-${cardNumber}`).value;
+
+            const attrRows = card.querySelectorAll('.attribute-row');
+            const attributes = {};
+            
+            attrRows.forEach(row => {
+                const typeInput = row.querySelector('.attr-type');
+                const valInput = row.querySelector('.attr-val');
+                if (typeInput && valInput && typeInput.value.trim()) {
+                    attributes[typeInput.value.trim()] = valInput.value.trim();
+                }
+            });
+
+            variantsData.push({
+                attributes: attributes,
+                quantity: parseInt(quantity, 10) || 0,
+                price: parseFloat(price) || 0
+            });
+
+            const fileInput = document.getElementById(`image-${cardNumber}`);
+            if (fileInput && fileInput.files.length > 0) {
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append(`variantImages_${index}`, fileInput.files[i]);
+                }
+            }
+        });
+
+        formData.append('variantsDataJSON', JSON.stringify(variantsData));
+
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                // Beautiful SweetAlert2 Modal confirmation popup
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Product Updated',
+                    text: 'The product modifications have been successfully saved!',
+                    confirmButtonColor: '#198754', 
+                    confirmButtonText: 'Great!'
+                });
+                
+                // Redirects right back to product management list view panel
+                window.location.href = '/admin/products';
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Update Failed',
+                    text: 'Something went wrong saving updates. Please review inputs.',
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        } catch (error) {
+            console.error("Transmission Error:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Network Error',
+                text: 'Connection error while trying to process updates.',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    });
+</script>
+</body>
+</html>
