@@ -141,16 +141,20 @@
                                         <div class="row">
                                             <div class="col-md-7">
                                                 <div class="row g-2">
-                                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute type</span></div>
-                                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                                                    <div class="col-5"><span class="small fw-semibold text-muted">Attribute type</span></div>
+                                                    <div class="col-5"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                                                    <div class="col-2"></div>
                                                 </div>
                                                 <div id="attributes-container-1">
-                                                    <div class="row g-2 my-1 attribute-row">
-                                                        <div class="col-6">
+                                                    <div class="row g-2 my-1 attribute-row align-items-center">
+                                                        <div class="col-5">
                                                             <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="e.g., Color">
                                                         </div>
-                                                        <div class="col-6">
+                                                        <div class="col-5">
                                                             <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="e.g., Space Grey">
+                                                        </div>
+                                                        <div class="col-2 text-center">
+                                                            <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removeAttributeRow(this, 1)"><i class="bi bi-trash3"></i></button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -227,7 +231,7 @@
     let imageCount = {};
     let cropCount = {};
     let croppedBlobs = [];
-    let confirmedVariants = {}; // Tracks confirmed status per variant card ID
+    let confirmedVariants = {}; 
 
     function stepQuantity(cardNumber, change) {
         const inputField = document.getElementById(`quantity-${cardNumber}`);
@@ -240,7 +244,6 @@
         }
     }
 
-    // Input Validation Helpers
     function validateInputBox(inputEl, msgEl, condition, errorMsg) {
         if (!inputEl || condition) {
             msgEl.textContent = errorMsg;
@@ -254,16 +257,30 @@
         const container = document.getElementById(`attributes-container-${variantId}`);
         if (!container) return;
         const htmlRow = `
-        <div class="row g-2 my-1 attribute-row">
-            <div class="col-6">
+        <div class="row g-2 my-1 attribute-row align-items-center">
+            <div class="col-5">
                 <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="Type here">
             </div>
-            <div class="col-6">
+            <div class="col-5">
                 <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="Type here">
+            </div>
+            <div class="col-2 text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removeAttributeRow(this, ${variantId})"><i class="bi bi-trash3"></i></button>
             </div>
         </div>`;
         container.insertAdjacentHTML('beforeend', htmlRow);
-        confirmedVariants[variantId] = false; // reset confirmation on structural changes
+        confirmedVariants[variantId] = false; 
+    }
+
+    function removeAttributeRow(button, variantId) {
+        const row = button.closest('.attribute-row');
+        const container = document.getElementById(`attributes-container-${variantId}`);
+        if (container && container.querySelectorAll('.attribute-row').length > 1) {
+            row.remove();
+            confirmedVariants[variantId] = false;
+        } else {
+            Swal.fire({ icon: 'warning', title: 'Action Denied', text: 'At least one variant attribute row configuration must remain active.', timer: 2000, showConfirmButton: false });
+        }
     }
 
     function appendVariantCard(event) {
@@ -271,21 +288,25 @@
         variantCount++;
         const wrapper = document.getElementById("variants-wrapper");
         const variantCardHTML = `
-        <div class="variant-card position-relative shadow-sm my-4 p-3 border bg-white" id="variant-session-${variantCount}">
+        <div class="variant-card position-relative shadow-sm my-4 p-4 border bg-white" id="variant-session-${variantCount}">
             <button type="button" class="btn-close position-absolute top-0 end-0 m-2 small" onclick="removeVariantCard(${variantCount})"></button>
             <div class="row">
                 <div class="col-md-7">
                     <div class="row g-2">
-                        <div class="col-6"><span class="small fw-semibold text-muted">Attribute type</span></div>
-                        <div class="col-6"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                        <div class="col-5"><span class="small fw-semibold text-muted">Attribute type</span></div>
+                        <div class="col-5"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                        <div class="col-2"></div>
                     </div>
                     <div id="attributes-container-${variantCount}">
-                        <div class="row g-2 my-1 attribute-row">
-                            <div class="col-6">
+                        <div class="row g-2 my-1 attribute-row align-items-center">
+                            <div class="col-5">
                                 <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="Type here">
                             </div>
-                            <div class="col-6">
+                            <div class="col-5">
                                 <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="Type here">
+                            </div>
+                            <div class="col-2 text-center">
+                                <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removeAttributeRow(this, ${variantCount})"><i class="bi bi-trash3"></i></button>
                             </div>
                         </div>
                     </div>
@@ -295,16 +316,16 @@
                 <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
                     <div class="mb-3">
                         <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
-                        <div class="input-group" style="width: 140px;">
+                        <div class="input-group" style="width: 160px;">
                             <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${variantCount}, -1)">◀</button>
-                            <input type="number" id="quantity-${variantCount}" class="form-control text-center rounded-0 border-secondary" value="1" min="0">
+                            <input type="number" id="quantity-${variantCount}" class="form-control text-center rounded-0 border-secondary no-spinners" value="1" min="0">
                             <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${variantCount}, 1)">▶</button>
                         </div>
                         <p class="text-danger dynamic-msg" id="quantityMsg-${variantCount}" style="font-size: small;"></p>
                     </div>
                     <div class="mb-3">
                         <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
-                        <input type="text" id="price-${variantCount}" class="form-control rounded-0 border-secondary" placeholder="Type here">
+                        <input type="text" id="price-${variantCount}" class="form-control rounded-0 border-secondary" placeholder="Type price here">
                         <p class="text-danger dynamic-msg" id="priceMsg-${variantCount}" style="font-size: small;"></p>
                     </div>
                 </div>
@@ -313,14 +334,14 @@
                 <p class="fw-semibold small text-muted mb-2">Variant Images (Minimum 3 Required)</p>
                 <div class="row row-cols-2 row-cols-md-4 g-3 mb-3" id="imageRow-${variantCount}"></div>
                 <div class="d-flex justify-content-start" id="image-input-${variantCount}">
-                    <label style="cursor: pointer;" for="image-${variantCount}" class="image-label border border-secondary border-dashed bg-light p-3 text-center small fw-semibold">
-                         Add Image
+                    <label for="image-${variantCount}" class="image-label border-secondary bg-light p-3 text-center small fw-semibold">
+                        <i class="bi bi-image fs-5 d-block text-danger mb-1"></i> Add Image
                     </label>
                     <input id="image-${variantCount}" type="file" accept="image/*" multiple onchange="newFile(${variantCount})" class="d-none">
                 </div>
                 <p class="text-danger small mt-1" id="imageMsg-${variantCount}"></p>
             </div>
-            <div class="text-end mt-4">
+            <div class="text-end mt-3 pt-2">
                 <button type="button" class="confirm-btn" onclick="saveVariantState(${variantCount})">confirm</button>
             </div>
         </div>`;
@@ -340,7 +361,6 @@
     function saveVariantState(variantNumber) {
         let isCardValid = true;
 
-        // 1. Validate Input Box Configurations for Attributes
         const types = document.querySelectorAll(`#attributes-container-${variantNumber} .attr-type`);
         const vals = document.querySelectorAll(`#attributes-container-${variantNumber} .attr-val`);
         const errField = document.getElementById(`attrError-${variantNumber}`);
@@ -357,21 +377,18 @@
             errField.textContent = "";
         }
 
-        // 2. Validate Quantity Box Input
         const qtyEl = document.getElementById(`quantity-${variantNumber}`);
         const qtyMsgEl = document.getElementById(`quantityMsg-${variantNumber}`);
         if (!validateInputBox(qtyEl, qtyMsgEl, (!qtyEl.value.trim() || parseInt(qtyEl.value, 10) < 0), "Quantity must be a positive number.")) {
             isCardValid = false;
         }
 
-        // 3. Validate Price Box Input
         const priceEl = document.getElementById(`price-${variantNumber}`);
         const priceMsgEl = document.getElementById(`priceMsg-${variantNumber}`);
         if (!validateInputBox(priceEl, priceMsgEl, (!priceEl.value.trim() || !/^\d+(\.\d{1,2})?$/.test(priceEl.value) || parseFloat(priceEl.value) <= 0), "Enter a valid positive numeric price.")) {
             isCardValid = false;
         }
 
-        // 4. Validate Minimum Upload Crops Count
         const imgMsgEl = document.getElementById(`imageMsg-${variantNumber}`);
         if (!cropCount[variantNumber] || cropCount[variantNumber] < 3) {
             imgMsgEl.textContent = "Minimum 3 image crops are required to confirm this variant card.";
@@ -396,7 +413,7 @@
         const files = imageInput.files;
         if (!files.length) return;
         
-        confirmedVariants[id] = false; // Reset verification on new file additions
+        confirmedVariants[id] = false; 
         let allowedLength = (files.length > 5) ? 5 : files.length;
         
         for (let i = 0; i < allowedLength; i++) {
@@ -416,11 +433,12 @@
             count++;
             
             const targetContainerId = `imgContainer${count}`;
+            const internalCount = count;
             imageRow.insertAdjacentHTML('beforeend', `
-            <div class="position-relative pb-5 col-6 col-md-3 text-center border py-2 bg-white" id="${targetContainerId}">
+            <div class="position-relative pb-5 col-6 col-md-3 text-center border py-2 bg-white image-track-node" id="${targetContainerId}" data-index="${internalCount}">
                 <div class="d-flex gap-1 position-absolute bottom-0 start-50 translate-middle-x mb-1" style="z-index:100; width: 90%;">
-                    <button type="button" class="btn btn-dark btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="cropperBtn${count}" onclick="cropImg(this, ${id})">Crop</button>
-                    <button type="button" class="btn btn-danger btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="deleteBtn${count}" onclick="deleteImg(this, ${id})">Del</button>
+                    <button type="button" class="btn btn-dark btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="cropperBtn${internalCount}" onclick="cropImg(this, ${id}, ${internalCount})">Crop</button>
+                    <button type="button" class="btn btn-danger btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="deleteBtn${internalCount}" onclick="deleteImg(this, ${id}, ${internalCount})">Del</button>
                 </div> 
             </div>`);
             
@@ -445,7 +463,7 @@
         imageInput.value = '';
     }
 
-    async function cropImg(element, variantNumber) {
+    async function cropImg(element, variantNumber, targetCountIndex) {
         const container = element.parentElement.parentElement;
         const img = container.querySelector("img");   
         if (!img || !img.cropperInstance) return;
@@ -461,6 +479,10 @@
         
         const croppedBlob = await new Promise(resolve => croppedCanvas.toBlob(resolve, "image/jpeg", 0.9));
         croppedBlob.variant = variantNumber;
+        croppedBlob.imgIndex = targetCountIndex;
+        
+        // Evict any existing stale crop calculation for this slot to clear payload bloating
+        croppedBlobs = croppedBlobs.filter(b => !(b.variant === variantNumber && b.imgIndex === targetCountIndex));
         croppedBlobs.push(croppedBlob);
         
         if (cropCount[variantNumber] === undefined) cropCount[variantNumber] = 1;
@@ -471,7 +493,7 @@
         element.disabled = true;
     }
 
-    function deleteImg(element, variantNumber) {
+    function deleteImg(element, variantNumber, targetCountIndex) {
         confirmedVariants[variantNumber] = false;
         const container = element.parentElement.parentElement;
         const img = container.querySelector("img");        
@@ -479,6 +501,10 @@
             img.cropperInstance.destroy();
         }
         container.remove();
+        
+        // Thoroughly clear file lists matching tracking indices
+        croppedBlobs = croppedBlobs.filter(b => !(b.variant === variantNumber && b.imgIndex === targetCountIndex));
+        
         if (imageCount[variantNumber] > 0) imageCount[variantNumber]--;
         if (cropCount[variantNumber] > 0) cropCount[variantNumber]--;
         if (imageCount[variantNumber] < 5) {
@@ -486,7 +512,6 @@
         }
     }
 
-    // Form Submission & Verification Execution
     document.getElementById("publish").addEventListener('click', async (event) => {
         event.preventDefault();
         
@@ -505,7 +530,6 @@
 
         let isPrimaryFormValid = true;
 
-        // Base input validations
         if (!validateInputBox(name, productNameMsg, (!name.value.trim() || !nameRegex.test(name.value)), "Field required. Minimum 3 characters containing letters.")) {
             isPrimaryFormValid = false;
         }
@@ -530,7 +554,6 @@
             return;
         }
 
-        // Loop through all cards and force calculation check
         let areAllCardsValid = true;
         let finalVariantsArray = [];
 
@@ -538,7 +561,6 @@
             const card = activeCards[i];
             const cardId = parseInt(card.id.split('-')[2], 10);
             
-            // Re-run save checking validation loops
             const processingResult = saveVariantState(cardId);
             if (!processingResult) {
                 areAllCardsValid = false;
@@ -546,7 +568,6 @@
                 return;
             }
 
-            // Extract variant fields for clean backend transport serialization
             const quantityVal = parseInt(document.getElementById(`quantity-${cardId}`).value, 10);
             const priceVal = parseFloat(document.getElementById(`price-${cardId}`).value);
             
@@ -558,6 +579,7 @@
             });
 
             finalVariantsArray.push({
+                cardDomId: cardId, // temporary reference for matching tracking blobs
                 attributes: attributesMap,
                 quantity: quantityVal,
                 price: priceVal
@@ -566,7 +588,6 @@
 
         if (!areAllCardsValid) return;
 
-        // Build FormData payload container matching controller structural design keys
         const dataPayload = new FormData();
         dataPayload.append('name', name.value.trim());
         dataPayload.append('discount', discount.value.trim());
@@ -574,14 +595,11 @@
         dataPayload.append('category', category.value);
         dataPayload.append('brand', 'Apple');
         
-        // Critical Harmonization fix variable name strings matching controller loops
         dataPayload.append('variantsDataJSON', JSON.stringify(finalVariantsArray));
 
-        // Append corresponding cropped variant images tracked by dynamic index loops
+        // Append the correct blobs matching the valid cardDomId
         finalVariantsArray.forEach((variantObj, variantIndex) => {
-            const cardElementId = parseInt(activeCards[variantIndex].id.split('-')[2], 10);
-            const targetBlobs = croppedBlobs.filter(b => b.variant === cardElementId);
-            
+            const targetBlobs = croppedBlobs.filter(b => b.variant === variantObj.cardDomId);
             targetBlobs.forEach((blobFile) => {
                 dataPayload.append(`variantImages_${variantIndex}`, blobFile, `variant-${variantIndex}-image.jpeg`);
             });

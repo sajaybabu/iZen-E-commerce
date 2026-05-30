@@ -8,7 +8,7 @@ const loadUsers = async (req, res) => {
  const skip = (page - 1) * limit;
 
  const userData = await User.find({ isAdmin: false })
-.sort({ createdAt: -1 })
+.sort({ isCreated:-1 })
  .skip(skip)
  .limit(limit);
 

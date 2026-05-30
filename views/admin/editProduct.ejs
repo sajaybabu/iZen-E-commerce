@@ -9,6 +9,9 @@
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
     <style>
         .variant-card { 
@@ -24,13 +27,41 @@
         .no-spinners { 
             -moz-appearance: textfield; 
         }
+        .img-wrapper-node {
+            position: relative;
+            width: 90px;
+            height: 90px;
+        }
         .image-preview { 
-            width: 80px; 
-            height: 80px; 
+            width: 100%; 
+            height: 100%; 
             object-fit: contain; 
             border: 1px solid #ddd; 
             padding: 4px; 
             background: #fff; 
+        }
+        .delete-overlay-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background-color: #dc3545;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 5;
+        }
+        .delete-overlay-btn:hover {
+            transform: scale(1.15);
+            background-color: #bd2130;
         }
         .image-label {
             cursor: pointer;
@@ -40,6 +71,15 @@
         }
         .image-label:hover {
             background-color: #f1f5f9 !important;
+        }
+        .cropper-container-modal {
+            max-height: 400px;
+            overflow: hidden;
+            background-color: #f8f9fa;
+        }
+        .cropper-container-modal img {
+            max-width: 100%;
+            display: block;
         }
     </style>
 </head>
@@ -58,12 +98,12 @@
             <div class="card p-4 shadow-sm mb-4">
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted">Device Name</label>
-                    <input type="text" name="name" class="form-control" value="<%= product.name %>" required>
+                    <input type="text" name="name" id="productNameInput" class="form-control" value="<%= product.name %>" required>
                 </div>
                 
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted">Description</label>
-                    <textarea name="description" class="form-control" rows="4" required><%= product.description %></textarea>
+                    <textarea name="description" id="productDescInput" class="form-control" rows="4" required><%= product.description %></textarea>
                 </div>
 
                 <div class="row row-cols-1 row-cols-md-2 g-3">
@@ -78,7 +118,7 @@
                     </div>
                     <div>
                         <label class="form-label fw-bold small text-muted">Discount (%)</label>
-                        <input type="number" name="discount" class="form-control" value="<%= product.discount || 0 %>" min="0" max="99">
+                        <input type="number" name="discount" id="productDiscountInput" class="form-control" value="<%= product.discount || 0 %>" min="0" max="99">
                     </div>
                 </div>
             </div>
@@ -89,27 +129,38 @@
                 <% product.variants.forEach((variant, index) => { 
                     let cardNumber = index + 1;
                 %>
-                    <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-<%= cardNumber %>">
+                    <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-<%= cardNumber %>" data-variant-id="<%= variant._id %>">
                         <div class="row">
                             <div class="col-md-7">
                                 <div class="row g-2 mb-2">
-                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute type</span></div>
-                                    <div class="col-6"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                                    <div class="col-5"><span class="small fw-semibold text-muted">Attribute type</span></div>
+                                    <div class="col-5"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                                    <div class="col-2"></div>
                                 </div>
 
                                 <div id="attributes-container-<%= cardNumber %>">
                                     <% Object.entries(variant.attributes).forEach(([type, val]) => { %>
-                                        <div class="row g-2 my-1 attribute-row">
-                                            <div class="col-6">
-                                                <input type="text" name="attributeType_<%= cardNumber %>" class="form-control rounded-0 border-secondary attr-type" value="<%= type %>" required>
+                                        <div class="row g-2 my-1 attribute-row align-items-center">
+                                            <div class="col-5">
+                                                <input type="text" class="form-control rounded-0 border-secondary attr-type" value="<%= type %>" required>
                                             </div>
-                                            <div class="col-6">
-                                                <input type="text" name="attributeValue_<%= cardNumber %>" class="form-control rounded-0 border-secondary attr-val" value="<%= val %>" required>
+                                            <div class="col-5">
+                                                <input type="text" class="form-control rounded-0 border-secondary attr-val" value="<%= val %>" required>
+                                            </div>
+                                            <div class="col-2 text-center">
+                                                <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeAttributeRow(this, <%= cardNumber %>)">
+                                                    <i class="bi bi-trash-fill"></i>
+                                                </button>
                                             </div>
                                         </div>
                                     <% }) %>
                                 </div>
-                                <p class="text-danger small targetAttrMsg" id="attrError-<%= cardNumber %>"></p>
+                                
+                                <div class="mt-2">
+                                    <button type="button" class="btn btn-sm btn-dark rounded-0 px-3" onclick="addAttributeRow(<%= cardNumber %>)">
+                                        <i class="bi bi-plus-circle me-1"></i> Add Custom Attribute
+                                    </button>
+                                </div>
                             </div>
 
                             <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
@@ -117,41 +168,42 @@
                                     <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
                                     <div class="input-group" style="width: 160px;"> 
                                         <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= cardNumber %>, -1)">◀</button>
-                                        <input type="number" name="quantity_<%= cardNumber %>" id="quantity-<%= cardNumber %>" class="form-control text-center rounded-0 border-secondary no-spinners" value="<%= variant.quantity %>" min="0">
+                                        <input type="number" id="quantity-<%= cardNumber %>" class="form-control text-center rounded-0 border-secondary no-spinners target-qty-val" value="<%= variant.quantity %>" min="0" required>
                                         <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= cardNumber %>, 1)">▶</button>
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
-                                    <input type="text" name="price_<%= cardNumber %>" id="price-<%= cardNumber %>" class="form-control rounded-0 border-secondary" value="<%= variant.price %>" required>
+                                    <input type="number" id="price-<%= cardNumber %>" class="form-control rounded-0 border-secondary target-price-val" value="<%= variant.price %>" min="1" step="any" required>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mt-4 pt-3 border-top">
-                            <p class="fw-semibold small text-muted mb-2">Current Saved Images</p>
-                            <div class="d-flex flex-wrap gap-2 mb-3" id="imageRow-<%= cardNumber %>">
+                            <p class="fw-semibold small text-muted mb-2">Saved Images & New Uploads</p>
+                            <div class="d-flex flex-wrap gap-3 mb-3 image-row-container" id="imageRow-<%= cardNumber %>">
                                 
                                 <% if (variant.images && variant.images.length > 0) { %>
-                                    <% variant.images.forEach(img => { %>
-                                        <img src="<%= img %>" class="image-preview rounded" alt="variant item asset">
-                                    <% }) %>
-                                <% } else if (product.images && product.images.length > 0) { %>
-                                    <% product.images.forEach(img => { %>
-                                        <img src="<%= img %>" class="image-preview rounded shadow-sm" alt="global product asset">
+                                    <% variant.images.forEach((img, imgIdx) => { %>
+                                        <div class="img-wrapper-node saved-image-instance" id="saved-img-<%= cardNumber %>-<%= imgIdx %>" data-img-path="<%= img %>">
+                                            <img src="<%= img %>" class="image-preview rounded shadow-sm" alt="variant hardware view">
+                                            <button type="button" class="delete-overlay-btn" onclick="markImageForRemoval('<%= img %>', 'saved-img-<%= cardNumber %>-<%= imgIdx %>', '<%= cardNumber %>')">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
                                     <% }) %>
                                 <% } else { %>
-                                    <span class="text-muted small"><i class="bi bi-exclamation-circle text-warning"></i> No images found in database records.</span>
+                                    <span class="text-muted small no-assets-flag"><i class="bi bi-exclamation-circle text-warning"></i> At least 3 images are mandatory.</span>
                                 <% } %>
 
                             </div>
 
-                            <div class="d-flex justify-content-start" id="image-input-<%= cardNumber %>">
+                            <div class="d-flex justify-content-start">
                                 <label for="image-<%= cardNumber %>" class="image-label bg-light p-3 text-center small fw-semibold">
                                     <i class="bi bi-upload fs-5 d-block text-primary mb-1"></i> Upload New Images
                                 </label>
-                                <input id="image-<%= cardNumber %>" type="file" name="variantImages" accept="image/*" multiple class="d-none">
+                                <input id="image-<%= cardNumber %>" type="file" accept="image/*" multiple class="d-none" onchange="initiateCroppingProcess(this, <%= cardNumber %>, <%= index %>)">
                             </div>
                         </div>
                     </div>
@@ -165,98 +217,339 @@
         </form>
     </div>
 
+    <div class="modal fade" id="cropModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-md">
+            <div class="modal-content rounded-1">
+                <div class="modal-header py-2 bg-light">
+                    <h6 class="modal-title fw-bold mb-0"><i class="bi bi-crop text-primary me-2"></i>Crop Image</h6>
+                </div>
+                <div class="modal-body p-2">
+                    <div class="cropper-container-modal border">
+                        <img id="imageToCrop" src="" alt="Source viewport">
+                    </div>
+                </div>
+                <div class="modal-footer py-1 d-flex justify-content-between bg-light">
+                    <span class="text-muted small" id="croppingProgressText">Image 1 of 1</span>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-secondary rounded-0 px-2 me-1" onclick="abortCroppingCycle()">Cancel Upload</button>
+                        <button type="button" class="btn btn-sm btn-dark rounded-0 px-3" onclick="commitCroppedCanvas()">Crop & Accept</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    // Quantities Stepper Functionality
+    let removedImages = [];
+    let dynamicCroppedFilesMap = {}; 
+    
+    let activeFilesQueue = [];
+    let activeQueueIndex = 0;
+    let targetCardNumberRef = null;
+    let targetVariantIndexRef = null;
+    let cropperInstance = null;
+    let cropModalBootstrap = null;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        cropModalBootstrap = new bootstrap.Modal(document.getElementById('cropModal'));
+    });
+
+    function addAttributeRow(cardNumber) {
+        const targetContainer = document.getElementById(`attributes-container-${cardNumber}`);
+        const markup = `
+            <div class="row g-2 my-1 attribute-row align-items-center">
+                <div class="col-5">
+                    <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="e.g., Storage" required>
+                </div>
+                <div class="col-5">
+                    <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="e.g., 256GB" required>
+                </div>
+                <div class="col-2 text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeAttributeRow(this, ${cardNumber})">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        targetContainer.insertAdjacentHTML('beforeend', markup);
+    }
+
+    function removeAttributeRow(buttonRef, cardNumber) {
+        const container = document.getElementById(`attributes-container-${cardNumber}`);
+        const currentRowsCount = container.querySelectorAll('.attribute-row').length;
+
+        if (currentRowsCount <= 1) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Action Restrained',
+                text: 'Every product variant requires at least one core attribute. You cannot remove the last row.',
+                confirmButtonColor: '#000'
+            });
+            return;
+        }
+        buttonRef.closest('.attribute-row').remove();
+    }
+
     function stepQuantity(cardNumber, change) {
         const inputField = document.getElementById(`quantity-${cardNumber}`);
         if (inputField) {
             let currentValue = parseInt(inputField.value, 10) || 0;
             let newValue = currentValue + change;
-            if (newValue >= 0) {
-                inputField.value = newValue;
-            }
+            if (newValue >= 0) inputField.value = newValue;
         }
     }
 
-    // Intercept Master Submit Event Payload
+    function markImageForRemoval(imagePath, elementId, cardNumber) {
+        const container = document.getElementById(`imageRow-${cardNumber}`);
+        
+        const savedCount = container.querySelectorAll('.saved-image-instance').length;
+        const stagedCount = container.querySelectorAll('.staged-cropped-instance').length;
+        const balanceAssetsTotal = savedCount + stagedCount;
+
+        if (balanceAssetsTotal <= 3) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Minimum Limit Reached',
+                text: 'A minimum of 3 display images are required per item. Upload new replacement files first before removing this one.',
+                confirmButtonColor: '#000'
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Remove Image Asset?',
+            text: "This image will be removed from records once modifications are saved.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Remove'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                removedImages.push(imagePath);
+                document.getElementById(elementId).remove();
+            }
+        });
+    }
+
+    function initiateCroppingProcess(inputRef, cardNumber, variantIndex) {
+        if (!inputRef.files || inputRef.files.length === 0) return;
+        
+        activeFilesQueue = Array.from(inputRef.files);
+        activeQueueIndex = 0;
+        targetCardNumberRef = cardNumber;
+        targetVariantIndexRef = variantIndex;
+
+        if (!dynamicCroppedFilesMap[variantIndex]) {
+            dynamicCroppedFilesMap[variantIndex] = [];
+        }
+
+        launchCropperModalInstance();
+        inputRef.value = ""; 
+    }
+
+    function launchCropperModalInstance() {
+        if (activeQueueIndex >= activeFilesQueue.length) {
+            cropModalBootstrap.hide();
+            return;
+        }
+
+        document.getElementById('croppingProgressText').innerText = `Image ${activeQueueIndex + 1} of ${activeFilesQueue.length}`;
+        const file = activeFilesQueue[activeQueueIndex];
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const imageDOMElement = document.getElementById('imageToCrop');
+            imageDOMElement.src = e.target.result;
+            cropModalBootstrap.show();
+
+            if (cropperInstance) cropperInstance.destroy();
+
+            cropperInstance = new Cropper(imageDOMElement, {
+                aspectRatio: 1,
+                viewMode: 1,
+                background: false,
+                autoCropArea: 0.9
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function commitCroppedCanvas() {
+        if (!cropperInstance) return;
+
+        cropperInstance.getCroppedCanvas({ width: 800, height: 800 }).toBlob((blob) => {
+            const originalFile = activeFilesQueue[activeQueueIndex];
+            const croppedFile = new File([blob], `cropped_${Date.now()}_${originalFile.name}`, { type: 'image/jpeg' });
+
+            dynamicCroppedFilesMap[targetVariantIndexRef].push(croppedFile);
+
+            const rowWrapper = document.getElementById(`imageRow-${targetCardNumberRef}`);
+            const alternativeFlag = rowWrapper.querySelector('.no-assets-flag');
+            if (alternativeFlag) alternativeFlag.remove();
+
+            const randomId = Math.random().toString(36).substring(2, 9);
+            const arrayIndexPosition = dynamicCroppedFilesMap[targetVariantIndexRef].length - 1;
+
+            const livePreviewHtml = `
+                <div class="img-wrapper-node staged-cropped-instance" id="staged-preview-${randomId}">
+                    <img src="${URL.createObjectURL(croppedFile)}" class="image-preview rounded shadow-sm border border-primary" alt="preview">
+                    <button type="button" class="delete-overlay-btn" onclick="removePendingCroppedAsset('${randomId}', ${targetVariantIndexRef}, ${arrayIndexPosition})">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+            `;
+            rowWrapper.insertAdjacentHTML('beforeend', livePreviewHtml);
+
+            activeQueueIndex++;
+            if (activeQueueIndex < activeFilesQueue.length) {
+                launchCropperModalInstance();
+            } else {
+                cropModalBootstrap.hide();
+                if (cropperInstance) cropperInstance.destroy();
+            }
+        }, 'image/jpeg', 0.9);
+    }
+
+    function removePendingCroppedAsset(previewId, variantIdx, storageIdx) {
+        document.getElementById(`staged-preview-${previewId}`).remove();
+        if (dynamicCroppedFilesMap[variantIdx]) {
+            dynamicCroppedFilesMap[variantIdx][storageIdx] = null; 
+        }
+    }
+
+    function abortCroppingCycle() {
+        cropModalBootstrap.hide();
+        if (cropperInstance) cropperInstance.destroy();
+        activeFilesQueue = [];
+    }
+
     document.getElementById('editProductForm').addEventListener('submit', async function(e) {
         e.preventDefault(); 
 
-        const formData = new FormData();
-        
-        formData.append('name', this.name.value);
-        formData.append('description', this.description.value);
-        formData.append('category', this.category.value);
-        formData.append('discount', this.discount.value);
+        const nameVal = document.getElementById('productNameInput').value.trim();
+        const descVal = document.getElementById('productDescInput').value.trim();
+        const discountVal = parseInt(document.getElementById('productDiscountInput').value, 10) || 0;
+
+        if (!nameVal || !descVal) {
+            Swal.fire({ icon: 'error', title: 'Validation Fault', text: 'Device Name and Description are required.' });
+            return;
+        }
 
         const variantCards = document.querySelectorAll('.variant-card');
         const variantsData = [];
+        let validationFailure = false;
+        let errorMessage = "";
 
         variantCards.forEach((card, index) => {
-            const cardNumber = index + 1;
+            if (validationFailure) return;
 
-            const quantity = document.getElementById(`quantity-${cardNumber}`).value;
-            const price = document.getElementById(`price-${cardNumber}`).value;
+            const cardNumber = index + 1;
+            const variantId = card.getAttribute('data-variant-id');
+            const qtyInput = card.querySelector('.target-qty-val');
+            const priceInput = card.querySelector('.target-price-val');
+            
+            const quantity = parseInt(qtyInput.value, 10);
+            const price = parseFloat(priceInput.value);
+
+            if (isNaN(quantity) || quantity < 0) {
+                validationFailure = true;
+                errorMessage = `Variant #${cardNumber} needs a valid stock quantity entry.`;
+                return;
+            }
+            if (isNaN(price) || price <= 0) {
+                validationFailure = true;
+                errorMessage = `Variant #${cardNumber} requires a valid price greater than 0.`;
+                return;
+            }
 
             const attrRows = card.querySelectorAll('.attribute-row');
             const attributes = {};
-            
             attrRows.forEach(row => {
-                const typeInput = row.querySelector('.attr-type');
-                const valInput = row.querySelector('.attr-val');
-                if (typeInput && valInput && typeInput.value.trim()) {
-                    attributes[typeInput.value.trim()] = valInput.value.trim();
-                }
+                const typeInput = row.querySelector('.attr-type').value.trim();
+                const valInput = row.querySelector('.attr-val').value.trim();
+                if (typeInput && valInput) attributes[typeInput] = valInput;
             });
+
+            const existingSavedCount = card.querySelectorAll('.saved-image-instance').length;
+            let stagedActiveFilesCount = 0;
+            if (dynamicCroppedFilesMap[index]) {
+                stagedActiveFilesCount = dynamicCroppedFilesMap[index].filter(f => f !== null).length;
+            }
+            const totalImages = existingSavedCount + stagedActiveFilesCount;
+
+            if (totalImages < 3) {
+                validationFailure = true;
+                errorMessage = `Variant #${cardNumber} has only ${totalImages} images. Minimum of 3 images are mandatory.`;
+                return;
+            }
 
             variantsData.push({
+                variantId: variantId, 
                 attributes: attributes,
-                quantity: parseInt(quantity, 10) || 0,
-                price: parseFloat(price) || 0
+                quantity: quantity,
+                price: price
             });
+        });
 
-            const fileInput = document.getElementById(`image-${cardNumber}`);
-            if (fileInput && fileInput.files.length > 0) {
-                for (let i = 0; i < fileInput.files.length; i++) {
-                    formData.append(`variantImages_${index}`, fileInput.files[i]);
-                }
+        if (validationFailure) {
+            Swal.fire({ icon: 'error', title: 'Data Hold', text: errorMessage, confirmButtonColor: '#000' });
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('name', nameVal);
+        formData.append('description', descVal);
+        formData.append('category', this.category.value);
+        formData.append('discount', discountVal);
+        
+        formData.append('variantsDataJSON', JSON.stringify(variantsData));
+        formData.append('removedImagesJSON', JSON.stringify(removedImages));
+
+        variantCards.forEach((card, index) => {
+            if (dynamicCroppedFilesMap[index]) {
+                dynamicCroppedFilesMap[index].forEach((file) => {
+                    if (file !== null) {
+                        formData.append(`variantImages_${index}`, file);
+                    }
+                });
             }
         });
 
-        formData.append('variantsDataJSON', JSON.stringify(variantsData));
-
         try {
+            Swal.fire({ title: 'Saving changes...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
             const response = await fetch(this.action, {
                 method: 'POST',
                 body: formData
             });
 
-            if (response.ok) {
-                // Beautiful SweetAlert2 Modal confirmation popup
+            const resData = await response.json().catch(() => ({ success: false }));
+
+            if (response.ok && resData.success !== false) {
                 await Swal.fire({
                     icon: 'success',
-                    title: 'Product Updated',
-                    text: 'The product modifications have been successfully saved!',
-                    confirmButtonColor: '#198754', 
-                    confirmButtonText: 'Great!'
+                    title: 'Modifications Saved',
+                    text: 'The asset records and variant fields have updated successfully.',
+                    confirmButtonColor: '#198754'
                 });
-                
-                // Redirects right back to product management list view panel
                 window.location.href = '/admin/products';
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Update Failed',
-                    text: 'Something went wrong saving updates. Please review inputs.',
+                    title: 'Database Rejection',
+                    text: resData.message || 'The server rejected the transaction payload parameters.',
                     confirmButtonColor: '#dc3545'
                 });
             }
         } catch (error) {
-            console.error("Transmission Error:", error);
+            console.error(error);
             Swal.fire({
                 icon: 'error',
-                title: 'Network Error',
-                text: 'Connection error while trying to process updates.',
+                title: 'Network Failure',
+                text: 'A transmission failure or server redirect blocked verification.',
                 confirmButtonColor: '#dc3545'
             });
         }

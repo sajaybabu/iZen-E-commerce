@@ -9,12 +9,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <style>
         .test:hover {
-            background-color: rgb(238, 238, 238);
+            background-color: rgb(245, 245, 245);
         }
 
         .add-user-btn {
             background-color: #000000;
-            /* Sophisticated Apple black theme */
         }
 
         .active::after {
@@ -33,6 +32,17 @@
 
         .sidebar {
             transition: transform 0.3s ease;
+        }
+
+        .variant-nested-row {
+            background-color: #fdfdfd !important;
+        }
+
+        .nested-table th {
+            background-color: #f1f5f9 !important;
+            font-size: 0.85rem;
+            color: #475569;
+            font-weight: 600;
         }
 
         @media (max-width: 767.98px) {
@@ -59,192 +69,222 @@
 
     <%- include("../partials/admin/navbar.ejs") %>
 
-        <div class="container px-0 mt-5">
-            <div class="row row-cols-1 justify-content-between mx-0">
-                <div
-                    class="col col-md-3 col-lg-2 border border-secondary rounded text-secondary sidebar align-self-start p-0">
-                    <%- include("../partials/admin/sidebarLinks.ejs") %>
-                </div>
+    <div class="container px-0 mt-5">
+        <div class="row row-cols-1 justify-content-between mx-0">
+            <div class="col col-md-3 col-lg-2 border border-secondary rounded text-secondary sidebar align-self-start p-0">
+                <%- include("../partials/admin/sidebarLinks.ejs") %>
+            </div>
 
-                <div class="card col col-md-8 col-lg-9 px-0 mx-md-3 mt-4 mt-md-0">
-                    <div class="card-header">
-                        <h1 class="text-center my-3">Product Management</h1>
+            <div class="card col col-md-8 col-lg-9 px-0 mx-md-3 mt-4 mt-md-0">
+                <div class="card-header">
+                    <h1 class="text-center my-3">Product Management</h1>
 
-                        <div class="container">
-                            <div class="row justify-content-between my-4 align-items-center">
-                                <form action="/admin/searchProduct" class="col-8 col-lg-7 d-flex gap-2" method="post">
-                                    <input class="form-control me-2" name="name" type="search"
-                                        placeholder="Search Apple Devices..." aria-label="Search"
-                                        value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" />
+                    <div class="container">
+                        <div class="row justify-content-between my-4 align-items-center">
+                            <form action="/admin/searchProduct" class="col-8 col-lg-7 d-flex gap-2" method="post">
+                                <input class="form-control me-2" name="name" type="search"
+                                    placeholder="Search Apple Devices..." aria-label="Search"
+                                    value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" />
 
-                                    <button class="btn btn-outline-dark" type="submit">Search</button>
+                                <button class="btn btn-outline-dark" type="submit">Search</button>
 
-                                    <% if (typeof isSearchPage !=='undefined' && isSearchPage) { %>
-                                        <a href="/admin/products"
-                                            class="btn btn-secondary d-flex align-items-center justify-content-center text-decoration-none">Clear</a>
-                                        <% } %>
-                                </form>
+                                <% if (typeof isSearchPage !=='undefined' && isSearchPage) { %>
+                                    <a href="/admin/products"
+                                        class="btn btn-secondary d-flex align-items-center justify-content-center text-decoration-none">Clear</a>
+                                <% } %>
+                            </form>
 
-                                <div class="col-4 col-lg-3 d-flex justify-content-end">
-                                    <a role="button" href="/admin/products/add"
-                                        class="add-user-btn text-light border-0 rounded px-4 py-2 text-decoration-none">+
-                                        Add new</a>
-                                </div>
+                            <div class="col-4 col-lg-3 d-flex justify-content-end">
+                                <a role="button" href="/admin/products/add"
+                                    class="add-user-btn text-light border-0 rounded px-4 py-2 text-decoration-none">+ Add new</a>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <% if (products && products.length> 0) { %>
-                                <table class="table table-striped align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>No.</th>
-                                            <th>Device Name</th>
-                                            <th>Category</th>
-                                            <th>Price</th>
-                                            <th>Stock</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <% if (products && products.length > 0) { %>
+                            <table class="table align-middle" style="border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th>No.</th>
+                                        <th>Device Name</th>
+                                        <th>Category</th>
+                                        <th>Price Range</th>
+                                        <th>Total Stock</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% products.forEach((product, index) => {
+                                        let currentStock = typeof product.stock !== 'undefined' ? product.stock :
+                                        (product.variants ? product.variants.reduce((acc, curr) => acc + (curr.quantity || 0), 0) : 0);
+                                        
+                                        // Dynamic pricing string configuration
+                                        let priceDisplay = '0';
+                                        if (product.price) {
+                                            priceDisplay = '₹' + product.price.toLocaleString('en-IN');
+                                        } else if (product.variants && product.variants.length > 0) {
+                                            let prices = product.variants.map(v => v.price);
+                                            let minPrice = Math.min(...prices);
+                                            let maxPrice = Math.max(...prices);
+                                            priceDisplay = minPrice === maxPrice ? '₹' + minPrice.toLocaleString('en-IN') : '₹' + minPrice.toLocaleString('en-IN') + ' - ₹' + maxPrice.toLocaleString('en-IN');
+                                        }
+                                    %>
+                                        <tr style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target="#variants-collapse-<%= product._id %>" class="test">
+                                            <td>
+                                                <i class="bi bi-chevron-right me-2 text-muted small"></i><%= index + 1 %>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <img src="<%= product.images && product.images.length > 0 ? product.images[0] : (product.variants && product.variants[0] && product.variants[0].images && product.variants[0].images.length > 0 ? product.variants[0].images[0] : '/uploads/default-apple.png') %>"
+                                                        alt="<%= product.name %>"
+                                                        style="width: 45px; height: 45px; object-fit: contain;" class="border rounded p-1 bg-white">
+                                                    <span class="fw-semibold">
+                                                        <%= product.name %>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td><span class="badge bg-secondary"><%= product.category %></span></td>
+                                            <td><span class="fw-medium text-dark"><%= priceDisplay %></span></td>
+                                            <td><%= currentStock %> units</td>
+                                            <td>
+                                                <% if (product.isBlocked) { %>
+                                                    <span class="badge bg-danger">Blocked</span>
+                                                <% } else if (currentStock === 0) { %>
+                                                    <span class="badge bg-danger">Out of Stock</span>
+                                                <% } else if (currentStock < 10) { %>
+                                                    <span class="badge bg-warning text-dark">Low Stock</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-success">In Stock</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex gap-3 justify-content-end pe-2">
+                                                    <a class="actions" href="/admin/editProduct/<%= product._id %>" onclick="event.stopPropagation();">
+                                                        <i class="bi bi-pencil-square text-primary fs-5"></i>
+                                                    </a>
+                                                    <a class="actions" style="cursor: pointer;" onclick='deleteCategory(event, "<%= product._id%>")' data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                                        <i class="bi bi-trash text-danger fs-5"></i>
+                                                    </a>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% products.forEach((product, index)=> {
-                                            let currentStock = typeof product.stock !== 'undefined' ? product.stock :
-                                            (product.variants ? product.variants.reduce((acc, curr) => acc +
-                                            (curr.quantity || 0), 0) : 0);
-                                            %>
-                                            <tr style="cursor: pointer;" onclick='productInfo("<%= product._id%>")'
-                                                class="test">
-                                                <td>
-                                                    <%= index + 1 %>
-                                                </td>
-                                                <td>
-                                                    <div class="d-flex align-items-center gap-3">
-                                                        <img src="<%= product.images && product.images.length > 0 ? product.images[0] : '/uploads/default-apple.png' %>"
-                                                            alt="<%= product.name %>"
-                                                            style="max-width: 50px; max-height: 50px; object-fit: contain;">
-                                                        <span class="fw-semibold">
-                                                            <%= product.name %>
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td><span class="badge bg-secondary">
-                                                        <%= product.category %>
-                                                    </span></td>
-                                                <td>
-                                                    ₹<%= product.price ? product.price.toLocaleString('en-IN') :
-                                                        (product.variants && product.variants.length> 0 ?
-                                                        product.variants[0].price.toLocaleString('en-IN') : '0') %>
-                                                </td>
-                                                <td>
-                                                    <%= currentStock %> units
-                                                </td>
-                                                <td>
-                                                    <% if (product.isBlocked) { %>
-                                                        <span class="badge bg-danger">Blocked</span>
-                                                        <% } else if (currentStock===0) { %>
-                                                            <span class="badge bg-danger">Out of Stock</span>
-                                                            <% } else if (currentStock < 10) { %>
-                                                                <span class="badge bg-warning text-dark">Low
-                                                                    Stock</span>
-                                                                <% } else { %>
-                                                                    <span class="badge bg-success">In Stock</span>
-                                                                    <% } %>
-                                                </td>
 
-                                                <td>
-                                                    <div class="d-flex gap-3">
-                                                        <a class="actions" href="/admin/editProduct/<%= product._id %>"
-                                                            onclick="event.stopPropagation();">
-                                                            <i class="bi bi-pencil-square text-primary"></i>
-                                                        </a>
-                                                        <a class="actions"
-                                                            onclick='deleteCategory(event, "<%= product._id%>")'
-                                                            data-bs-toggle="modal" data-bs-target="#deleteModal">
-                                                            <i class="bi bi-trash text-danger"></i>
-                                                        </a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <% }) %>
-                                    </tbody>
-                                </table>
-                                <% } else { %>
-                                    <h3 class="text-center text-muted my-5">No Apple products found. Let's seed your
-                                        inventory!</h3>
-                                    <% } %>
-                        </div>
-                    </div>
-
-                    <% if (typeof prevPage !=='undefined' && typeof nextPage !=='undefined' ) { %>
-                        <div class="mb-4 mx-auto">
-                            <a href="/admin/products?page=<%= prevPage %>"
-                                class="text-light btn bg-secondary rounded border-0 px-3 py-1 <%= typeof prevDisable !== 'undefined' ? prevDisable : '' %>">Prev</a>
-                            <a href="/admin/products?page=<%= nextPage %>"
-                                class="text-light btn rounded border-0 px-3 py-1 <%= typeof nextDisable !== 'undefined' ? nextDisable : '' %>"
-                                style="background-color: #000000;">Next</a>
-                        </div>
+                                        <tr class="collapse variant-nested-row" id="variants-collapse-<%= product._id %>">
+                                            <td colspan="7" class="p-3 bg-light">
+                                                <div class="card card-body border-0 shadow-sm rounded-3 p-3 mx-2">
+                                                    <p class="fw-bold text-dark small mb-2"><i class="bi bi-layers-half me-2"></i>Available Variants Breakdown</p>
+                                                    
+                                                    <% if (product.variants && product.variants.length > 0) { %>
+                                                        <table class="table table-bordered table-sm nested-table mb-0 align-middle text-center">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Image</th>
+                                                                    <th>Specifications Map</th>
+                                                                    <th>Unit Price</th>
+                                                                    <th>Available Stock</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <% product.variants.forEach((variant) => { %>
+                                                                    <tr>
+                                                                        <td style="width: 70px;">
+                                                                            <img src="<%= variant.images && variant.images.length > 0 ? variant.images[0] : (product.images && product.images.length > 0 ? product.images[0] : '/uploads/default-apple.png') %>" 
+                                                                                 style="width: 35px; height: 35px; object-fit: contain;">
+                                                                        </td>
+                                                                        <td class="text-start ps-3 font-monospace small">
+                                                                            <% Object.entries(variant.attributes).forEach(([key, val]) => { %>
+                                                                                <span class="badge bg-light text-dark border me-1"><strong class="text-muted"><%= key %>:</strong> <%= val %></span>
+                                                                            <% }) %>
+                                                                        </td>
+                                                                        <td class="fw-semibold text-secondary">₹<%= variant.price.toLocaleString('en-IN') %></td>
+                                                                        <td>
+                                                                            <span class="<%= variant.quantity < 5 ? 'text-danger fw-bold' : 'text-success' %>">
+                                                                                <%= variant.quantity %> items
+                                                                            </span>
+                                                                        </td>
+                                                                    </tr>
+                                                                <% }) %>
+                                                            </tbody>
+                                                        </table>
+                                                    <% } else { %>
+                                                        <span class="text-muted small"><i class="bi bi-info-circle me-1"></i> No specialized sub-variants parsed for this standard product build record.</span>
+                                                    <% } %>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        <% } else { %>
+                            <h3 class="text-center text-muted my-5">No Apple products found. Let's seed your inventory!</h3>
                         <% } %>
+                    </div>
                 </div>
+
+                <% if (typeof prevPage !=='undefined' && typeof nextPage !=='undefined' ) { %>
+                    <div class="mb-4 mx-auto">
+                        <a href="/admin/products?page=<%= prevPage %>"
+                            class="text-light btn bg-secondary rounded border-0 px-3 py-1 <%= typeof prevDisable !== 'undefined' ? prevDisable : '' %>">Prev</a>
+                        <a href="/admin/products?page=<%= nextPage %>"
+                            class="text-light btn rounded border-0 px-3 py-1 <%= typeof nextDisable !== 'undefined' ? nextDisable : '' %>"
+                            style="background-color: #000000;">Next</a>
+                    </div>
+                <% } %>
             </div>
         </div>
+    </div>
 
-        <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-body px-5">
-                        <h1 class="fs-3 text-center mt-2 mb-4 fw-bold">Remove Product</h1>
-                        <p class="fs-6 text-center text-muted mb-4">Are you sure you want to completely remove this
-                            product from the store?</p>
-                        <div class="d-flex justify-content-center gap-3 mb-3">
-                            <button class="border-0 rounded px-4 py-2 bg-secondary text-light"
-                                data-bs-dismiss="modal">Cancel</button>
-                            <button class="border-0 rounded px-4 py-2 text-light" style="background-color: #dc3545;"
-                                onclick="confirmDelete()">Delete</button>
-                        </div>
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body px-5">
+                    <h1 class="fs-3 text-center mt-2 mb-4 fw-bold">Remove Product</h1>
+                    <p class="fs-6 text-center text-muted mb-4">Are you sure you want to completely remove this product from the store?</p>
+                    <div class="d-flex justify-content-center gap-3 mb-3">
+                        <button class="border-0 rounded px-4 py-2 bg-secondary text-light" data-bs-dismiss="modal">Cancel</button>
+                        <button class="border-0 rounded px-4 py-2 text-light" style="background-color: #dc3545;" onclick="confirmDelete()">Delete</button>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <script>
-            const sidebar = document.querySelector('.sidebar');
-            const toggleBtn = document.getElementById('menuToggle');
+    <script>
+        const sidebar = document.querySelector('.sidebar');
+        const toggleBtn = document.getElementById('menuToggle');
 
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', () => {
-                    sidebar.classList.toggle('show');
-                });
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('show');
+            });
+        }
+
+        let deleteId;
+
+        function deleteCategory(e, id) {
+            e.stopPropagation(); // Restricts parent expanding trigger firing
+            deleteId = id;
+        }
+
+        async function confirmDelete() {
+            if (!deleteId) return;
+
+            const res = await fetch(`/admin/deleteProduct/${deleteId}`, {
+                method: "DELETE"
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert("Failed to delete product. Please check console logs.");
             }
-
-            let deleteId;
-
-            function deleteCategory(e, id) {
-                e.stopPropagation();
-                deleteId = id;
-            }
-
-            async function confirmDelete() {
-                if (!deleteId) return;
-
-                const res = await fetch(`/admin/deleteProduct/${deleteId}`, {
-                    method: "DELETE"
-                });
-
-                if (res.ok) {
-                    window.location.reload();
-                } else {
-                    alert("Failed to delete product. Please check console logs.");
-                }
-            }
-
-            async function productInfo(id) {
-                window.location.href = `/admin/products/view/${id}`;
-            }
-        </script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

@@ -171,31 +171,51 @@ exports.getEditProductPage = async (req, res) => {
 exports.updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, category, discount, variantsDataJSON } = req.body;
+        const { name, description, category, discount, variantsDataJSON, removedImagesJSON } = req.body;
 
+        // Find the product and ensure it isn't soft deleted
         const product = await Product.findOne({ _id: id, isDeleted: { $ne: true } });
         if (!product) {
-            return res.status(404).send("Product not found.");
+            return res.status(404).json({ success: false, message: "Product context records not found." });
         }
 
+        // Parse Removed Images List if sent by the front-end
+        let imageRemovalList = [];
+        if (removedImagesJSON) {
+            try {
+                imageRemovalList = JSON.parse(removedImagesJSON);
+            } catch (e) {
+                console.error("Failed to parse removedImagesJSON:", e);
+            }
+        }
+
+        // Update basic global properties
         product.name = name;
         product.description = description;
         product.category = category;
         product.discount = parseInt(discount, 10) || 0;
 
         if (!variantsDataJSON) {
-            return res.status(400).send("Variants dataset structure missing.");
+            return res.status(400).json({ success: false, message: "Variants dataset structure is missing." });
         }
 
         const submittedVariants = JSON.parse(variantsDataJSON);
         const finalVariants = [];
+        let globalImagesArray = [];
 
         let totalQuantity = 0;
         let startingPrice = Infinity;
 
+        // Iterate through submitted variants map
         for (let i = 0; i < submittedVariants.length; i++) {
             const incomingVariant = submittedVariants[i];
+            
+            // Get current images belonging to this specific variant position index 
             let allocatedImages = (product.variants && product.variants[i]) ? product.variants[i].images : [];
+
+            if (imageRemovalList.length > 0) {
+                allocatedImages = allocatedImages.filter(img => !imageRemovalList.includes(img));
+            }
 
             if (req.files && req.files.length > 0) {
                 const targetKeyName = `variantImages_${i}`;
@@ -203,8 +223,9 @@ exports.updateProduct = async (req, res) => {
                     .filter(file => file.fieldname === targetKeyName)
                     .map(file => `/uploads/products/${file.filename}`);
 
+                // Append new image items into the remaining active arrays smoothly instead of overwriting everything
                 if (freshlyUploaded.length > 0) {
-                    allocatedImages = freshlyUploaded; 
+                    allocatedImages = allocatedImages.concat(freshlyUploaded); 
                 }
             }
 
@@ -215,6 +236,9 @@ exports.updateProduct = async (req, res) => {
             if (vPrice < startingPrice) {
                 startingPrice = vPrice; 
             }
+
+            // Keep tracking active presentation media files globally
+            globalImagesArray = globalImagesArray.concat(allocatedImages);
 
             finalVariants.push({
                 attributes: incomingVariant.attributes || {},
@@ -227,7 +251,7 @@ exports.updateProduct = async (req, res) => {
         if (startingPrice === Infinity) startingPrice = 0;
 
         product.variants = finalVariants;
-        product.markModified('variants');
+        product.images = globalImagesArray; 
         product.price = startingPrice; 
         
         if (typeof product.stock !== 'undefined') {
@@ -236,11 +260,21 @@ exports.updateProduct = async (req, res) => {
             product.quantity = totalQuantity;
         }
 
+        product.markModified('variants');
+        product.markModified('images');
+
         await product.save();
-        return res.sendStatus(200);
+        
+        return res.status(200).json({ 
+            success: true, 
+            message: "The asset records and variant fields have updated successfully." 
+        });
 
     } catch (error) {
         console.error("!!! CRITICAL CATCH REJECTION EXCEPTION DETAILS !!!", error);
-        return res.status(500).send("Internal Server Error processing updates.");
+        return res.status(500).json({ 
+            success: false, 
+            message: "Internal Server Error updating database fields." 
+        });
     }
 };
