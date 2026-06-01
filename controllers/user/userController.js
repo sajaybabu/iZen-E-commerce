@@ -1,4 +1,4 @@
-const userService = require("../../services/userService");
+const userService = require("../../services/user/userService");
 const sendOTP = require("../../utils/sendEmail");
 const bcrypt = require("bcrypt");
 const User = require("../../models/userModel");
@@ -262,7 +262,7 @@ const changePassword = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        await User.updateOne({ _id: userId }, { $set: { password: hashedPassword } });
+        await userService.changeUserPassword(userId,hashedPassword);
         res.json({ success: true, message: "Password updated successfully!" });
     } catch (error) {
         console.error("Change Password Error:", error);
@@ -276,7 +276,7 @@ const loadHome = async (req, res) => {
     try {
         let user = req.session.user || null;
         if (user) {
-            const dbUser = await User.findById(user.id || user._id);
+            const dbUser = await userService.getUserById(user.id || user._id);
             if (!dbUser || dbUser.isBlocked) {
                 req.session.destroy();
                return res.redirect("/login");
@@ -409,7 +409,7 @@ const updateAvatar = async (req, res) => {
 const removeAvatar = async (req, res) => {
     try {
         const userId = req.session.user.id || req.session.user._id;
-        await User.updateOne({ _id: userId }, { $set: { profileImage: null } });
+        await userService.removeProfileImage(userId);
         req.session.user.image = null;
         req.session.save((err) => {
             if (err) return res.status(500).json({ success: false });
@@ -450,7 +450,7 @@ const getEditAddress = async (req, res) => {
     try {
         const addressId = req.params.id;
         const userId = req.session.user.id || req.session.user._id;
-        const user = await User.findById(userId);
+        const user = await userService.getUserById(userId);
         const address = user.addresses.find(addr => addr._id.toString() === addressId);
         if (!address) return res.redirect('/address'); 
         res.render('user/editaddress', { user, address });
@@ -465,10 +465,19 @@ const postEditAddress = async (req, res) => {
         const addressId = req.params.id;
         const userId = req.session.user.id || req.session.user._id;
         const { fullname, phone, address, city, pincode, addressType } = req.body;
-        const result = await User.updateOne(
-            { _id: userId, "addresses._id": addressId },
-            { $set: { "addresses.$": { fullname, phone, address, city, pincode, addressType } } }
-        );
+        const result =
+         await userService.updateAddress(
+        userId,
+        addressId,
+        {
+            fullname,
+            phone,
+            address,
+            city,
+            pincode,
+            addressType
+        }
+    );
         if (result.modifiedCount > 0) {
             res.json({ success: true, message: "Address updated successfully" });
         } else {

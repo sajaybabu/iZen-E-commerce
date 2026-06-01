@@ -1,151 +1,216 @@
-const Category = require('../../models/categoryModel');
+const categoryService = require('../../services/admin/categoryService');
 
 const loadCategories = async (req, res) => {
     try {
-        const page = parseInt(req.query.page, 10) || 1;
-        const limit = 5;
-        const skip = (page - 1) * limit;
-        
-        const searchWord = req.query.search ? req.query.search.trim() : "";
 
-        const queryCondition = { isDeleted: { $ne: true } };
+        const page =
+            parseInt(req.query.page, 10) || 1;
 
-        if (searchWord !== "") {
-            queryCondition.name = { $regex: searchWord, $options: 'i' };
-        }
+        const searchWord =
+            req.query.search
+                ? req.query.search.trim()
+                : "";
 
-        const count = await Category.countDocuments(queryCondition);
-        
-        const categories = await Category.find(queryCondition)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        const result =
+            await categoryService.getCategories(
+                page,
+                searchWord
+            );
 
         res.render('admin/category', {
-            cat: categories,
+            cat: result.categories,
             currentPage: page,
-            totalPages: Math.ceil(count / limit) || 1,
-            search: searchWord 
+            totalPages: result.totalPages,
+            search: searchWord
         });
+
     } catch (error) {
-        console.error("Error loading categories:", error);
-        res.status(500).send("Error loading categories");
+
+        console.error(error);
+        res.status(500).send(
+            "Error loading categories"
+        );
     }
 };
 
 const addCategory = async (req, res) => {
     try {
+
         const { name, description } = req.body;
-        
-        const existing = await Category.findOne({ 
-            name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
-            isDeleted: { $ne: true }
-        });
-        
-        if (existing) {
-            return res.status(400).json({ message: "Category name already exists" });
-        }
 
-        const newCat = new Category({
-            name: name.trim(),
-            description: description.trim()
-        });
-        await newCat.save();
+        await categoryService.createCategory(
+            name,
+            description
+        );
 
-        res.status(200).json({ message: "Category added successfully" });
+        res.status(200).json({
+            message:
+                "Category added successfully"
+        });
+
     } catch (error) {
-        res.status(400).json({ message: error.message });
+
+        res.status(400).json({
+            message: error.message
+        });
     }
 };
 
 const deleteCategory = async (req, res) => {
     try {
-        const { id } = req.body; 
-        await Category.findByIdAndUpdate(id, { isDeleted: true });
-        res.json({ success: true, message: "Category moved to trash" });
+
+        await categoryService.deleteCategory(
+            req.body.id
+        );
+
+        res.json({
+            success: true,
+            message:
+                "Category moved to trash"
+        });
+
     } catch (error) {
-        res.status(500).json({ success: false });
+
+        res.status(500).json({
+            success: false
+        });
     }
 };
 
 const loadEditCategory = async (req, res) => {
     try {
-        const { id } = req.params;
-        const category = await Category.findById(id);
 
-        if (!category || category.isDeleted) {
-            return res.redirect('/admin/category');
+        const category =
+            await categoryService.getCategoryById(
+                req.params.id
+            );
+
+        if (
+            !category ||
+            category.isDeleted
+        ) {
+            return res.redirect(
+                '/admin/category'
+            );
         }
 
-        res.render('admin/editCategory', { category });
+        res.render(
+            'admin/editCategory',
+            { category }
+        );
+
     } catch (error) {
-        console.error("Load Edit Category Error:", error);
-        res.status(500).send("Internal Server Error");
+
+        console.error(error);
+
+        res.status(500).send(
+            "Internal Server Error"
+        );
     }
 };
 
 const updateCategory = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { name, description, isListed } = req.body;
 
-        const existingCategory = await Category.findOne({
-            name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
-            _id: { $ne: id },
-            isDeleted: { $ne: true }
+        const {
+            name,
+            description,
+            isListed
+        } = req.body;
+
+        await categoryService.updateCategory(
+            req.params.id,
+            name,
+            description,
+            isListed
+        );
+
+        res.status(200).json({
+            success: true
         });
 
-        if (existingCategory) {
-            return res.status(400).json({ success: false, message: "Category name already exists" });
-        }
-
-        await Category.findByIdAndUpdate(id, {
-            name: name.trim(),
-            description: description.trim(),
-            isListed: isListed === 'true' || isListed === true
-        });
-
-        res.status(200).json({ success: true });
     } catch (error) {
-        console.error("Update Category Error:", error);
-        res.status(500).json({ success: false, message: "Server Error" });
+
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
     }
 };
 
 const blockCategory = async (req, res) => {
     try {
-        const { id } = req.body;
-        if (!id) return res.status(400).json({ success: false, message: "Category ID is required." });
 
-        const updatedCategory = await Category.findByIdAndUpdate(id, { isListed: false }, {returnDocument: 'after'});
-        if (!updatedCategory) return res.status(404).json({ success: false, message: "Category not found." });
+        const updatedCategory =
+            await categoryService.blockCategory(
+                req.body.id
+            );
 
-        return res.status(200).json({ success: true, message: "Category blocked successfully." });
+        if (!updatedCategory) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Category not found."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Category blocked successfully."
+        });
+
     } catch (error) {
-        console.error("Error blocking category:", error);
-        return res.status(500).json({ success: false, message: "Internal server error." });
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Internal server error."
+        });
     }
 };
 
 const unBlockCategory = async (req, res) => {
     try {
-        const { id } = req.body;
-        if (!id) return res.status(400).json({ success: false, message: "Category ID is required." });
 
-        const updatedCategory = await Category.findByIdAndUpdate(id, { isListed: true }, {returnDocument: 'after'});
-        if (!updatedCategory) return res.status(404).json({ success: false, message: "Category not found." });
+        const updatedCategory =
+            await categoryService.unBlockCategory(
+                req.body.id
+            );
 
-        return res.status(200).json({ success: true, message: "Category unblocked successfully." });
+        if (!updatedCategory) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Category not found."
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message:
+                "Category unblocked successfully."
+        });
+
     } catch (error) {
-        console.error("Error unblocking category:", error);
-        return res.status(500).json({ success: false, message: "Internal server error." });
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message:
+                "Internal server error."
+        });
     }
 };
 
-module.exports = { 
-    loadCategories, 
-    addCategory, 
-    loadAddCategory: (req, res) => res.render('admin/addCategory'),
+module.exports = {
+    loadCategories,
+    addCategory,
+    loadAddCategory: (req, res) =>
+        res.render('admin/addCategory'),
     deleteCategory,
     loadEditCategory,
     updateCategory,

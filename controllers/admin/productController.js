@@ -1,280 +1,175 @@
-const Product = require('../../models/Product');
-const Category = require('../../models/categoryModel');
+const productService = require('../../services/admin/productService');
 
 exports.createProduct = async (req, res) => {
     try {
-        const { name, description, category, discount, variantsDataJSON, isFeatured } = req.body;
 
-        if (!variantsDataJSON) {
-            return res.status(400).json({ success: false, message: "Product variants data is missing." });
-        }
-
-        const submittedVariants = JSON.parse(variantsDataJSON);
-        const variantArray = [];
-        let globalImagesArray = []; 
-
-        let totalStock = 0;
-        let lowestPrice = Infinity;
-
-        for (let i = 0; i < submittedVariants.length; i++) {
-            const incomingVariant = submittedVariants[i];
-
-            const vQty = parseInt(incomingVariant.quantity, 10) || 0;
-            const vPrice = parseFloat(incomingVariant.price) || 0;
-
-            totalStock += vQty;
-            if (vPrice < lowestPrice) {
-                lowestPrice = vPrice;
-            }
-
-            const targetKeyName = `variantImages_${i}`;
-            const variantImages = req.files ? req.files
-                .filter(file => file.fieldname === targetKeyName)
-                .map(file => `/uploads/products/${file.filename}`) : [];
-
-            globalImagesArray = globalImagesArray.concat(variantImages);
-
-            variantArray.push({
-                attributes: incomingVariant.attributes || {},
-                quantity: vQty,
-                price: vPrice,
-                images: variantImages
+        if (!req.body.variantsDataJSON) {
+            return res.status(400).json({
+                success: false,
+                message: "Product variants data is missing."
             });
         }
 
-        if (lowestPrice === Infinity) lowestPrice = 0;
+        await productService.createProduct(req.body, req.files);
 
-        const newProduct = new Product({
-            name,
-            description,
-            category,
-            discount: parseFloat(discount) || 0,
-            variants: variantArray,
-            images: globalImagesArray, 
-            price: lowestPrice,        
-            stock: totalStock,    
-            isBlocked: false,
-            isDeleted: false,
-            isFeatured: isFeatured === 'on' || isFeatured === true || isFeatured === 'true'
+        return res.status(200).json({
+            success: true,
+            message: "Product added successfully!"
         });
 
-        await newProduct.save();
-        return res.status(200).json({ success: true, message: "Product added successfully!" });
-
     } catch (error) {
-        console.error("Error creating product:", error);
-        return res.status(500).json({ success: false, message: "Server Error: Unable to complete product entry." });
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error: Unable to complete product entry."
+        });
     }
 };
 
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await Product.find({ isDeleted: { $ne: true } }).sort({ createdAt: -1 });
-        
-        res.render('admin/productManagement', { 
-            products: products,
+
+        const products =
+            await productService.getAllProducts();
+
+        res.render('admin/productManagement', {
+            products,
             searchQuery: '',
-            isSearchPage: false,        
-            prevPage: 1, 
+            isSearchPage: false,
+            prevPage: 1,
             nextPage: 1,
             prevDisable: 'disabled',
             nextDisable: 'disabled'
-        }); 
+        });
+
     } catch (error) {
-        console.error("Error fetching products:", error);
+
+        console.error(error);
         res.status(500).send("Internal Server Error");
     }
 };
 
 exports.getAddProductPage = async (req, res) => {
     try {
-        // Fetch categories that are explicitly listed AND not soft-deleted
-        const categories = await Category.find({ 
-            isListed: true, 
-            isDeleted: { $ne: true } 
-        }); 
-        
-        res.render('admin/addproduct', { 
-            categories: categories 
+
+        const categories =
+            await productService.getCategoriesForAddPage();
+
+        res.render('admin/addproduct', {
+            categories
         });
+
     } catch (error) {
-        console.error("Error fetching categories for add product page:", error);
+
+        console.error(error);
         res.status(500).redirect('/admin/products');
     }
 };
 
 exports.deleteProduct = async (req, res) => {
     try {
-        const { id } = req.params; 
 
-        if (!id) {
-            return res.status(400).json({ success: false, message: "No ID supplied to parameters." });
+        const deletedProduct =
+            await productService.deleteProduct(req.params.id);
+
+        if (!deletedProduct) {
+            return res.status(404).json({
+                success: false,
+                message: "Product record not found."
+            });
         }
 
-        const softDeletedProduct = await Product.findByIdAndUpdate(id, { isDeleted: true }, { new: true });
+        return res.status(200).json({
+            success: true,
+            message: "Product successfully moved to trash."
+        });
 
-        if (!softDeletedProduct) {
-            return res.status(404).json({ success: false, message: "Product record not found." });
-        }
-
-        return res.status(200).json({ success: true, message: "Product successfully moved to trash." });
     } catch (error) {
-        console.error("Router dynamic deletion exception:", error);
-        return res.status(500).json({ success: false, message: "Internal server anomaly encountered." });
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal server anomaly encountered."
+        });
     }
 };
 
 exports.searchProducts = async (req, res) => {
     try {
+
         const { name } = req.body;
 
         if (!name || name.trim() === "") {
             return res.redirect('/admin/products');
         }
 
-        const products = await Product.find({
-            name: { $regex: name.trim(), $options: 'i' },
-            isDeleted: { $ne: true }
-        }).sort({ createdAt: -1 });
+        const products =
+            await productService.searchProducts(name);
 
-        res.render('admin/productManagement', { 
-            products: products,
-            searchQuery: name,          
-            isSearchPage: true,         
-            prevPage: 1, 
+        res.render('admin/productManagement', {
+            products,
+            searchQuery: name,
+            isSearchPage: true,
+            prevPage: 1,
             nextPage: 1,
             prevDisable: 'disabled',
             nextDisable: 'disabled'
-        }); 
+        });
+
     } catch (error) {
-        console.error("Error searching products:", error);
+
+        console.error(error);
         res.status(500).send("Internal Server Error");
     }
 };
 
 exports.getEditProductPage = async (req, res) => {
     try {
-        const { id } = req.params;
-        const product = await Product.findById(id);
+
+        const product =
+            await productService.getProductById(req.params.id);
 
         if (!product || product.isDeleted) {
-            return res.status(404).send("Error: Product not found or has been deleted.");
+            return res.status(404).send(
+                "Error: Product not found or has been deleted."
+            );
         }
 
-        res.render('admin/editproduct', { product: product }); 
+        res.render('admin/editproduct', {
+            product
+        });
+
     } catch (error) {
-        console.error("Error loading edit page view context:", error);
+
+        console.error(error);
         res.status(500).send("Internal Server Error");
     }
 };
 
 exports.updateProduct = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { name, description, category, discount, variantsDataJSON, removedImagesJSON } = req.body;
 
-        // Find the product and ensure it isn't soft deleted
-        const product = await Product.findOne({ _id: id, isDeleted: { $ne: true } });
-        if (!product) {
-            return res.status(404).json({ success: false, message: "Product context records not found." });
-        }
+        await productService.updateProduct(
+            req.params.id,
+            req.body,
+            req.files
+        );
 
-        // Parse Removed Images List if sent by the front-end
-        let imageRemovalList = [];
-        if (removedImagesJSON) {
-            try {
-                imageRemovalList = JSON.parse(removedImagesJSON);
-            } catch (e) {
-                console.error("Failed to parse removedImagesJSON:", e);
-            }
-        }
-
-        // Update basic global properties
-        product.name = name;
-        product.description = description;
-        product.category = category;
-        product.discount = parseInt(discount, 10) || 0;
-
-        if (!variantsDataJSON) {
-            return res.status(400).json({ success: false, message: "Variants dataset structure is missing." });
-        }
-
-        const submittedVariants = JSON.parse(variantsDataJSON);
-        const finalVariants = [];
-        let globalImagesArray = [];
-
-        let totalQuantity = 0;
-        let startingPrice = Infinity;
-
-        // Iterate through submitted variants map
-        for (let i = 0; i < submittedVariants.length; i++) {
-            const incomingVariant = submittedVariants[i];
-            
-            // Get current images belonging to this specific variant position index 
-            let allocatedImages = (product.variants && product.variants[i]) ? product.variants[i].images : [];
-
-            if (imageRemovalList.length > 0) {
-                allocatedImages = allocatedImages.filter(img => !imageRemovalList.includes(img));
-            }
-
-            if (req.files && req.files.length > 0) {
-                const targetKeyName = `variantImages_${i}`;
-                const freshlyUploaded = req.files
-                    .filter(file => file.fieldname === targetKeyName)
-                    .map(file => `/uploads/products/${file.filename}`);
-
-                // Append new image items into the remaining active arrays smoothly instead of overwriting everything
-                if (freshlyUploaded.length > 0) {
-                    allocatedImages = allocatedImages.concat(freshlyUploaded); 
-                }
-            }
-
-            const vQty = parseInt(incomingVariant.quantity, 10) || 0;
-            const vPrice = parseFloat(incomingVariant.price) || 0;
-
-            totalQuantity += vQty;
-            if (vPrice < startingPrice) {
-                startingPrice = vPrice; 
-            }
-
-            // Keep tracking active presentation media files globally
-            globalImagesArray = globalImagesArray.concat(allocatedImages);
-
-            finalVariants.push({
-                attributes: incomingVariant.attributes || {},
-                quantity: vQty,
-                price: vPrice,
-                images: allocatedImages
-            });
-        }
-
-        if (startingPrice === Infinity) startingPrice = 0;
-
-        product.variants = finalVariants;
-        product.images = globalImagesArray; 
-        product.price = startingPrice; 
-        
-        if (typeof product.stock !== 'undefined') {
-            product.stock = totalQuantity;
-        } else {
-            product.quantity = totalQuantity;
-        }
-
-        product.markModified('variants');
-        product.markModified('images');
-
-        await product.save();
-        
-        return res.status(200).json({ 
-            success: true, 
-            message: "The asset records and variant fields have updated successfully." 
+        return res.status(200).json({
+            success: true,
+            message: "The asset records and variant fields have updated successfully."
         });
 
     } catch (error) {
-        console.error("!!! CRITICAL CATCH REJECTION EXCEPTION DETAILS !!!", error);
-        return res.status(500).json({ 
-            success: false, 
-            message: "Internal Server Error updating database fields." 
+
+        console.error(error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error updating database fields."
         });
     }
 };
