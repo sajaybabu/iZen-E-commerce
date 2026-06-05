@@ -13,7 +13,7 @@ const productSchema = new mongoose.Schema({
     category: {
         type: String,
         required: [true, 'Category is required'],
-        enum: ['iPhone', 'iPad', 'MacBook', 'Macbook', 'Apple Watch', 'Accessories'] 
+        enum: ['iPhone', 'iPad', 'MacBook', 'Macbook', 'Apple Watch', 'AirPods'] 
     },
     price: {
         type: Number,
