@@ -53,6 +53,12 @@
                         </div>
 
                         <div class="mb-4">
+                            <label for="categoryDiscount" class="form-label fw-semibold text-secondary">Discount (%)</label>
+                            <input type="number" class="form-control" id="categoryDiscount" name="discount" placeholder="e.g., 0" value="0" min="0" max="100">
+                            <p class="text-danger small mt-1" id="discountError"></p>
+                        </div>
+
+                        <div class="mb-4">
                             <label for="description" class="form-label fw-semibold text-secondary">Description</label>
                             <textarea class="form-control" id="description" name="description" rows="4" placeholder="Brief description of this product line..."></textarea>
                             <p class="text-danger small mt-1" id="descError"></p>
@@ -84,17 +90,27 @@
             event.preventDefault();
             
             const name = document.getElementById("categoryName").value.trim();
+            const discount = document.getElementById("categoryDiscount").value.trim();
             const description = document.getElementById("description").value.trim();
             const isListed = document.getElementById("status").value === "true";
+            
             const nameError = document.getElementById("nameError");
+            const discountError = document.getElementById("discountError");
             const descError = document.getElementById("descError");
 
-            // Simple Validation
+            // Complete Form Validation Check
             let isValid = true;
-            if (!name || !/^[A-Za-z\s]+$/.test(name)) {
+            
+            if (!name || !/^\s*[A-Za-z]+(\s[A-Za-z]+)*\s*$/.test(name)) {
                 nameError.textContent = "Please enter a valid category name (Letters only).";
                 isValid = false;
             } else { nameError.textContent = ""; }
+
+            const discountRegex = /^(100|[0-9]?[0-9])$/;
+            if (!discountRegex.test(discount)) {
+                discountError.textContent = "Enter a valid percentage rate between 0 and 100.";
+                isValid = false;
+            } else { discountError.textContent = ""; }
 
             if (description.length < 10) {
                 descError.textContent = "Description must be at least 10 characters.";
@@ -107,7 +123,7 @@
                 const response = await fetch('/admin/addCategory', {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, description, isListed })
+                    body: JSON.stringify({ name, discount, description, isListed })
                 });
 
                 const data = await response.json();
@@ -125,4 +141,5 @@
         });
     </script>
 </body>
+
 </html>

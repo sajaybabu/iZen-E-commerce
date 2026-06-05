@@ -10,6 +10,13 @@ const categorySchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // FIXED: Added missing discount field definition here to match your frontend logic
+    discount: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100
+    },
     isListed: {
         type: Boolean,
         default: true

@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= product.name %> - iZen</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" charset="UTF-8"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: "Titillium Web", sans-serif; background-color: #f8f9fa; }
+    .thumb-img { width: 70px; height: 70px; object-fit: contain; cursor: pointer; border-radius: 6px; border: 1px solid #ddd; background: white; padding: 5px; transition: all 0.2s ease; }
+    .thumb-img:hover, .thumb-img.active { border: 1px solid #000; box-shadow: 0 0 4px rgba(0,0,0,0.1); }
+    .main-img { width: 100%; border-radius: 8px; display: block; }
+    .price-old { text-decoration: line-through; color: gray; font-size: 16px; }
+    .navbar-brand { font-weight: bold; font-size: 1.5rem; letter-spacing: 1px; }
+    .product-card img { height: 180px; object-fit: contain; padding: 15px; background: #fff; }
+    .nav-detail-container { max-width: 80%; }
+    .navbar { padding: 0.8rem 1rem; }
+    .nav-link:hover { color: #EF6627 !important; }
+    .breadcrumb-item a { text-decoration: none; color: #6c757d; }
+    .breadcrumb-item a:hover { color: #000; }
+    @media (min-width: 992px) { .thumb-img { width: 65px !important; height: 65px !important; } }
+
+    /* Premium Amazon-Style Custom Zoom System Layout Elements */
+    .img-zoom-container { position: relative; width: 100%; }
+    
+    /* The tracking selector mesh overlaying the native asset */
+    .img-zoom-lens {
+      position: absolute;
+      border: 1px solid #d4d4d4;
+      background-color: rgba(239, 102, 39, 0.15); /* Tinted subtle brand overlay color */
+      background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 0);
+      background-size: 8px 8px;
+      width: 140px;
+      height: 140px;
+      cursor: crosshair;
+      display: none;
+      z-index: 10;
+    }
+
+    /* The distinct isolated high-magnification split projection frame */
+    .img-zoom-result {
+      position: absolute;
+      top: 0;
+      left: 102%; /* Pops out perfectly straight to the right side exactly like Amazon */
+      width: 100%;
+      height: 100%;
+      background-repeat: no-repeat;
+      border: 1px solid #e0e0e0;
+      background-color: #fff;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-radius: 8px;
+      display: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav class="navbar navbar-expand-xl bg-black sticky-top shadow-sm">
+    <div class="container nav-detail-container">
+      <a class="navbar-brand text-light fw-bold d-flex align-items-center" href="/">
+        <i class="bi bi-apple me-2"></i> iZen
+      </a>
+
+      <div style="position: relative; width: 250px;">
+        <input autocomplete="off" id="search" class="form-control rounded w-100" name="name" type="search" placeholder="Search iOS devices..." aria-label="Search" />
+      </div>
+
+      <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav mx-auto text-center mb-2 mb-lg-0">
+          <li class="nav-item"><a class="nav-link text-light" href="/">Home</a></li>
+          <li class="nav-item"><a class="nav-link text-light active" href="/allProducts">Shop</a></li>
+        </ul>
+
+        <div class="d-lg-flex flex-column flex-lg-row align-items-center gap-5">
+          <div class="d-flex align-items-center justify-content-center gap-5 mt-lg-0 mt-3 mb-3 mb-lg-1">
+            <a href="/wishlist" class="text-light"><i class="bi bi-heart"></i></a>
+            <a href="/cart" class="text-light"><i class="bi bi-cart3"></i></a>
+            <a href="/profile" class="text-light"><i class="bi bi-person-circle"></i></a>
+          </div>
+          <div class="d-flex justify-content-center">
+            <a href="/logout" class="btn btn-outline-light">Logout</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <% let inWishlist = false %>
+
+  <div class="container py-4 px-0 mx-auto mt-3 nav-detail-container">
+    
+    <nav aria-label="breadcrumb" class="mb-4">
+      <ol class="breadcrumb bg-transparent p-0 m-0">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item"><a href="/allProducts">Shop</a></li>
+        <li class="breadcrumb-item"><a href="/allProducts?category=<%= product.category ? product.category._id : '' %>"><%= product.category ? product.category.name : 'Devices' %></a></li>
+        <li class="breadcrumb-item active text-dark fw-semibold" aria-current="page"><%= product.name %></li>
+      </ol>
+    </nav>
+
+    <div class="row g-4 justify-content-around">
+      <div class="col-lg-5 d-flex flex-column flex-lg-row align-items-start gap-4">
+        <div class="d-flex flex-row flex-lg-column gap-2 order-last order-lg-first">
+          <% let activeImages = (variant.images && variant.images.length > 0) ? variant.images : product.images; %>
+          <% if (activeImages && activeImages.length > 0) { %>
+            <% activeImages.forEach((img, i) => { %>
+              <img src="/<%= img.replace(/^\//, '') %>" class="thumb-img <%= i === 0 ? 'active' : '' %>" onclick="changeImage(this)" />
+            <% }) %>
+          <% } %>
+        </div>
+
+        <div class="position-relative w-100 bg-white p-3 rounded text-center border shadow-sm">
+          <% let mainImgSrc = (variant.images && variant.images[0]) ? '/' + variant.images[0].replace(/^\//, '') : (product.images && product.images[0] ? '/' + product.images[0].replace(/^\//, '') : '/uploads/default-apple.png'); %>
+          <div class="img-zoom-container">
+            <div id="zoomLens" class="img-zoom-lens"></div>
+            <img src="<%= mainImgSrc %>" class="main-img mb-3 mb-lg-0 w-100" id="mainImage" style="max-height: 450px; object-fit: contain;">
+            <div id="zoomResult" class="img-zoom-result"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-6 d-flex align-items-center position-relative">
+        <div class="w-100 ps-lg-3">
+          <span class="badge bg-dark mb-2 px-3 py-1.5 rounded-pill text-uppercase tracking-wider">Premium Apple Device</span>
+          <h2 class="fw-bold text-dark mb-1"><%= product.name %></h2>
+          
+          <p class="text-muted small mb-3 fw-semibold">
+            Configuration: 
+            <%= (variant.attributes && variant.attributes.ram) ? variant.attributes.ram : 'Standard' %> 
+            <%= (variant.attributes && variant.attributes.storage) ? ' | ' + variant.attributes.storage : '' %> 
+            <%= (variant.attributes && variant.attributes.color) ? ' | ' + variant.attributes.color : '' %>
+          </p>
+
+          <div class="mb-3 d-flex align-items-center gap-1">
+            <span class="text-warning"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></span>
+            <span class="text-muted small ms-2">(5.0 based on verified customer feedback)</span>
+          </div>
+
+          <p class="fs-6 text-secondary mb-4 leading-relaxed">
+            <%= product.description %>
+          </p>
+
+          <div class="mb-4">
+            <div class="d-flex align-items-baseline gap-2">
+              <h3 class="fs-1 fw-bold mb-0 text-dark">
+                ₹<%= (variant.price || 0).toLocaleString('en-IN') %>
+              </h3>
+              <% if (product.price > variant.price) { %>
+                <span class="price-old">MSRP: ₹<%= product.price.toLocaleString('en-IN') %></span>
+              <% } %>
+            </div>
+            <% if (product.price > variant.price) { %>
+              <div class="mt-1">
+                <% let saving = product.price - variant.price; %>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded">
+                  <i class="bi bi-tags-fill me-1"></i> Save ₹<%= saving.toLocaleString('en-IN') %> off original pricing launch parameters
+                </span>
+              </div>
+            <% } %>
+          </div>
+
+          <div class="mb-4 w-75">
+            <label class="form-label fw-bold text-uppercase small text-muted">Select Configuration:</label>
+            <select class="form-select form-select-md rounded-3" onchange='variantOption()' id="variantOptions">
+              <option value="<%= variant._id %>" selected>
+                <%= variant.attributes?.ram || 'Standard' %> / <%= variant.attributes?.storage || 'Base' %> — ₹<%= (variant.price || 0).toLocaleString('en-IN') %> (Active Selection)
+              </option>
+              <% if (typeof variantOptions !== 'undefined' && variantOptions.length > 0) { %>
+                <% variantOptions.forEach(ele => { %>
+                  <% if (String(ele._id) !== String(variant._id)) { %>
+                    <option value="<%= ele._id %>">
+                      <%= ele.attributes?.ram || 'Standard' %> / <%= ele.attributes?.storage || 'Base' %> — ₹<%= (ele.price || 0).toLocaleString('en-IN') %>
+                    </option>
+                  <% } %>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+
+          <div class="mb-4">
+            <% if (variant.quantity <= 0) { %>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fs-6 rounded-3 fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i> Out of Stock</span>
+            <% } else if (variant.quantity <= 5) { %>
+              <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 fs-6 rounded-3 fw-bold"><i class="bi bi-speedometer2 me-1"></i> Only <%= variant.quantity %> units remaining!</span>
+            <% } else { %>
+              <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 rounded-3 fw-bold"><i class="bi bi-check-circle-fill me-1"></i> In Stock (Ready to Ship)</span>
+            <% } %>
+          </div>
+
+          <div class="d-flex align-items-center gap-3 mt-4">
+            <% if (variant.quantity > 0) { %>
+              <button class="btn btn-dark btn-lg px-5 py-2.5 fs-6 rounded-pill shadow-sm fw-bold" onclick='addToCart("<%= variant._id %>", event)'>
+                <i class="bi bi-cart-plus me-2 fs-5"></i> Add to Cart
+              </button>
+            <% } else { %>
+              <button class="btn btn-secondary btn-lg px-5 py-2.5 fs-6 rounded-pill disabled" disabled>Out of Stock</button>
+            <% } %>
+            
+            <div class="bg-white p-2 rounded-circle border shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+              <% if (typeof wishlist !== 'undefined' && wishlist?.items) { %>
+                <% wishlist.items.forEach((ele)=> { %>
+                  <% if (ele.productId && (String(ele.productId._id || ele.productId) == String(product._id))) { %>
+                    <% inWishlist = true %>
+                    <i class="bi bi-heart-fill fs-5" onclick='removeFromWishlist("<%= product._id %>", this, event)' style="color: tomato;"></i>
+                  <% } %>
+                <% }) %>
+                <% if (!inWishlist) { %>
+                  <i class="bi bi-heart fs-5 text-muted" onclick='addtoWishList("<%= product._id %>", this, event)'></i>
+                <% } %>
+              <% } else { %>
+                <i class="bi bi-heart fs-5 text-muted" onclick='addtoWishList("<%= product._id %>", this, event)'></i>
+              <% } %>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container nav-detail-container my-5">
+    <div class="row g-4">
+      
+      <div class="col-md-5">
+        <div class="card border-dashed p-4 h-100 bg-white shadow-sm" style="border: 2px dashed #EF6627; border-radius: 12px;">
+          <h5 class="fw-bold text-dark mb-3"><i class="bi bi-percent text-success me-2"></i>Available iZen Offers</h5>
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <div class="bg-light p-2 rounded text-center fw-bold text-dark border" style="min-width: 80px; font-size: 0.85rem;">
+              IZEN20
+            </div>
+            <div>
+              <h6 class="fw-bold mb-0">Flat ₹2,000 Off</h6>
+              <p class="text-muted small mb-0">Applicable on payments made via virtual wallet ecosystems.</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-start gap-3">
+            <div class="bg-light p-2 rounded text-center fw-bold text-dark border" style="min-width: 80px; font-size: 0.85rem;">
+              APPLELOG
+            </div>
+            <div>
+              <h6 class="fw-bold mb-0">Free Super-Speed Shipping</h6>
+              <p class="text-muted small mb-0">Get complimentary fast-lane delivery straight to your hub.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-7">
+        <div class="bg-white p-4 rounded border shadow-sm h-100">
+          <h5 class="fw-bold text-dark mb-4">Customer Reviews & Feedback</h5>
+          
+          <div class="border-b pb-3 mb-3 border-bottom">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <h6 class="fw-bold mb-0">Sajay Babu <span class="badge bg-success-subtle text-success ms-2 bmi-small" style="font-size: 10px;">Verified Buyer</span></h6>
+              <span class="text-warning small">★★★★★</span>
+            </div>
+            <p class="text-secondary small mb-0">"The absolute peak of performance. Transitioning configurations was smooth, and the design build is extraordinarily classy and premium."</p>
+          </div>
+
+          <div class="pb-1">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <h6 class="fw-bold mb-0">Rizwan K. <span class="badge bg-success-subtle text-success ms-2" style="font-size: 10px;">Verified Buyer</span></h6>
+              <span class="text-warning small">★★★★★</span>
+            </div>
+            <p class="text-secondary small mb-0">"Incredibly fast delivery ecosystem. The device arrived flawless and packaging was beautiful. Fits perfectly into my workflow architecture."</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <section id="trending" class="bg-white border-top py-5 mt-5">
+    <div class="container nav-detail-container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h3 class="fw-bold mb-0 text-dark">Explore More iOS Collections</h3>
+          <p class="text-muted small mb-0">Recommended accessories and sibling products based on your active selection parameters</p>
+        </div>
+        <a href="/allProducts" class="btn btn-sm btn-outline-dark px-3 rounded-pill text-decoration-none fw-semibold">View All Products</a>
+      </div>
+      
+      <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-4">
+        <% if (typeof exploreMore !== 'undefined' && exploreMore.length > 0) { %>
+          <% exploreMore.forEach(ele => { %>
+            <% 
+              let targetVariantId = (ele.variants && ele.variants[0]) ? ele.variants[0]._id : ele._id; 
+              let displayPrice = (ele.variants && ele.variants[0]) ? ele.variants[0].price : (ele.price || 0);
+            %>
+            <div class="col" style="cursor: pointer;" onclick='viewProduct("<%= targetVariantId %>")'>
+              <div class="card h-100 product-card border border-light-subtle shadow-sm position-relative rounded-3 bg-light overflow-hidden">
+                <img src="<%= (ele.images && ele.images[0]) ? '/' + ele.images[0].replace(/^\//, '') : '/uploads/default-apple.png' %>" class="card-img-top">
+                <div class="card-body text-center bg-white border-top p-3">
+                  <h6 class="fw-bold text-truncate text-dark mb-1"><%= ele.name %></h6>
+                  <p class="text-muted mb-2 small fw-medium"><%= ele.category ? ele.category.name : 'Apple Ecosystem' %></p>
+                  <div class="d-flex flex-column align-items-center mb-3">
+                    <span class="text-success fw-bold">
+                      ₹<%= displayPrice.toLocaleString('en-IN') %>
+                    </span>
+                  </div>
+                  <button class="btn btn-dark btn-sm w-100 rounded-pill py-1.5 fw-semibold" onclick='addToCart("<%= targetVariantId %>", event)'>Add to Cart</button>
+                </div> 
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <div class="col-12 text-center py-4">
+            <p class="text-muted small">No ecosystem companion devices listed under this specific target category.</p>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bg-dark text-white text-center py-4">
+    <p class="mb-0 small">&copy; 2026 iZen Personal E-Commerce Ecosystem. All rights reserved.</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <script>
+    function setupAmazonZoomEngine(imgID, resultID, lensID) {
+      const img = document.getElementById(imgID);
+      const result = document.getElementById(resultID);
+      const lens = document.getElementById(lensID);
+      
+      if (!img || !result || !lens) return;
+
+      const ZOOM_SCALE_FACTOR = 2.2; 
+
+      if (img.complete) {
+        initZoomLayout();
+      } else {
+        img.onload = initZoomLayout;
+      }
+
+      function initZoomLayout() {
+        result.style.backgroundImage = "url('" + img.src + "')";
+        result.style.backgroundSize = (img.width * ZOOM_SCALE_FACTOR) + "px " + (img.height * ZOOM_SCALE_FACTOR) + "px";
+
+        lens.addEventListener("mousemove", moveLens);
+        img.addEventListener("mousemove", moveLens);
+        lens.addEventListener("touchmove", moveLens);
+        img.addEventListener("touchmove", moveLens);
+
+        img.parentElement.addEventListener("mouseenter", () => {
+          lens.style.display = "block";
+          result.style.display = "block";
+        });
+        img.parentElement.addEventListener("mouseleave", () => {
+          lens.style.display = "none";
+          result.style.display = "none";
+        });
+      }
+
+      function moveLens(e) {
+        e.preventDefault();
+        const pos = getCursorPos(e);
+        
+        let x = pos.x - (lens.offsetWidth / 2);
+        let y = pos.y - (lens.offsetHeight / 2);
+
+        if (x > img.width - lens.offsetWidth) { x = img.width - lens.offsetWidth; }
+        if (x < 0) { x = 0; }
+        if (y > img.height - lens.offsetHeight) { y = img.height - lens.offsetHeight; }
+        if (y < 0) { y = 0; }
+
+        lens.style.left = x + "px";
+        lens.style.top = y + "px";
+
+        result.style.backgroundPosition = "-" + (x * ZOOM_SCALE_FACTOR) + "px -" + (y * ZOOM_SCALE_FACTOR) + "px";
+      }
+
+      function getCursorPos(e) {
+        let a = img.getBoundingClientRect();
+        let x = e.pageX - a.left - window.pageXOffset;
+        let y = e.pageY - a.top - window.pageYOffset;
+        return { x: x, y: y };
+      }
+    }
+
+    $(document).ready(function () { 
+      setupAmazonZoomEngine("mainImage", "zoomResult", "zoomLens");
+    });
+
+    function changeImage(element) {
+      const mainImg = document.getElementById("mainImage");
+      const zoomResult = document.getElementById("zoomResult");
+      
+      mainImg.src = element.src;
+      if(zoomResult) {
+        zoomResult.style.backgroundImage = "url('" + element.src + "')";
+      }
+      
+      document.querySelectorAll('.thumb-img').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      
+      setupAmazonZoomEngine("mainImage", "zoomResult", "zoomLens");
+    }
+
+    function variantOption() {
+      const val = document.getElementById("variantOptions").value;
+      if (val) { window.location.href = `/productDetail/${val}`; }
+    }
+
+    function viewProduct(id) { 
+      window.location.href = `/productDetail/${id}`; 
+    }
+
+    async function addToCart(variantId, event) {
+      if(event) event.stopPropagation();
+      try {
+        const request = await fetch('/cart/add', {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ variantId })
+        });
+        const res = await request.json();
+        if(res.message == "out of stock"){
+          Swal.fire({ icon: "warning", title: "Out of Stock", text: "This variant configuration is sold out." });
+        } else if (request.status == 200) {
+          window.location.href = '/cart';
+        } else {
+          Swal.fire({ icon: "error", title: "Notice", text: res.message || "Could not execute requested cart append." });
+        }
+      } catch (err) { console.error("Cart error trace:", err); }
+    }
+
+    async function addtoWishList(resolvedId, element, event) {
+      if(event) event.stopPropagation();
+      try {
+        const request = await fetch('/wishlist/add', {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: resolvedId }) 
+        });
+        const res = await request.json();
+        if (request.status === 200) {
+          Swal.fire({ icon: 'success', title: 'Added to Wishlist', showConfirmButton: false, timer: 1000 })
+          .then(() => window.location.reload());
+        } else {
+          Swal.fire({ icon: "error", title: "Error", text: res.message || "Could not add to wishlist." });
+        }
+      } catch (err) { console.error("Wishlist frontend tracing error:", err); }
+    }
+
+    async function removeFromWishlist(resolvedId, element, event) {
+      if(event) event.stopPropagation();
+      try {
+        const request = await fetch(`/wishlist/remove/${resolvedId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" }
+        });
+        const res = await request.json();
+        if (request.status === 200) {
+          Swal.fire({ icon: 'success', title: 'Removed from Wishlist', showConfirmButton: false, timer: 1000 })
+          .then(() => window.location.reload());
+        } else {
+          Swal.fire({ icon: "error", title: "Error", text: res.message || "Could not remove from wishlist." });
+        }
+      } catch (err) { console.error("Wishlist removal tracing error:", err); }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

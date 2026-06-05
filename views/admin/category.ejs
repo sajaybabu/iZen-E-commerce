@@ -89,7 +89,9 @@
                                                 </td>
                                                 <td>
                                                     <div class="d-flex justify-content-center gap-3 actions">
-                                                        <i class="bi bi-pencil-square text-primary" style="cursor: pointer;" onclick="openEditCategory('<%= category._id %>', '<%= category.name %>', '<%= category.description %>')" title="Edit"></i>
+                                                        <a href="/admin/editCategory/<%= category._id %>" title="Edit">
+                                                            <i class="bi bi-pencil-square text-primary"></i>
+                                                        </a>
                                                         
                                                         <% if(category.isListed) { %>
                                                             <i class="bi bi-eye-slash text-warning" onclick='confirmListAction("<%= category._id %>", "/admin/blockCategory", "PATCH", "Unlist")' title="Unlist"></i>
@@ -144,10 +146,10 @@
                 <div class="modal-body text-center p-5">
                     <i class="bi bi-exclamation-triangle text-danger display-1"></i>
                     <h3 class="mt-3">Delete Category?</h3>
-                    <p class="text-muted">This will perform a soft delete.</p>
+                    <p class="text-muted">This will remove the category from your active listings.</p>
                     <div class="d-flex justify-content-center gap-2 mt-4">
                         <button class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
-                        <button class="btn btn-danger px-4" onclick="executeAction('/admin/blockCategory', 'PATCH')">Confirm Delete</button>
+                        <button class="btn btn-danger px-4" onclick="executeAction('/admin/deleteCategory', 'DELETE')">Confirm Delete</button>
                     </div>
                 </div>
             </div>
@@ -174,55 +176,6 @@
                 if (result.isConfirmed) {
                     setActionId(id);
                     executeAction(url, method);
-                }
-            });
-        }
-
-        // Handles launching the Inline Edit View Popup via SweetAlert2
-        function openEditCategory(id, currentName, currentDescription) {
-            Swal.fire({
-                title: 'Edit Category',
-                html: `
-                    <div class="text-start mb-2"><label class="fw-semibold small">Category Name</label></div>
-                    <input id="swal-name" class="swal2-input mt-0 mb-3 w-100" placeholder="Category Name" value="${currentName}">
-                    <div class="text-start mb-2"><label class="fw-semibold small">Description</label></div>
-                    <textarea id="swal-desc" class="swal2-textarea mt-0 w-100" placeholder="Description">${currentDescription}</textarea>
-                `,
-                showCancelButton: true,
-                confirmButtonText: 'Save Changes',
-                confirmButtonColor: '#EF6627',
-                cancelButtonColor: '#6c757d',
-                preConfirm: () => {
-                    const name = document.getElementById('swal-name').value.trim();
-                    const description = document.getElementById('swal-desc').value.trim();
-                    if (!name) {
-                        Swal.showValidationMessage('Category name is required');
-                    }
-                    return { name, description };
-                }
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const response = await fetch('/admin/editCategory', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                id: id,
-                                name: result.value.name,
-                                description: result.value.description
-                            })
-                        });
-                        
-                        const data = await response.json();
-                        if (response.ok && data.success !== false) {
-                            Swal.fire({ icon: 'success', title: 'Updated Successfully!', timer: 1000, showConfirmButton: false })
-                            .then(() => window.location.reload());
-                        } else {
-                            Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Name might already exist.' });
-                        }
-                    } catch (error) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
-                    }
                 }
             });
         }
