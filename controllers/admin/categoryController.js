@@ -22,18 +22,15 @@ const loadCategories = async (req, res) => {
 
 const addCategory = async (req, res) => {
     try {
-        // Case-insensitive check to see if category name exists in database
         const existingCategory = await Category.findOne({ 
             name: { $regex: new RegExp(`^${req.body.name.trim()}$`, 'i') } 
         });
 
         if (existingCategory) {
-            // If it exists and isn't deleted, throw a duplicate field block
             if (!existingCategory.isDeleted) {
                 return res.status(400).json({ success: false, message: "Category already exists." });
             }
 
-            // If it exists but was soft-deleted, revive, reset and save it!
             existingCategory.isDeleted = false;
             existingCategory.description = req.body.description;
             existingCategory.discount = Number(req.body.discount) || 0;
@@ -43,7 +40,6 @@ const addCategory = async (req, res) => {
             return res.status(200).json({ success: true, message: "Category restored successfully." });
         }
 
-        // Create a totally fresh category record 
         const newCategory = new Category({
             name: req.body.name.trim(),
             description: req.body.description,
@@ -95,19 +91,27 @@ const updateCategory = async (req, res) => {
         const { newName, newDescription, newStatus, newDiscount } = req.body;
         const isListed = (newStatus === 'active');
 
-        // Added support for updating discount values directly via the service layer wrapper
         await categoryService.updateCategory(
             req.params.id, 
             newName.trim(), 
             newDescription.trim(), 
             isListed,
-            Number(newDiscount) || 0 // Pass discount payload explicitly to service
+            Number(newDiscount) || 0
         );
 
         res.redirect('/admin/category');
     } catch (error) {
         console.error("Update Controller Error:", error);
-        res.status(400).send("Failed to update category: " + error.message);
+        
+        // Catch service error and re-render the view instead of breaking out
+        res.render("admin/editCategory", {
+            categoryId: req.params.id,
+            editName: req.body.newName || '',
+            editDiscount: req.body.newDiscount || 0,
+            editDescription: req.body.newDescription || '',
+            editStatus: req.body.newStatus || 'active',
+            errorMessage: error.message || "Failed to update category"
+        });
     }
 };
 

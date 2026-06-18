@@ -45,42 +45,50 @@ const addToCart = async (req, res) => {
 
 const updateQuantity = async (req, res) => {
   try {
-    const { variantId, action } = req.body;
-    const userId = req.session?.user?.id;
+    const { variantId, action, change } = req.body;
+    const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
+    
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized execution context. Please log in again." });
+      return res.status(401).json({ success: false, message: "Unauthorized execution context." });
     }
 
-    if (!variantId || !action) {
+    if (!variantId) {
       return res.status(400).json({ success: false, message: "Missing matching payload variables." });
     }
 
-    const updatedCart = await cartService.changeQuantity(userId, variantId, action);
+    let resolvedAction = action;
+    if (!resolvedAction && change !== undefined) {
+      resolvedAction = Number(change) > 0 ? 'increment' : 'decrement';
+    }
+
+    if (!resolvedAction) {
+      console.log("Rejecting: Could not resolve action string");
+      return res.status(400).json({ success: false, message: "Missing matching action execution directives." });
+    }
+
+    const updatedCart = await cartService.changeQuantity(userId, variantId, resolvedAction);
     return res.status(200).json({ success: true, cart: updatedCart });
   } catch (error) {
-    console.error("Quantity modify trace failure:", error.message);
+    console.error("QUANTITY ERROR TRACE:", error.message);
     return res.status(400).json({ success: false, message: error.message });
   }
 };
 
 const removeProduct = async (req, res) => {
   try {
+    
     const { variantId } = req.params;
-    const userId = req.session?.user?.id;
+    const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized execution context." });
     }
 
     const updatedCart = await cartService.removeItemFromCart(userId, variantId);
-    return res.status(200).json({ 
-      success: true, 
-      message: "Product completely evicted from configuration ecosystem.",
-      cart: updatedCart 
-    });
+    return res.status(200).json({ success: true, message: "Product removed.", cart: updatedCart });
   } catch (error) {
-    console.error("Remove item allocation error:", error.message);
+    console.error("REMOVE PRODUCT ERROR TRACE:", error.message);
     return res.status(400).json({ success: false, message: error.message });
   }
 };
@@ -118,8 +126,8 @@ const getCartPage = async (req, res) => {
           (categoryDoc && categoryDoc.isListed === false) ||
           (categoryDoc && categoryDoc.isDeleted === true);
 
-        // If activeVariant is missing OR quantity is 0 or less, mark it as Out of Stock!
-        // This ensures that even if the admin panel completely deletes the variant from the product, it stays on screen.
+        // If activeVariant is missing OR quantity is 0 or less, mark it as Out of Stock
+        //  even if the admin panel completely deletes the variant from the product, it stays on screen
         const isOutOfStock = !activeVariant || 
                              activeVariant.quantity === undefined || 
                              activeVariant.quantity <= 0 || 
@@ -191,7 +199,7 @@ const getCartPage = async (req, res) => {
 };
 const getCheckoutPage = async (req, res) => {
   try {
-    const userId = req.session?.user?.id;
+    const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
     if (!userId) return res.redirect('/login');
 
     const cartData = await cartService.getCartDetails(userId);
@@ -217,11 +225,13 @@ const getCheckoutPage = async (req, res) => {
       }
     }
 
-    if (!systemCheckoutReady || cartData.cart.items.length === 0) {
+    if (!systemCheckoutReady || !cartData.cart || !cartData.cart.items || cartData.cart.items.length === 0) {
       return res.redirect('/cart'); 
     }
-
-    return res.render('user/checkout', { user: req.session.user });
+    return res.render('user/checkout', { 
+      user: req.session.user, 
+      cart: cartData.cart 
+    });
 
   } catch (error) {
     console.error("Checkout page security error:", error);

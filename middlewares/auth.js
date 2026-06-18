@@ -4,6 +4,7 @@ const isLogin = (req, res, next) => {
     res.set('Expires', '0');
 
     if (req.session.user) {
+        console.log("✅ Check passed: User session detected. Moving to controller...");
         return next();
     }
 
@@ -11,7 +12,6 @@ const isLogin = (req, res, next) => {
     if (req.session.admin) {
         return res.redirect('/admin/dashboard');
     }
-
     res.redirect('/login');
 };
 

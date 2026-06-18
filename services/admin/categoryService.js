@@ -1,8 +1,7 @@
 const Category = require('../../models/categoryModel');
 
 const getCategories = async (page, searchWord) => {
-
-    const limit = 5;
+    const limit = 4;
     const skip = (page - 1) * limit;
 
     const queryCondition = {
@@ -11,19 +10,17 @@ const getCategories = async (page, searchWord) => {
 
     if (searchWord !== "") {
         queryCondition.name = {
-            $regex: searchWord,
+            $regex: searchWord.trim(),
             $options: 'i'
         };
     }
 
-    const count =
-        await Category.countDocuments(queryCondition);
+    const count = await Category.countDocuments(queryCondition);
 
-    const categories =
-        await Category.find(queryCondition)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+    const categories = await Category.find(queryCondition)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
 
     return {
         categories,
@@ -32,17 +29,12 @@ const getCategories = async (page, searchWord) => {
 };
 
 const createCategory = async (name, description) => {
-
-    const existing =
-        await Category.findOne({
-            name: {
-                $regex: new RegExp(
-                    `^${name.trim()}$`,
-                    'i'
-                )
-            },
-            isDeleted: { $ne: true }
-        });
+    const existing = await Category.findOne({
+        name: {
+            $regex: new RegExp(`^${name.trim()}$`, 'i')
+        },
+        isDeleted: { $ne: true }
+    });
 
     if (existing) {
         throw new Error("Category name already exists");
@@ -67,24 +59,14 @@ const getCategoryById = async (id) => {
     return await Category.findById(id);
 };
 
-const updateCategory = async (
-    id,
-    name,
-    description,
-    isListed
-) => {
-
-    const existingCategory =
-        await Category.findOne({
-            name: {
-                $regex: new RegExp(
-                    `^${name.trim()}$`,
-                    'i'
-                )
-            },
-            _id: { $ne: id },
-            isDeleted: { $ne: true }
-        });
+const updateCategory = async (id, name, description, isListed, discount) => {
+    const existingCategory = await Category.findOne({
+        name: {
+            $regex: new RegExp(`^${name.trim()}$`, 'i')
+        },
+        _id: { $ne: id },
+        isDeleted: { $ne: true }
+    });
 
     if (existingCategory) {
         throw new Error("Category name already exists");
@@ -95,15 +77,13 @@ const updateCategory = async (
         {
             name: name.trim(),
             description: description.trim(),
-            isListed:
-                isListed === 'true' ||
-                isListed === true
+            isListed: isListed === 'true' || isListed === true,
+            discount: Number(discount) || 0 
         }
     );
 };
 
 const blockCategory = async (id) => {
-
     return await Category.findByIdAndUpdate(
         id,
         { isListed: false },
@@ -112,7 +92,6 @@ const blockCategory = async (id) => {
 };
 
 const unBlockCategory = async (id) => {
-
     return await Category.findByIdAndUpdate(
         id,
         { isListed: true },

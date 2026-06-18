@@ -1,0 +1,408 @@
+<%- include('../partials/User/userHeader') %>
+
+<style>
+    :root {
+        --apple-black: #1d1d1f;
+        --apple-gray: #f5f5f7;
+        --apple-border: #e5e5ea;
+        --izen-orange: #ff6b00;
+        --status-bg: #e3f2fd;
+        --status-text: #0d47a1;
+        --apple-blue: #0071e3;
+    }
+
+    body {
+        background-color: #fbfbfd;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--apple-black);
+    }
+
+    .order-container {
+        max-width: 900px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+    }
+
+    .back-link {
+        color: #86868b;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+    }
+    .back-link:hover {
+        color: var(--apple-black);
+    }
+
+    .main-card {
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+
+    .badge-status {
+        background-color: var(--status-bg);
+        color: var(--status-text);
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        padding: 2rem;
+        border-bottom: 1px solid var(--apple-border);
+        background-color: #fafafa;
+    }
+
+    .info-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #86868b;
+        margin-bottom: 0.5rem;
+    }
+
+    .product-row {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 2rem;
+        border-bottom: 1px solid var(--apple-border);
+    }
+
+    @media (min-width: 576px) {
+        .product-row {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+    }
+
+    .product-details {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .product-img-box {
+        width: 70px;
+        height: 70px;
+        background-color: var(--apple-gray);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .product-img-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 6px;
+    }
+
+    .variant-badge {
+        font-size: 0.75rem;
+        background: var(--apple-gray);
+        color: #1d1d1f;
+        padding: 4px 10px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        font-weight: 600;
+        border: 1px solid var(--apple-border);
+    }
+
+    .apple-btn-danger {
+        color: #ff3b30;
+        border: 1px solid #ff3b30;
+        background: transparent;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .apple-btn-danger:hover {
+        background: #ff3b30;
+        color: #ffffff;
+    }
+
+    .apple-btn-warning {
+        color: var(--izen-orange);
+        border: 1px solid var(--izen-orange);
+        background: transparent;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .apple-btn-warning:hover {
+        background: var(--izen-orange);
+        color: #ffffff;
+    }
+
+    .summary-box {
+        max-width: 320px;
+        margin-left: auto;
+        padding: 2rem;
+    }
+
+    .summary-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+        color: #1d1d1f;
+    }
+
+    /* Minimalist Apple Style SweetAlert Custom Overrides */
+    .apple-swal-popup {
+        border-radius: 16px !important;
+        padding: 2rem !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+    .apple-swal-title {
+        font-size: 1.4rem !important;
+        font-weight: 600 !important;
+        color: var(--apple-black) !important;
+    }
+    .apple-swal-input {
+        border: 1px solid var(--apple-border) !important;
+        box-shadow: none !important;
+        border-radius: 8px !important;
+        font-size: 0.95rem !important;
+        height: 44px !important;
+    }
+    .apple-swal-input:focus {
+        border-color: var(--apple-blue) !important;
+    }
+</style>
+
+<div class="order-container">
+    <a href="/checkout/orders/my-orders" class="back-link"><i class="bi bi-chevron-left"></i> Back to Orders History</a>
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mt-3 gap-2">
+        <div>
+            <h1 class="fw-bold tracking-tight mb-1" style="font-size: 2rem;">Order Details</h1>
+            <p class="text-muted small mb-0">Placed on <%= order.date %></p><a href="/checkout/orders/<%= order._id %>/invoice" class="apple-btn-secondary bg-dark text-white" style="padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; border: 1px solid var(--apple-border); border-radius: 8px; color: var(--apple-black); background: #ffffff;">
+    <i class="bi bi-download"></i> Download Invoice (PDF)
+</a>
+
+        </div>
+        <div>
+            <span class="text-muted me-2 small">ID: <strong class="text-dark"><%= order.orderId %></strong></span>
+            <span class="badge-status text-capitalize"><%= order.status %></span>
+        </div>
+    </div>
+
+    <div class="main-card">
+        <div class="info-grid">
+            <div>
+                <div class="info-title">Shipping Address</div>
+                <div class="fw-bold mb-1"><%= order.shippingAddress.fullname %></div>
+                <div class="text-muted small" style="line-height: 1.4;">
+                    <%= order.shippingAddress.address %><br>
+                    Pincode: <%= order.shippingAddress.pincode %><br>
+                    Phone: <%= order.shippingAddress.phone %>
+                </div>
+            </div>
+            <div>
+                <div class="info-title">Payment Method</div>
+                <div class="fw-bold text-dark"><%= order.paymentMethod %></div>
+                <div class="text-muted small mt-1">Status: <span class="text-warning fw-bold">Verified</span></div>
+            </div>
+            <div>
+                <div class="info-title">Delivery Commitment</div>
+                <div class="fw-bold" style="color: #34c759;"><i class="bi bi-truck me-1"></i> Standard Delivery</div>
+                <div class="text-muted small">Expected within 3-5 operational business days.</div>
+            </div>
+        </div>
+
+        <% order.items.forEach(item => { %>
+            <div class="product-row">
+                <div class="product-details">
+                    <div class="product-img-box">
+                        <img src="<%= item.image.startsWith('/') ? item.image : '/' + item.image %>" alt="<%= item.name %>" onerror="this.onerror=null; this.src='/images/login.png';">
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-1" style="font-size: 1.05rem;"><%= item.name %></h5>
+                        
+                        <div class="mb-2">
+                            <% if (item.variant && item.variant !== 'Standard Config' && item.variant !== 'Default Config' && item.variant !== 'Base Specification') { %>
+                                <span class="variant-badge">
+                                    <i class="bi bi-palette-fill me-1.5 text-muted" style="font-size: 0.75rem;"></i><%= item.variant %>
+                                </span>
+                            <% } else { %>
+                                <span class="variant-badge text-muted" style="font-style: italic; background: none; border: none; padding: 0;">Standard Edition</span>
+                            <% } %>
+                        </div>
+                        
+                        <span class="badge bg-light text-dark border small">Qty: <%= item.quantity %></span>
+                    </div>
+                </div>
+                
+                <div class="text-sm-end d-flex flex-row flex-sm-column align-items-center align-items-sm-end justify-content-between gap-2">
+                    <span class="fw-bold d-block" style="font-size: 1.1rem;">
+                        ₹<%= (item.price * item.quantity).toLocaleString('en-IN') %>
+                    </span>
+
+                    <div class="action-button-container mt-sm-2">
+                        <% if (item.status.toLowerCase() === 'pending' || item.status.toLowerCase() === 'processing' || item.status.toLowerCase() === 'shipped') { %>
+                            <button class="apple-btn-danger" onclick="handleCancelItem('<%= order._id || order.id %>', '<%= item.variantId %>')">
+                                Cancel Item
+                            </button>
+                        <% } else if (item.status.toLowerCase() === 'delivered') { %>
+                            <button class="apple-btn-warning" onclick="handleReturnItem('<%= order._id || order.id %>', '<%= item.variantId %>')">
+                                Return Item
+                            </button>
+                        <% } else if (item.status.toLowerCase() === 'cancelled') { %>
+                            <span class="badge bg-danger-subtle text-danger px-3 py-2 small rounded-pill fw-bold">Cancelled</span>
+                        <% } else if (item.status.toLowerCase() === 'returned') { %>
+                            <span class="badge bg-secondary-subtle text-secondary px-3 py-2 small rounded-pill fw-bold">Returned</span>
+                        <% } else { %>
+                            <span class="badge bg-light text-dark border px-2 py-1 small text-capitalize"><%= item.status %></span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        <% }) %>
+
+        <div class="summary-box">
+            <div class="summary-line">
+                <span class="text-muted">Subtotal</span>
+                <span>₹<%= order.summary.subtotal.toLocaleString('en-IN') %></span>
+            </div>
+            <div class="summary-line">
+                <span class="text-muted">Shipping Charges</span>
+                <span>₹<%= order.summary.shipping %></span>
+            </div>
+            <div class="summary-line">
+                <span class="text-muted">Discount Applied</span>
+                <span class="text-success">-₹<%= order.summary.discount.toLocaleString('en-IN') %></span>
+            </div>
+            <hr style="border-top: 1px dashed var(--apple-border); margin: 1rem 0;">
+            <div class="summary-line fw-bold" style="font-size: 1.2rem;">
+                <span>Total Amount</span>
+                <span style="color: var(--apple-black);">₹<%= order.summary.total.toLocaleString('en-IN') %></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+async function handleCancelItem(orderId, variantId) {
+    if (!orderId || orderId === "undefined" || orderId === "") {
+        Swal.fire('Error', 'Unable to retrieve valid Order Reference Identifier.', 'error');
+        return;
+    }
+
+    // Classy, clear button labels avoiding duplicate actions confirmation confusion
+    const { value: reason, isConfirmed } = await Swal.fire({
+        title: 'Cancel Item Request',
+        input: 'text',
+        inputLabel: 'Reason for cancellation (Optional):',
+        inputPlaceholder: 'Tell us why you changed your mind...',
+        showCancelButton: true,
+        confirmButtonText: 'Confirm Cancellation',
+        cancelButtonText: 'Keep Item',
+        confirmButtonColor: '#ff3b30',
+        cancelButtonColor: '#86868b',
+        customClass: {
+            popup: 'apple-swal-popup',
+            title: 'apple-swal-title',
+            input: 'apple-swal-input'
+        }
+    });
+
+    // Check if user clicked 'Confirm Cancellation' rather than 'Keep Item' / overlay click
+    if (isConfirmed) {
+        try {
+            const response = await fetch('/checkout/orders/cancel-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, variantId, reason: reason || "No explicit reason specified" })
+            });
+            const data = await response.json();
+            if (data.success) {
+                Swal.fire({
+                    title: 'Cancelled!',
+                    text: 'The item has been successfully cancelled.',
+                    icon: 'success',
+                    confirmButtonColor: '#0071e3'
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message || 'Failed to process request.', 'error');
+            }
+        } catch (err) {
+            console.error("Cancellation fetch crash:", err);
+            Swal.fire('Error', 'Failed to communicate with the server.', 'error');
+        }
+    }
+}
+
+async function handleReturnItem(orderId, variantId) {
+    if (!orderId || orderId === "undefined" || orderId === "") {
+        Swal.fire('Error', 'Unable to retrieve valid Order Reference Identifier.', 'error');
+        return;
+    }
+
+    const { value: reason, isConfirmed } = await Swal.fire({
+        title: 'Return Request',
+        input: 'text',
+        inputLabel: 'Reason for return (Mandatory):',
+        inputPlaceholder: 'Please describe the issue with the device...',
+        showCancelButton: true,
+        confirmButtonText: 'Submit Return Request',
+        cancelButtonText: 'Keep Item',
+        confirmButtonColor: '#ff6b00',
+        cancelButtonColor: '#86868b',
+        customClass: {
+            popup: 'apple-swal-popup',
+            title: 'apple-swal-title',
+            input: 'apple-swal-input'
+        },
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return 'A reason is required to submit a return request!';
+            }
+        }
+    });
+
+    if (isConfirmed && reason) {
+        try {
+            const response = await fetch('/checkout/orders/return-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, variantId, reason })
+            });
+            const data = await response.json();
+            if (data.success) {
+                Swal.fire({
+                    title: 'Submitted!',
+                    text: 'Your return request has been submitted for review.',
+                    icon: 'success',
+                    confirmButtonColor: '#0071e3'
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message || 'Failed to submit request.', 'error');
+            }
+        } catch (err) {
+            console.error("Return reference catch error:", err);
+            Swal.fire('Error', 'Failed to communicate with the server.', 'error');
+        }
+    }
+}
+</script>
+
+<%- include('../partials/User/userFooter') %>

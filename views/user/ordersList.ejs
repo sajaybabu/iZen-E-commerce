@@ -1,0 +1,245 @@
+<%- include('../partials/User/userHeader') %>
+<style>
+    :root { 
+        --apple-black: #1d1d1f; 
+        --apple-gray: #f5f5f7; 
+        --apple-border: #e5e5ea; 
+        --apple-blue: #0071e3;
+    }
+    body { background-color: #fbfbfd; font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: var(--apple-black); }
+    .orders-wrapper { max-width: 1000px; margin: 4rem auto; padding: 0 1.5rem; }
+    .page-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; }
+    
+    /* Search Bar Wrapper Styles */
+    .search-container {
+        position: relative;
+        margin-bottom: 2rem;
+        max-width: 450px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 10px 16px 10px 40px;
+        font-size: 0.95rem;
+        background-color: #f0efef;
+        border: 1px solid black;
+        border-radius: 10px;
+        outline: none;
+        transition: all 0.2s ease-in-out;
+    }
+    .search-input:focus {
+        background-color: #ffffff;
+        border-color: var(--apple-blue);
+        box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+    }
+    .search-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #86868b;
+        font-size: 1rem;
+        pointer-events: none;
+    }
+
+    .empty-orders-state { text-align: center; padding: 5rem 2rem; background: #ffffff; border: 1px solid var(--apple-border); border-radius: 20px; }
+    .no-results-state { text-align: center; padding: 3rem 2rem; background: #ffffff; border: 1px solid var(--apple-border); border-radius: 16px; display: none; }
+    
+    .order-row-card { background: #ffffff; border: 1px solid var(--apple-border); border-radius: 16px; margin-bottom: 1.5rem; overflow: hidden; transition: transform 0.2s; }
+    .order-row-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.04); }
+    .card-header-bar { background-color: var(--apple-gray); padding: 1rem 1.5rem; border-bottom: 1px solid var(--apple-border); display: flex; justify-content: space-between; font-size: 0.85rem; color: #6e6e73; }
+    .card-body-content { padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+    .status-badge { padding: 4px 12px; font-size: 0.8rem; font-weight: 600; border-radius: 10px; background-color: #fff3cd; color: #856404; }
+    .apple-btn { background: #ffffff; color: #0071e3; border: 1px solid #0071e3; padding: 8px 16px; font-size: 0.85rem; border-radius: 8px; text-decoration: none; }
+    .apple-btn:hover { background: #0071e3; color: #ffffff; }
+
+    /* Minimalist Apple Style Pagination controls */
+    .apple-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 2.5rem;
+    }
+    .page-node {
+        min-width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid var(--apple-border);
+        background: #ffffff;
+        color: var(--apple-black);
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        user-select: none;
+    }
+    .page-node:hover {
+        background-color: var(--apple-gray);
+    }
+    .page-node.active {
+        background-color: var(--apple-blue);
+        color: #ffffff;
+        border-color: var(--apple-blue);
+    }
+    .page-node.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background-color: var(--apple-gray);
+    }
+</style>
+
+<div class="orders-wrapper">
+    <h1 class="page-title">Your Orders</h1>
+    
+    <% if (orders && orders.length > 0) { %>
+        <div class="search-container">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" id="orderSearchInput" class="search-input" placeholder="Search by Order ID or product name...">
+        </div>
+    <% } %>
+
+    <% if (!orders || orders.length === 0) { %>
+        <div class="empty-orders-state">
+            <h3 class="fw-bold">No Orders Yet</h3>
+            <a href="/shop" class="btn btn-primary mt-2" style="background:#0071e3;">Explore Shop</a>
+        </div>
+    <% } else { %>
+        <div id="ordersListContainer">
+            <% orders.forEach(order => { %>
+                <div class="order-row-card" data-order-id="<%= order.orderId.toLowerCase() %>" data-product-name="<%= order.items[0]?.name.toLowerCase() %>">
+                    <div class="card-header-bar">
+                        <div>
+                            <span class="me-3">Placed: <strong><%= new Date(order.createdAt).toLocaleDateString('en-IN') %></strong></span>
+                            <span>Total: <strong>₹<%= order.totalAmount.toLocaleString('en-IN') %></strong></span>
+                        </div>
+                        <div>Ref: ID #<span class="searchable-id"><%= order.orderId %></span></div>
+                    </div>
+                    <div class="card-body-content">
+                        <div>
+                            <span class="status-badge">Status: <%= order.items[0]?.status || 'Processing' %></span>
+                            <h6 class="fw-bold mt-2 product-title-text"><%= order.items[0]?.name %> <%= order.items.length > 1 ? '(+' + (order.items.length - 1) + ' more)' : '' %></h6>
+                        </div>
+                        <div>
+                            <a href="/checkout/orders/<%= order._id %>" class="apple-btn">Manage Details</a>
+                        </div>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+
+        <div id="noResultsState" class="no-results-state">
+            <h4 class="fw-bold text-muted mb-1">No Matching Orders Found</h4>
+            <p class="text-secondary small mb-0">Double check your spelling or transaction ID string reference.</p>
+        </div>
+
+        <div id="paginationNav" class="apple-pagination"></div>
+    <% } %>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('orderSearchInput');
+    const orderCards = Array.from(document.querySelectorAll('.order-row-card'));
+    const noResultsState = document.getElementById('noResultsState');
+    const paginationNav = document.getElementById('paginationNav');
+
+    const ITEMS_PER_PAGE = 3; // 🌟 Adjust this number to change items shown per page
+    let currentPage = 1;
+    let filteredCards = [...orderCards];
+
+    function updatePagination() {
+        if (!paginationNav) return;
+        paginationNav.innerHTML = '';
+
+        const totalItems = filteredCards.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+        if (totalPages <= 1) {
+            // Hide elements if everything easily fits on one page
+            displayPageItems();
+            return;
+        }
+
+        // Previous Button
+        const prevBtn = document.createElement('div');
+        prevBtn.className = `page-node ${currentPage === 1 ? 'disabled' : ''}`;
+        prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i>';
+        if (currentPage > 1) {
+            prevBtn.addEventListener('click', () => {
+                currentPage--;
+                updatePagination();
+            });
+        }
+        paginationNav.appendChild(prevBtn);
+
+        // Page Number Nodes
+        for (let i = 1; i <= totalPages; i++) {
+            const pageNode = document.createElement('div');
+            pageNode.className = `page-node ${i === currentPage ? 'active' : ''}`;
+            pageNode.innerText = i;
+            pageNode.addEventListener('click', () => {
+                currentPage = i;
+                updatePagination();
+            });
+            paginationNav.appendChild(pageNode);
+        }
+
+        // Next Button
+        const nextBtn = document.createElement('div');
+        nextBtn.className = `page-node ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextBtn.innerHTML = '<i class="bi bi-chevron-right"></i>';
+        if (currentPage < totalPages) {
+            nextBtn.addEventListener('click', () => {
+                currentPage++;
+                updatePagination();
+            });
+        }
+        paginationNav.appendChild(nextBtn);
+
+        displayPageItems();
+    }
+
+    function displayPageItems() {
+        // First hide all cards
+        orderCards.forEach(card => card.style.display = 'none');
+
+        // Show only cards belonging to the current active chunk
+        const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+        const endIdx = startIdx + ITEMS_PER_PAGE;
+        
+        const activePageChunk = filteredCards.slice(startIdx, endIdx);
+        activePageChunk.forEach(card => card.style.display = 'block');
+
+        // Toggle clean fallback state if nothing fits query criteria
+        if (filteredCards.length === 0) {
+            noResultsState.style.display = 'block';
+        } else {
+            noResultsState.style.display = 'none';
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+
+            // Refilter cards index array based on text criteria
+            filteredCards = orderCards.filter(card => {
+                const idMatch = card.getAttribute('data-order-id');
+                const nameMatch = card.getAttribute('data-product-name');
+                return idMatch.includes(searchTerm) || nameMatch.includes(searchTerm);
+            });
+
+            currentPage = 1; // Always fall back to first page index chunk upon changing inputs
+            updatePagination();
+        });
+    }
+
+    // Initialize layout setup state on page boot
+    updatePagination();
+});
+</script>
+
+<%- include('../partials/User/userFooter') %>

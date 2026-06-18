@@ -81,7 +81,7 @@
 
                     <div class="container">
                         <div class="row justify-content-between my-4 align-items-center">
-                            <form action="/admin/searchProduct" class="col-8 col-lg-7 d-flex gap-2" method="post">
+                            <form action="/admin/searchProduct" class="col-8 col-lg-7 d-flex gap-2" method="GET">
                                 <input class="form-control me-2" name="name" type="search"
                                     placeholder="Search Apple Devices..." aria-label="Search"
                                     value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>" />
@@ -225,15 +225,37 @@
                     </div>
                 </div>
 
-                <% if (typeof prevPage !=='undefined' && typeof nextPage !=='undefined' ) { %>
-                    <div class="mb-4 mx-auto">
-                        <a href="/admin/products?page=<%= prevPage %>"
-                            class="text-light btn bg-secondary rounded border-0 px-3 py-1 <%= typeof prevDisable !== 'undefined' ? prevDisable : '' %>">Prev</a>
-                        <a href="/admin/products?page=<%= nextPage %>"
-                            class="text-light btn rounded border-0 px-3 py-1 <%= typeof nextDisable !== 'undefined' ? nextDisable : '' %>"
-                            style="background-color: #000000;">Next</a>
-                    </div>
-                <% } %>
+               <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+    <nav class="mb-4">
+        <ul class="pagination justify-content-center">
+            <!-- PREVIOUS -->
+            <li class="page-item <%= prevDisable %>">
+                <a class="page-link <%= prevDisable ? 'text-muted' : 'text-dark' %>" 
+                   href="<%= isSearchPage ? '/admin/products/search?name=' + searchQuery + '&page=' + prevPage : '/admin/products?page=' + prevPage %>">
+                   Previous
+                </a>
+            </li>
+
+            <!-- DYNAMIC PAGE NUMBERS -->
+            <% for(let i = 1; i <= totalPages; i++) { %>
+                <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                    <a class="page-link <%= currentPage === i ? 'bg-orange text-white border-dark' : 'text-dark' %>" 
+                       href="<%= isSearchPage ? '/admin/products/search?name=' + searchQuery + '&page=' + i : '/admin/products?page=' + i %>">
+                       <%= i %>
+                    </a>
+                </li>
+            <% } %>
+
+            <!-- NEXT -->
+            <li class="page-item <%= nextDisable %>">
+                <a class="page-link <%= nextDisable ? 'text-muted' : 'text-dark' %>" 
+                   href="<%= isSearchPage ? '/admin/products/search?name=' + searchQuery + '&page=' + nextPage : '/admin/products?page=' + nextPage %>">
+                   Next
+                </a>
+            </li>
+        </ul>
+    </nav>
+<% } %>
             </div>
         </div>
     </div>

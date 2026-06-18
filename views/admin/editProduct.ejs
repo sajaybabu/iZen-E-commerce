@@ -90,7 +90,7 @@
     <div class="container my-5" style="max-width: 900px;">
         <div class="d-flex align-items-center gap-3 mb-4">
             <a href="/admin/products" class="btn btn-outline-dark btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
-            <h1 class="h3 mb-0">Modify Apple Device</h1>
+            <h1 class="h3 mb-0">Edit Apple Device</h1>
         </div>
 
         <form id="editProductForm" action="/admin/updateProduct/<%= product._id %>" method="POST" enctype="multipart/form-data">
@@ -123,13 +123,14 @@
                 </div>
             </div>
 
-            <div id="variants-wrapper">
-                <p class="text-secondary mb-3 fs-5">Product Variants</p>
+            <div class="mb-3">
+                <p class="text-secondary mb-0 fs-5">Product Variants</p>
+            </div>
 
-                <% product.variants.forEach((variant, index) => { 
-                    let cardNumber = index + 1;
-                %>
-                    <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-<%= cardNumber %>" data-variant-id="<%= variant._id %>">
+            <div id="variants-wrapper">
+                <% product.variants.forEach((variant, index) => { %>
+                    <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-<%= index + 1 %>" data-variant-id="<%= variant._id %>">
+                        <button type="button" class="btn-close position-absolute top-0 end-0 m-2 small" onclick="removeVariantCard(<%= index + 1 %>)"></button>
                         <div class="row">
                             <div class="col-md-7">
                                 <div class="row g-2 mb-2">
@@ -138,17 +139,17 @@
                                     <div class="col-2"></div>
                                 </div>
 
-                                <div id="attributes-container-<%= cardNumber %>">
-                                    <% Object.entries(variant.attributes).forEach(([type, val]) => { %>
+                                <div id="attributes-container-<%= index + 1 %>">
+                                    <% Object.entries(variant.attributes || {}).forEach(([key, val]) => { %>
                                         <div class="row g-2 my-1 attribute-row align-items-center">
                                             <div class="col-5">
-                                                <input type="text" class="form-control rounded-0 border-secondary attr-type" value="<%= type %>" required>
+                                                <input type="text" class="form-control rounded-0 border-secondary attr-type" value="<%= key %>" placeholder="e.g., Storage" required>
                                             </div>
                                             <div class="col-5">
-                                                <input type="text" class="form-control rounded-0 border-secondary attr-val" value="<%= val %>" required>
+                                                <input type="text" class="form-control rounded-0 border-secondary attr-val" value="<%= val %>" placeholder="e.g., 256GB" required>
                                             </div>
                                             <div class="col-2 text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeAttributeRow(this, <%= cardNumber %>)">
+                                                <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeAttributeRow(this, <%= index + 1 %>)">
                                                     <i class="bi bi-trash-fill"></i>
                                                 </button>
                                             </div>
@@ -157,7 +158,7 @@
                                 </div>
                                 
                                 <div class="mt-2">
-                                    <button type="button" class="btn btn-sm btn-dark rounded-0 px-3" onclick="addAttributeRow(<%= cardNumber %>)">
+                                    <button type="button" class="btn btn-sm btn-dark rounded-0 px-3" onclick="addAttributeRow(<%= index + 1 %>)">
                                         <i class="bi bi-plus-circle me-1"></i> Add Custom Attribute
                                     </button>
                                 </div>
@@ -167,52 +168,56 @@
                                 <div class="mb-3">
                                     <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
                                     <div class="input-group" style="width: 160px;"> 
-                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= cardNumber %>, -1)">◀</button>
-                                        <input type="number" id="quantity-<%= cardNumber %>" class="form-control text-center rounded-0 border-secondary no-spinners target-qty-val" value="<%= variant.quantity %>" min="0" required>
-                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= cardNumber %>, 1)">▶</button>
+                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= index + 1 %>, -1)">◀</button>
+                                        <input type="number" id="quantity-<%= index + 1 %>" class="form-control text-center rounded-0 border-secondary no-spinners target-qty-val" value="<%= variant.quantity %>" min="0" required>
+                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(<%= index + 1 %>, 1)">▶</button>
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
-                                    <input type="number" id="price-<%= cardNumber %>" class="form-control rounded-0 border-secondary target-price-val" value="<%= variant.price %>" min="1" step="any" required>
+                                    <input type="number" id="price-<%= index + 1 %>" class="form-control rounded-0 border-secondary target-price-val" value="<%= variant.price %>" placeholder="Type price here" min="1" step="any" required>
                                 </div>
                             </div>
                         </div>
 
                         <div class="mt-4 pt-3 border-top">
-                            <p class="fw-semibold small text-muted mb-2">Saved Images & New Uploads</p>
-                            <div class="d-flex flex-wrap gap-3 mb-3 image-row-container" id="imageRow-<%= cardNumber %>">
-                                
-                                <% if (variant.images && variant.images.length > 0) { %>
-                                    <% variant.images.forEach((img, imgIdx) => { %>
-                                        <div class="img-wrapper-node saved-image-instance" id="saved-img-<%= cardNumber %>-<%= imgIdx %>" data-img-path="<%= img %>">
-                                            <img src="<%= img %>" class="image-preview rounded shadow-sm" alt="variant hardware view">
-                                            <button type="button" class="delete-overlay-btn" onclick="markImageForRemoval('<%= img %>', 'saved-img-<%= cardNumber %>-<%= imgIdx %>', '<%= cardNumber %>')">
+                            <p class="fw-semibold small text-muted mb-2">Display Images</p>
+                            <div class="d-flex flex-wrap gap-3 mb-3 image-row-container" id="imageRow-<%= index + 1 %>">
+                                <% if(variant.images && variant.images.length > 0) { %>
+                                    <% variant.images.forEach((imgUrl, imgIdx) => { %>
+                                        <div class="img-wrapper-node existing-asset-instance" data-image-url="<%= imgUrl %>">
+                                            <img src="<%= imgUrl %>" class="image-preview rounded shadow-sm" alt="preview">
+                                            <button type="button" class="delete-overlay-btn" onclick="removeExistingSavedAsset(this)">
                                                 <i class="bi bi-x"></i>
                                             </button>
                                         </div>
                                     <% }) %>
                                 <% } else { %>
-                                    <span class="text-muted small no-assets-flag"><i class="bi bi-exclamation-circle text-warning"></i> At least 3 images are mandatory.</span>
+                                    <span class="text-muted small no-assets-flag"><i class="bi bi-exclamation-circle text-warning"></i> No files uploaded. At least 3 images required.</span>
                                 <% } %>
-
                             </div>
 
                             <div class="d-flex justify-content-start">
-                                <label for="image-<%= cardNumber %>" class="image-label bg-light p-3 text-center small fw-semibold">
+                                <label for="image-<%= index + 1 %>" class="image-label bg-light p-3 text-center small fw-semibold">
                                     <i class="bi bi-upload fs-5 d-block text-primary mb-1"></i> Upload New Images
                                 </label>
-                                <input id="image-<%= cardNumber %>" type="file" accept="image/*" multiple class="d-none" onchange="initiateCroppingProcess(this, <%= cardNumber %>, <%= index %>)">
+                                <input id="image-<%= index + 1 %>" type="file" accept="image/*" multiple class="d-none" onchange="initiateCroppingProcess(this, <%= index + 1 %>, <%= index %>)">
                             </div>
                         </div>
                     </div>
                 <% }) %>
             </div>
 
+            <div class="mb-4">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-0" onclick="appendNewVariantCard(event)">
+                    <i class="bi bi-plus-square-fill me-1"></i> Add Another Variant
+                </button>
+            </div>
+
             <div class="d-flex justify-content-end gap-3 mt-4">
                 <a href="/admin/products" class="btn btn-secondary px-4 py-2 rounded-0">Cancel</a>
-                <button type="submit" class="btn btn-success px-5 py-2 rounded-0">Save Changes</button>
+                <button type="submit" class="btn btn-primary px-5 py-2 rounded-0">Save Changes</button>
             </div>
         </form>
     </div>
@@ -242,7 +247,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    let removedImages = [];
     let dynamicCroppedFilesMap = {}; 
     
     let activeFilesQueue = [];
@@ -252,9 +256,110 @@
     let cropperInstance = null;
     let cropModalBootstrap = null;
 
+    let globalVariantCount = <%= product.variants.length %>;
+
     document.addEventListener("DOMContentLoaded", function() {
         cropModalBootstrap = new bootstrap.Modal(document.getElementById('cropModal'));
     });
+
+    function appendNewVariantCard(event) {
+        if (event) event.preventDefault();
+        
+        globalVariantCount++;
+        const currentTrackingIndex = globalVariantCount - 1; 
+        const wrapper = document.getElementById("variants-wrapper");
+        
+        const variantCardHTML = `
+            <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-${globalVariantCount}" data-variant-id="new_variant">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-2 small" onclick="removeVariantCard(${globalVariantCount})"></button>
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="row g-2 mb-2">
+                            <div class="col-5"><span class="small fw-semibold text-muted">Attribute type</span></div>
+                            <div class="col-5"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                            <div class="col-2"></div>
+                        </div>
+
+                        <div id="attributes-container-${globalVariantCount}">
+                            <div class="row g-2 my-1 attribute-row align-items-center">
+                                <div class="col-5">
+                                    <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="e.g., Storage" required>
+                                </div>
+                                <div class="col-5">
+                                    <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="e.g., 256GB" required>
+                                </div>
+                                <div class="col-2 text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeAttributeRow(this, ${globalVariantCount})">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-sm btn-dark rounded-0 px-3" onclick="addAttributeRow(${globalVariantCount})">
+                                <i class="bi bi-plus-circle me-1"></i> Add Custom Attribute
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
+                        <div class="mb-3">
+                            <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
+                            <div class="input-group" style="width: 160px;"> 
+                                <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${globalVariantCount}, -1)">◀</button>
+                                <input type="number" id="quantity-${globalVariantCount}" class="form-control text-center rounded-0 border-secondary no-spinners target-qty-val" value="1" min="0" required>
+                                <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${globalVariantCount}, 1)">▶</button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
+                            <input type="number" id="price-${globalVariantCount}" class="form-control rounded-0 border-secondary target-price-val" placeholder="Type price here" min="1" step="any" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top">
+                    <p class="fw-semibold small text-muted mb-2">Display Images (Minimum 3 Required)</p>
+                    <div class="d-flex flex-wrap gap-3 mb-3 image-row-container" id="imageRow-${globalVariantCount}">
+                        <span class="text-muted small no-assets-flag"><i class="bi bi-exclamation-circle text-warning"></i> At least 3 images are mandatory.</span>
+                    </div>
+
+                    <div class="d-flex justify-content-start">
+                        <label for="image-${globalVariantCount}" class="image-label bg-light p-3 text-center small fw-semibold">
+                            <i class="bi bi-upload fs-5 d-block text-primary mb-1"></i> Upload New Images
+                        </label>
+                        <input id="image-${globalVariantCount}" type="file" accept="image/*" multiple class="d-none" onchange="initiateCroppingProcess(this, ${globalVariantCount}, ${currentTrackingIndex})">
+                    </div>
+                </div>
+            </div>`;
+            
+        wrapper.insertAdjacentHTML('beforeend', variantCardHTML);
+    }
+
+    function removeVariantCard(id) {
+        const remainingCards = document.querySelectorAll('.variant-card');
+        if (remainingCards.length <= 1) {
+            Swal.fire({ icon: 'warning', title: 'Action Denied', text: 'A product setup must retain at least one configured active variant.', confirmButtonColor: '#000' });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Remove Variant Block?',
+            text: "This specific product configuration block details will be permanently detached.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Remove'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const targetCard = document.getElementById(`variant-session-${id}`);
+                targetCard.remove();
+            }
+        });
+    }
 
     function addAttributeRow(cardNumber) {
         const targetContainer = document.getElementById(`attributes-container-${cardNumber}`);
@@ -299,39 +404,6 @@
             let newValue = currentValue + change;
             if (newValue >= 0) inputField.value = newValue;
         }
-    }
-
-    function markImageForRemoval(imagePath, elementId, cardNumber) {
-        const container = document.getElementById(`imageRow-${cardNumber}`);
-        
-        const savedCount = container.querySelectorAll('.saved-image-instance').length;
-        const stagedCount = container.querySelectorAll('.staged-cropped-instance').length;
-        const balanceAssetsTotal = savedCount + stagedCount;
-
-        if (balanceAssetsTotal <= 3) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Minimum Limit Reached',
-                text: 'A minimum of 3 display images are required per item. Upload new replacement files first before removing this one.',
-                confirmButtonColor: '#000'
-            });
-            return;
-        }
-
-        Swal.fire({
-            title: 'Remove Image Asset?',
-            text: "This image will be removed from records once modifications are saved.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Remove'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                removedImages.push(imagePath);
-                document.getElementById(elementId).remove();
-            }
-        });
     }
 
     function initiateCroppingProcess(inputRef, cardNumber, variantIndex) {
@@ -420,6 +492,16 @@
         }
     }
 
+    function removeExistingSavedAsset(buttonRef) {
+        const wrapperNode = buttonRef.closest('.img-wrapper-node');
+        const parentContainer = wrapperNode.closest('.image-row-container');
+        wrapperNode.remove();
+        
+        if (parentContainer.querySelectorAll('.img-wrapper-node').length === 0) {
+            parentContainer.innerHTML = `<span class="text-muted small no-assets-flag"><i class="bi bi-exclamation-circle text-warning"></i> No files uploaded. At least 3 images required.</span>`;
+        }
+    }
+
     function abortCroppingCycle() {
         cropModalBootstrap.hide();
         if (cropperInstance) cropperInstance.destroy();
@@ -473,24 +555,30 @@
                 if (typeInput && valInput) attributes[typeInput] = valInput;
             });
 
-            const existingSavedCount = card.querySelectorAll('.saved-image-instance').length;
-            let stagedActiveFilesCount = 0;
+            const structuralSavedCount = card.querySelectorAll('.existing-asset-instance').length;
+            let stagedNewFilesCount = 0;
             if (dynamicCroppedFilesMap[index]) {
-                stagedActiveFilesCount = dynamicCroppedFilesMap[index].filter(f => f !== null).length;
+                stagedNewFilesCount = dynamicCroppedFilesMap[index].filter(f => f !== null).length;
             }
-            const totalImages = existingSavedCount + stagedActiveFilesCount;
+            const totalAggregatedImages = structuralSavedCount + stagedNewFilesCount;
 
-            if (totalImages < 3) {
+            if (totalAggregatedImages < 3) {
                 validationFailure = true;
-                errorMessage = `Variant #${cardNumber} has only ${totalImages} images. Minimum of 3 images are mandatory.`;
+                errorMessage = `Variant #${cardNumber} configuration holds only ${totalAggregatedImages} assets. Keep or add at least 3 images.`;
                 return;
             }
 
+            const survivingExistingImages = [];
+            card.querySelectorAll('.existing-asset-instance').forEach(node => {
+                survivingExistingImages.push(node.getAttribute('data-image-url'));
+            });
+
             variantsData.push({
-                variantId: variantId, 
+                id: variantId,
                 attributes: attributes,
                 quantity: quantity,
-                price: price
+                price: price,
+                existingImages: survivingExistingImages
             });
         });
 
@@ -504,9 +592,9 @@
         formData.append('description', descVal);
         formData.append('category', this.category.value);
         formData.append('discount', discountVal);
+        formData.append('brand', 'Apple'); 
         
         formData.append('variantsDataJSON', JSON.stringify(variantsData));
-        formData.append('removedImagesJSON', JSON.stringify(removedImages));
 
         variantCards.forEach((card, index) => {
             if (dynamicCroppedFilesMap[index]) {
@@ -519,7 +607,7 @@
         });
 
         try {
-            Swal.fire({ title: 'Saving changes...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+            Swal.fire({ title: 'Updating product entry...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
             const response = await fetch(this.action, {
                 method: 'POST',
@@ -531,8 +619,8 @@
             if (response.ok && resData.success !== false) {
                 await Swal.fire({
                     icon: 'success',
-                    title: 'Modifications Saved',
-                    text: 'The asset records and variant fields have updated successfully.',
+                    title: 'Product Updated',
+                    text: 'The device specifications have been successfully modified.',
                     confirmButtonColor: '#198754'
                 });
                 window.location.href = '/admin/products';
@@ -540,7 +628,7 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Database Rejection',
-                    text: resData.message || 'The server rejected the transaction payload parameters.',
+                    text: resData.message || 'The backend application layer rejected this payload layout.',
                     confirmButtonColor: '#dc3545'
                 });
             }
@@ -549,7 +637,7 @@
             Swal.fire({
                 icon: 'error',
                 title: 'Network Failure',
-                text: 'A transmission failure or server redirect blocked verification.',
+                text: 'A transmission failure blocked database verification.',
                 confirmButtonColor: '#dc3545'
             });
         }

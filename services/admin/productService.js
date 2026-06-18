@@ -63,10 +63,23 @@ const createProduct = async (body, files) => {
     return await newProduct.save();
 };
 
-const getAllProducts = async () => {
+
+const getAllProducts = async (options = {}) => {
+    const { skip = 0, limit = 5 } = options;
     return await Product.find({
         isDeleted: { $ne: true }
-    }).sort({ createdAt: -1 });
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+};
+
+
+const countProducts = async (filter = {}) => {
+    return await Product.countDocuments({
+        isDeleted: { $ne: true },
+        ...filter
+    });
 };
 
 const getCategoriesForAddPage = async () => {
@@ -84,14 +97,29 @@ const deleteProduct = async (id) => {
     );
 };
 
-const searchProducts = async (name) => {
+const searchProducts = async (options = {}) => {
+    const { name = '', skip = 0, limit = 5 } = options;
     return await Product.find({
         name: {
             $regex: name.trim(),
             $options: 'i'
         },
         isDeleted: { $ne: true }
-    }).sort({ createdAt: -1 });
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+};
+
+
+const countSearchProducts = async (name = '') => {
+    return await Product.countDocuments({
+        name: {
+            $regex: name.trim(),
+            $options: 'i'
+        },
+        isDeleted: { $ne: true }
+    });
 };
 
 const getProductById = async (id) => {
@@ -207,9 +235,11 @@ const updateProduct = async (id, body, files) => {
 module.exports = {
     createProduct,
     getAllProducts,
+    countProducts,          
     getCategoriesForAddPage,
     deleteProduct,
     searchProducts,
+    countSearchProducts,    
     getProductById,
     updateProduct
 };
