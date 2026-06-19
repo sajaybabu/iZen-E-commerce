@@ -110,11 +110,12 @@
                     <div>
                         <label class="form-label fw-bold small text-muted">Category</label>
                         <select name="category" class="form-select" required>
-                            <option value="iPhone" <%= product.category === 'iPhone' ? 'selected' : '' %>>iPhone</option>
-                            <option value="iPad" <%= product.category === 'iPad' ? 'selected' : '' %>>iPad</option>
-                            <option value="MacBook" <%= product.category === 'MacBook' ? 'selected' : '' %>>MacBook</option>
-                            <option value="Watch" <%= product.category === 'Watch' ? 'selected' : '' %>>Apple Watch</option>
-                        </select>
+    <option value="iPhone" <%= product.category === 'iPhone' ? 'selected' : '' %>>iPhone</option>
+    <option value="iPad" <%= product.category === 'iPad' ? 'selected' : '' %>>iPad</option>
+    <option value="MacBook" <%= product.category === 'MacBook' ? 'selected' : '' %>>MacBook</option>
+    <option value="AirPods" <%= product.category === 'AirPods' ? 'selected' : '' %>>AirPods</option>
+    <option value="Apple Watch" <%= product.category === 'Apple Watch' ? 'selected' : '' %>>Apple Watch</option>
+</select>
                     </div>
                     <div>
                         <label class="form-label fw-bold small text-muted">Discount (%)</label>

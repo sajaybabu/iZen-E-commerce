@@ -2,7 +2,6 @@ const productService = require('../../services/admin/productService');
 
 exports.createProduct = async (req, res) => {
     try {
-
         if (!req.body.variantsDataJSON) {
             return res.status(400).json({
                 success: false,
@@ -18,9 +17,7 @@ exports.createProduct = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error(error);
-
         return res.status(500).json({
             success: false,
             message: "Server Error: Unable to complete product entry."
@@ -30,19 +27,16 @@ exports.createProduct = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
     try {
-        // Capture the page from the query parameter (e.g., /admin/products?page=2). Default to page 1.
         const page = parseInt(req.query.page) || 1;
-        const limit = 5; // Sets how many products display per admin page row table
+        const limit = 5; //  how many products 
         const skip = (page - 1) * limit;
 
-        //  Fetch only the limited slice of products and the total count from the service
-        // (Note: You might need to update your productService.getAllProducts to accept skip and limit)
+        // Fetch paginated data slice from service layer
         const products = await productService.getAllProducts({ skip, limit });
-        const totalProducts = await productService.countProducts({}); // Get total active products
+        const totalProducts = await productService.countProducts({}); 
 
-        const totalPages = Math.ceil(totalProducts / limit);
+        const totalPages = Math.ceil(totalProducts / limit) || 1;
 
-        //  Render dynamically instead of using hardcoded mock placeholders
         res.render('admin/productManagement', {
             products,
             searchQuery: '',
@@ -60,18 +54,12 @@ exports.getAllProducts = async (req, res) => {
         res.status(500).send("Internal Server Error");
     }
 };
+
 exports.getAddProductPage = async (req, res) => {
     try {
-
-        const categories =
-            await productService.getCategoriesForAddPage();
-
-        res.render('admin/addproduct', {
-            categories
-        });
-
+        const categories = await productService.getCategoriesForAddPage();
+        res.render('admin/addproduct', { categories });
     } catch (error) {
-
         console.error(error);
         res.status(500).redirect('/admin/products');
     }
@@ -79,9 +67,7 @@ exports.getAddProductPage = async (req, res) => {
 
 exports.deleteProduct = async (req, res) => {
     try {
-
-        const deletedProduct =
-            await productService.deleteProduct(req.params.id);
+        const deletedProduct = await productService.deleteProduct(req.params.id);
 
         if (!deletedProduct) {
             return res.status(404).json({
@@ -96,9 +82,7 @@ exports.deleteProduct = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error(error);
-
         return res.status(500).json({
             success: false,
             message: "Internal server anomaly encountered."
@@ -108,8 +92,8 @@ exports.deleteProduct = async (req, res) => {
 
 exports.searchProducts = async (req, res) => {
     try {
-        //  Capture the search name from body (POST form submit) or query string (GET pagination click)
-        const name = req.body.name || req.query.name;
+        // Standardized parameter parsing to keep terms active during page transitions
+        const name = req.query.name || req.body.name;
 
         if (!name || name.trim() === "") {
             return res.redirect('/admin/products');
@@ -117,23 +101,20 @@ exports.searchProducts = async (req, res) => {
 
         const searchQueryText = name.trim();
 
-        // Setup standard pagination variables
         const page = parseInt(req.query.page) || 1;
-        const limit = 5; // Keep this matching your getAllProducts limit
+        const limit = 5; 
         const skip = (page - 1) * limit;
 
-        // Pass name, skip, and limit to your service layer
+        // Pass structured skip parameters to service query
         const products = await productService.searchProducts({ 
             name: searchQueryText, 
             skip, 
             limit 
         });
 
-        // Get the total count of filtered search items to determine total pages
         const totalMatchingProducts = await productService.countSearchProducts(searchQueryText);
         const totalPages = Math.ceil(totalMatchingProducts / limit) || 1;
 
-        // Render your admin view with dynamic pagination flags
         res.render('admin/productManagement', {
             products,
             searchQuery: searchQueryText,
@@ -154,22 +135,14 @@ exports.searchProducts = async (req, res) => {
 
 exports.getEditProductPage = async (req, res) => {
     try {
-
-        const product =
-            await productService.getProductById(req.params.id);
+        const product = await productService.getProductById(req.params.id);
 
         if (!product || product.isDeleted) {
-            return res.status(404).send(
-                "Error: Product not found or has been deleted."
-            );
+            return res.status(404).send("Error: Product not found or has been deleted.");
         }
 
-        res.render('admin/editproduct', {
-            product
-        });
-
+        res.render('admin/editproduct', { product });
     } catch (error) {
-
         console.error(error);
         res.status(500).send("Internal Server Error");
     }
@@ -177,7 +150,6 @@ exports.getEditProductPage = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
     try {
-
         await productService.updateProduct(
             req.params.id,
             req.body,
@@ -190,9 +162,7 @@ exports.updateProduct = async (req, res) => {
         });
 
     } catch (error) {
-
         console.error(error);
-
         return res.status(500).json({
             success: false,
             message: "Internal Server Error updating database fields."
