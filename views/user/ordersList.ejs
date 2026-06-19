@@ -123,7 +123,7 @@
                             <h6 class="fw-bold mt-2 product-title-text"><%= order.items[0]?.name %> <%= order.items.length > 1 ? '(+' + (order.items.length - 1) + ' more)' : '' %></h6>
                         </div>
                         <div>
-                            <a href="/checkout/orders/<%= order._id %>" class="apple-btn">Manage Details</a>
+                            <a href="/checkout/orders/<%= order._id %>" class="apple-btn">View Details</a>
                         </div>
                     </div>
                 </div>
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const noResultsState = document.getElementById('noResultsState');
     const paginationNav = document.getElementById('paginationNav');
 
-    const ITEMS_PER_PAGE = 3; // 🌟 Adjust this number to change items shown per page
+    const ITEMS_PER_PAGE = 3; 
     let currentPage = 1;
     let filteredCards = [...orderCards];
 
@@ -237,7 +237,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize layout setup state on page boot
     updatePagination();
 });
 </script>

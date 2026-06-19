@@ -28,56 +28,8 @@
 </head>
 <body>
   
-  <nav class="navbar navbar-expand-xl bg-black sticky-top shadow-sm">
-    <div class="container">
-      <a class="navbar-brand text-light fw-bold d-flex align-items-center" href="/">
-        <i class="bi bi-apple me-2 text-white"></i> iZen
-      </a>
-
-      <div style="position: relative; width: 280px;">
-        <form action="/allProducts" method="GET" id="navSearchForm" class="d-flex align-items-center m-0">
-          <% if (typeof selectedCategory !== 'undefined' && selectedCategory) { %> <input type="hidden" name="category" value="<%= selectedCategory %>"> <% } %>
-          <% if (typeof minPrice !== 'undefined' && minPrice) { %> <input type="hidden" name="minPrice" value="<%= minPrice %>"> <% } %>
-          <% if (typeof maxPrice !== 'undefined' && maxPrice) { %> <input type="hidden" name="maxPrice" value="<%= maxPrice %>"> <% } %>
-          <% if (typeof selectedSort !== 'undefined' && selectedSort) { %> <input type="hidden" name="sort" value="<%= selectedSort %>"> <% } %>
-          
-          <div class="input-group">
-            <input autocomplete="off" id="search" class="form-control rounded-start" name="search" type="search" placeholder="Search Apple ecosystem..." value="<%= typeof search !== 'undefined' ? search : '' %>" aria-label="Search" />
-            <% if (typeof search !== 'undefined' && search && search.trim() !== '') { %>
-              <a href="/allProducts?category=<%= selectedCategory %>&sort=<%= selectedSort %>" class="btn btn-secondary d-flex align-items-center justify-content-center border-0"><i class="bi bi-x-lg"></i></a>
-            <% } else { %>
-              <button class="btn btn-outline-light bg-white text-dark border-0" type="submit"><i class="bi bi-search"></i></button>
-            <% } %>
-          </div>
-        </form>
-      </div>
-
-      <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarContent">
-        <ul class="navbar-nav mx-auto text-center mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link text-light" href="/">Home</a></li>
-          <li class="nav-item"><a class="nav-link text-light active fw-bold" href="/allProducts">Shop</a></li>
-          <li class="nav-item"><a class="nav-link text-light d-block d-xl-none" data-bs-toggle="modal" data-bs-target="#filterModal">Filters</a></li>
-        </ul>
-
-        <div class="d-lg-flex flex-column flex-lg-row align-items-center gap-5">
-          <div class="d-flex align-items-center justify-content-center gap-5 mt-lg-0 mt-3 mb-3 mb-lg-1">
-            <a href="/wishlist" class="text-light fs-5"><i class="bi bi-heart"></i></a>
-            <a href="/cart" class="text-light fs-5"><i class="bi bi-cart3"></i></a>
-            <a href="/profile" class="text-light fs-5"><i class="bi bi-person-circle"></i></a>
-          </div>
-          
-          <div class="d-flex justify-content-center">
-            <a href="/logout" class="btn btn-outline-light btn-sm px-3">Logout</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>
-
+ 
+<%- include("../partials/user/shopHeader.ejs") %>
   <div class="container-fluid mt-4 px-4">
     <div class="row">
       
@@ -215,29 +167,79 @@
         </section>
 
         <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
-          <div class="d-flex justify-content-center gap-2 mt-4">
-            <a href="/allProducts?page=<%= currentPage - 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= selectedCategory %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=<%= selectedSort %>" 
-               class="btn btn-dark py-1 px-3 rounded-pill <%= currentPage <= 1 ? 'disabled' : '' %>">
-               Prev
-            </a>
-            
-            <span class="align-self-center mx-2 fw-semibold text-muted">Page <%= currentPage %> of <%= totalPages %></span>
+  <nav aria-label="Product catalog navigation" class="my-5">
+    <div class="d-flex justify-content-center align-items-center gap-1">
+      
+      <!-- Previous Page Button -->
+      <a href="/allProducts?page=<%= currentPage - 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+         class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center p-0 <%= currentPage <= 1 ? 'disabled text-muted opacity-25' : '' %>"
+         style="width: 40px; height: 40px; transition: all 0.2s ease;">
+        <i class="bi bi-chevron-left fs-5"></i>
+      </a>
+      
+      <!-- Numbered Page Blocks -->
+      <% 
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+        }
+      %>
 
-            <a href="/allProducts?page=<%= currentPage + 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= selectedCategory %>&minPrice=<%= minPrice %>&maxPrice=<%= maxPrice %>&sort=<%= selectedSort %>" 
-               class="btn py-1 px-3 rounded-pill text-light <%= currentPage >= totalPages ? 'disabled' : '' %>" 
-               style="background-color: #EF6627;">
-               Next
-            </a>
-          </div>
+      <% if (startPage > 1) { %>
+        <a href="/allProducts?page=1&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+           class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center fw-medium p-0"
+           style="width: 40px; height: 40px;">1</a>
+        <% if (startPage > 2) { %>
+          <span class="text-muted px-1 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">&bull;&bull;&bull;</span>
         <% } %>
+      <% } %>
+
+      <% for(let i = startPage; i <= endPage; i++) { %>
+        <% if (i === currentPage) { %>
+          <!-- Active Page State -->
+          <span class="btn text-white rounded-3 d-flex align-items-center justify-content-center fw-bold p-0 shadow-sm" 
+                style="width: 40px; height: 40px; background-color: #EF6627; cursor: default;">
+            <%= i %>
+          </span>
+        <% } else { %>
+          <!-- Inactive Page State -->
+          <a href="/allProducts?page=<%= i %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+             class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center fw-medium p-0 text-dark"
+             style="width: 40px; height: 40px; transition: all 0.2s ease;"
+             onmouseover="this.style.backgroundColor='#f1f1f1'"
+             onmouseout="this.style.backgroundColor='transparent'">
+            <%= i %>
+          </a>
+        <% } %>
+      <% } %>
+
+      <% if (endPage < totalPages) { %>
+        <% if (endPage < totalPages - 1) { %>
+          <span class="text-muted px-1 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">&bull;&bull;&bull;</span>
+        <% } %>
+        <a href="/allProducts?page=<%= totalPages %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+           class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center fw-medium p-0"
+           style="width: 40px; height: 40px;"><%= totalPages %></a>
+      <% } %>
+
+      <!-- Next Page Button -->
+      <a href="/allProducts?page=<%= currentPage + 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+         class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center p-0 <%= currentPage >= totalPages ? 'disabled text-muted opacity-25' : '' %>" 
+         style="width: 40px; height: 40px; transition: all 0.2s ease;">
+        <i class="bi bi-chevron-right fs-5"></i>
+      </a>
+
+    </div>
+  </nav>
+<% } %>
       </div>
 
     </div>
   </div>
 
-  <footer class="bg-dark text-white text-center py-4 mt-5">
-    <p class="mb-0 small">&copy; 2026 iZen Personal E-Commerce Ecosystem. All rights reserved.</p>
-  </footer>
+
+  <%- include("../partials/user/userFooter.ejs") %>
 
   <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">

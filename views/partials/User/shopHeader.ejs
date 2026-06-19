@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iZen | Premium Tech Store</title>
+  
+  <!-- Bootstrap & Global Icon UI Libraries -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Shared Global Navigation Layout Styling -->
+  <style>
+    .navbar { padding: 0.8rem 1rem; }
+    .nav-link { font-weight: 500; transition: 0.3s; }
+    .nav-link:hover { color: #ff6b00 !important; }
+    .product-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+    .product-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important; }
+    .card-img-top { height: 220px; object-fit: contain; padding: 15px; background: #f8f9fa; }
+    .badge-discount { font-size: 0.75rem; }
+    .nav-avatar { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+
+<!-- UNIFIED SHOP HEADER PARTIAL NAVBAR -->
+<nav class="navbar navbar-expand-xl bg-black sticky-top shadow-sm py-2">
+  <div class="container">
+    <!-- Brand Identity -->
+    <a class="navbar-brand text-light fw-bold d-flex align-items-center" href="/">
+      <i class="bi bi-apple me-2 text-white"></i> iZen
+    </a>
+
+    <!-- Global Product Search Bar (Identical 280px dimensions) -->
+    <div style="position: relative; width: 280px;">
+      <form action="/allProducts" method="GET" id="navSearchForm" class="d-flex align-items-center m-0">
+        <!-- Safely preserve active state queries when referenced inside allProducts grid -->
+        <% if (typeof selectedCategory !== 'undefined' && selectedCategory) { %> <input type="hidden" name="category" value="<%= selectedCategory %>"> <% } %>
+        <% if (typeof minPrice !== 'undefined' && minPrice) { %> <input type="hidden" name="minPrice" value="<%= minPrice %>"> <% } %>
+        <% if (typeof maxPrice !== 'undefined' && maxPrice) { %> <input type="hidden" name="maxPrice" value="<%= maxPrice %>"> <% } %>
+        <% if (typeof selectedSort !== 'undefined' && selectedSort) { %> <input type="hidden" name="sort" value="<%= selectedSort %>"> <% } %>
+        
+        <div class="input-group">
+          <input autocomplete="off" id="search" class="form-control rounded-start" name="search" type="search" placeholder="Search ios devices..." value="<%= typeof search !== 'undefined' ? search : '' %>" aria-label="Search" style="font-size: 0.9rem;" />
+          
+          <% if (typeof search !== 'undefined' && search && search.trim() !== '') { %>
+            <a href="/allProducts?category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" class="btn btn-secondary d-flex align-items-center justify-content-center border-0"><i class="bi bi-x-lg"></i></a>
+          <% } else { %>
+            <button class="btn btn-outline-light bg-white text-dark border-0" type="submit"><i class="bi bi-search"></i></button>
+          <% } %>
+        </div>
+      </form>
+    </div>
+
+    <!-- Responsive Toggler -->
+    <button class="navbar-toggler bg-light toggle-btn-apple" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Navigation Menu Content -->
+    <div class="collapse navbar-collapse" id="navbarContent">
+      <ul class="navbar-nav mx-auto text-center mb-2 mb-xl-0">
+        <li class="nav-item"><a class="nav-link text-light px-3" href="/">Home</a></li>
+        <li class="nav-item"><a class="nav-link text-light px-3" href="/allProducts">Shop</a></li>
+      </ul>
+
+      <!-- Account Management Section -->
+      <div class="d-xl-flex align-items-center gap-4 text-center text-xl-start">
+        <div class="d-flex align-items-center justify-content-center gap-4 mb-3 mb-xl-0 mt-3 mt-xl-0">
+          <a href="/wishlist" class="text-light fs-5"><i class="bi bi-heart"></i></a>
+          <a href="/cart" class="text-light fs-5"><i class="bi bi-cart3"></i></a>
+        </div>
+        
+        <% if (locals.user) { %>
+          <!-- User Profile Dropdown Menu Structure -->
+          <div class="dropdown d-inline-block">
+            <a class="text-light dropdown-toggle d-flex align-items-center justify-content-center text-decoration-none" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <% if (user.image) { %>
+                <img src="/<%= user.image %>" class="nav-avatar me-2" alt="Profile">
+              <% } else { %>
+                <i class="bi bi-person-circle fs-5 me-2"></i>
+              <% } %>
+              <span class="small"><%= user.username %></span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow mt-2">
+              <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+              <li><a class="dropdown-item" href="/checkout/orders/my-orders"><i class="bi bi-bag me-2"></i>Orders</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="/logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
+          </div>
+        <% } else { %>
+          <!-- Fallback Authentication Buttons -->
+          <div class="d-flex justify-content-center gap-2">
+            <a href="/login" class="btn btn-outline-light btn-sm px-3">Login</a>
+            <a href="/signup" class="btn btn-primary btn-sm px-3">Signup</a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</nav>

@@ -81,11 +81,16 @@ class CheckoutService {
                     );
                 }
 
+                // Extract variant color from nested attributes
+                const selectedColor = item.variantDoc && item.variantDoc.attributes && item.variantDoc.attributes.color 
+                    ? item.variantDoc.attributes.color 
+                    : (item.variantDoc?.color || "Standard Config");
+
                 dbItemsArray.push({
                     product: parentProductId,
                     name: item.productDoc?.name || "Premium Apple Device",
                     variantId: targetVariantId?.toString(),
-                    variantColor: item.variantDoc?.color || "Standard Config",
+                    variantColor: selectedColor,
                     quantity: deductQty,
                     price: Number(priceValue),
                     status: 'Pending'
@@ -94,7 +99,7 @@ class CheckoutService {
                 snapshotItems.push({
                     variantId: targetVariantId,
                     name: item.productDoc?.name || "Premium Apple Device",
-                    variant: item.variantDoc?.color || "Standard Config",
+                    variant: selectedColor,
                     quantity: deductQty,
                     price: Number(priceValue),
                     image: imagePath
@@ -122,7 +127,7 @@ class CheckoutService {
 
             const savedOrder = await newDbOrder.save();
 
-            //  Wipe out the user's shopping cart 
+            // Wipe out the user's shopping cart 
             await Cart.findOneAndUpdate(
                 { _id: cartData._id },
                 { $set: { items: [] } }
@@ -130,7 +135,7 @@ class CheckoutService {
 
             return { 
                 success: true, 
-                orderId: savedOrder.orderId, // Real unique database sequential tracker string
+                orderId: savedOrder.orderId, 
                 snapshotItems,
                 snapshotAddress: {
                     fullname: selectedAddressObj.fullname || "Valued Customer",
@@ -140,7 +145,7 @@ class CheckoutService {
                 }
             };
         } catch (error) {
-            console.error("🚨 Database order processing exception:", error.message);
+            console.error(" Database order processing exception:", error.message);
             return { success: false, message: error.message };
         }
     }

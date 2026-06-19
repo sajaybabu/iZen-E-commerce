@@ -34,7 +34,6 @@ const getAllProductsPage = async (req, res) => {
 
   } catch (error) {
     console.error("Controller Error in getAllProductsPage:", error);
-    // FIXED: Fallback to redirect instead of rendering a missing error view
     res.redirect('/');
   }
 };

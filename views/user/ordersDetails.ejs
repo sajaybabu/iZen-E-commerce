@@ -151,6 +151,27 @@
         color: #ffffff;
     }
 
+    /* Classy Minimalist Apple Style Secondary Button */
+    .apple-btn-invoice {
+        color: var(--apple-black);
+        background-color: #ffffff;
+        border: 1px solid var(--apple-border);
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+    }
+    .apple-btn-invoice:hover {
+        background-color: var(--apple-black);
+        color: #ffffff;
+        border-color: var(--apple-black);
+    }
+
     .summary-box {
         max-width: 320px;
         margin-left: auto;
@@ -165,7 +186,6 @@
         color: #1d1d1f;
     }
 
-    /* Minimalist Apple Style SweetAlert Custom Overrides */
     .apple-swal-popup {
         border-radius: 16px !important;
         padding: 2rem !important;
@@ -194,10 +214,7 @@
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mt-3 gap-2">
         <div>
             <h1 class="fw-bold tracking-tight mb-1" style="font-size: 2rem;">Order Details</h1>
-            <p class="text-muted small mb-0">Placed on <%= order.date %></p><a href="/checkout/orders/<%= order._id %>/invoice" class="apple-btn-secondary bg-dark text-white" style="padding: 6px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; border: 1px solid var(--apple-border); border-radius: 8px; color: var(--apple-black); background: #ffffff;">
-    <i class="bi bi-download"></i> Download Invoice (PDF)
-</a>
-
+            <p class="text-muted small mb-0">Placed on <%= order.date %></p>
         </div>
         <div>
             <span class="text-muted me-2 small">ID: <strong class="text-dark"><%= order.orderId %></strong></span>
@@ -238,9 +255,19 @@
                         <h5 class="fw-bold mb-1" style="font-size: 1.05rem;"><%= item.name %></h5>
                         
                         <div class="mb-2">
-                            <% if (item.variant && item.variant !== 'Standard Config' && item.variant !== 'Default Config' && item.variant !== 'Base Specification') { %>
+                            <% 
+                                let displayColor = item.variantColor || item.variant;
+                                let isGenericConfig = !displayColor || 
+                                                      displayColor === 'Standard Config' || 
+                                                      displayColor === 'Default Config' || 
+                                                      displayColor === 'Base Specification' || 
+                                                      displayColor === 'Standard Edition' ||
+                                                      displayColor.trim() === '';
+                            %>
+
+                            <% if (!isGenericConfig) { %>
                                 <span class="variant-badge">
-                                    <i class="bi bi-palette-fill me-1.5 text-muted" style="font-size: 0.75rem;"></i><%= item.variant %>
+                                    <span class="text-capitalize"><%= displayColor %></span>
                                 </span>
                             <% } else { %>
                                 <span class="variant-badge text-muted" style="font-style: italic; background: none; border: none; padding: 0;">Standard Edition</span>
@@ -256,12 +283,16 @@
                         ₹<%= (item.price * item.quantity).toLocaleString('en-IN') %>
                     </span>
 
-                    <div class="action-button-container mt-sm-2">
+                    <div class="action-button-container d-flex flex-column gap-2 mt-sm-2">
                         <% if (item.status.toLowerCase() === 'pending' || item.status.toLowerCase() === 'processing' || item.status.toLowerCase() === 'shipped') { %>
                             <button class="apple-btn-danger" onclick="handleCancelItem('<%= order._id || order.id %>', '<%= item.variantId %>')">
                                 Cancel Item
                             </button>
                         <% } else if (item.status.toLowerCase() === 'delivered') { %>
+                            <!-- Invoice Download Link Rendered Exclusively For Delivered States -->
+                            <a href="/checkout/orders/<%= order._id %>/invoice" class="apple-btn-invoice">
+                                <i class="bi bi-download "></i> Download Invoice
+                            </a>
                             <button class="apple-btn-warning" onclick="handleReturnItem('<%= order._id || order.id %>', '<%= item.variantId %>')">
                                 Return Item
                             </button>
@@ -307,7 +338,6 @@ async function handleCancelItem(orderId, variantId) {
         return;
     }
 
-    // Classy, clear button labels avoiding duplicate actions confirmation confusion
     const { value: reason, isConfirmed } = await Swal.fire({
         title: 'Cancel Item Request',
         input: 'text',
@@ -325,7 +355,6 @@ async function handleCancelItem(orderId, variantId) {
         }
     });
 
-    // Check if user clicked 'Confirm Cancellation' rather than 'Keep Item' / overlay click
     if (isConfirmed) {
         try {
             const response = await fetch('/checkout/orders/cancel-item', {

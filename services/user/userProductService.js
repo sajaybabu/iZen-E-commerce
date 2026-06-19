@@ -18,34 +18,52 @@ const getAllProductsData = async (filterParams) => {
       query.name = { $regex: new RegExp(search.trim(), 'i') };
     }
 
-    // Safe Category Parsing (Handles both raw Names and ObjectIds seamlessly)
+    // SAFE CATEGORY PARSING WITH CASE-INSENSITIVE REGEX PATTERN 
     if (category && category !== 'all') {
       if (mongoose.Types.ObjectId.isValid(category)) {
         const foundCategory = await Category.findById(category);
-        query.category = foundCategory ? foundCategory.name : category;
+        if (foundCategory) {
+    
+          const caseInsensitiveCategoryRegex = new RegExp(`^${foundCategory.name.trim()}$`, 'i');
+          query.$or = [
+            { category: caseInsensitiveCategoryRegex },
+            { category: new mongoose.Types.ObjectId(category) },
+            { category: category }
+          ];
+        } else {
+          query.category = category;
+        }
       } else {
-        query.category = category;
+        query.category = new RegExp(`^${category.trim()}$`, 'i');
       }
     }
 
-    // Robust Price Range Queries against nested variants
     if (minPrice || maxPrice) {
-      query.$or = [
+      const priceFilter = [
         { "variants.price": {} },
         { "variants.unitPrice": {} }
       ];
       
       if (minPrice) {
-        query.$or[0]["variants.price"].$gte = Number(minPrice);
-        query.$or[1]["variants.unitPrice"].$gte = Number(minPrice);
+        priceFilter[0]["variants.price"].$gte = Number(minPrice);
+        priceFilter[1]["variants.unitPrice"].$gte = Number(minPrice);
       }
       if (maxPrice) {
-        query.$or[0]["variants.price"].$lte = Number(maxPrice);
-        query.$or[1]["variants.unitPrice"].$lte = Number(maxPrice);
+        priceFilter[0]["variants.price"].$lte = Number(maxPrice);
+        priceFilter[1]["variants.unitPrice"].$lte = Number(maxPrice);
+      }
+
+      if (query.$or) {
+        query.$and = [
+          { $or: query.$or },
+          { $or: priceFilter }
+        ];
+        delete query.$or; // Remove root level clashing $or key
+      } else {
+        query.$or = priceFilter;
       }
     }
 
-    //Multi-Variant Dynamic Sorting Matrix
     let sortQuery = {};
     switch (sort) {
       case 'priceLowToHigh': 

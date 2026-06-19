@@ -63,40 +63,7 @@
 
 <body>
 
-  <nav class="navbar navbar-expand-xl bg-black sticky-top shadow-sm">
-    <div class="container nav-detail-container">
-      <a class="navbar-brand text-light fw-bold d-flex align-items-center" href="/">
-        <i class="bi bi-apple me-2"></i> iZen
-      </a>
-
-      <div style="position: relative; width: 250px;">
-        <input autocomplete="off" id="search" class="form-control rounded w-100" name="name" type="search" placeholder="Search iOS devices..." aria-label="Search" />
-      </div>
-
-      <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-
-      <div class="collapse navbar-collapse" id="navbarContent">
-        <ul class="navbar-nav mx-auto text-center mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link text-light" href="/">Home</a></li>
-          <li class="nav-item"><a class="nav-link text-light active" href="/allProducts">Shop</a></li>
-        </ul>
-
-        <div class="d-lg-flex flex-column flex-lg-row align-items-center gap-5">
-          <div class="d-flex align-items-center justify-content-center gap-5 mt-lg-0 mt-3 mb-3 mb-lg-1">
-            <a href="/wishlist" class="text-light"><i class="bi bi-heart"></i></a>
-            <a href="/cart" class="text-light"><i class="bi bi-cart3"></i></a>
-            <a href="/profile" class="text-light"><i class="bi bi-person-circle"></i></a>
-          </div>
-          <div class="d-flex justify-content-center">
-            <a href="/logout" class="btn btn-outline-light">Logout</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </nav>
-
+<%- include("../partials/user/shopHeader.ejs") %>
   <% let inWishlist = false %>
 
   <div class="container py-4 px-0 mx-auto mt-3 nav-detail-container">
@@ -324,9 +291,7 @@
     </div>
   </section>
 
-  <footer class="bg-dark text-white text-center py-4">
-    <p class="mb-0 small">&copy; 2026 iZen Personal E-Commerce Ecosystem. All rights reserved.</p>
-  </footer>
+  <%- include("../partials/user/userFooter.ejs") %>
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   

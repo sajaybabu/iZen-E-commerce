@@ -169,12 +169,22 @@ const getOrderDetailsPage = async (req, res) => {
                 phone: orderDoc.shippingAddress.phone
             },
             items: orderDoc.items.map(item => {
-                let productColor = item.variantColor || "Default";
-                if ((productColor === "Default" || !productColor) && item.product && item.product.variants) {
-                    const matchingVariant = item.product.variants.find(v => String(v._id) === String(item.variantId));
-                    if (matchingVariant && matchingVariant.color) {
-                        productColor = matchingVariant.color;
+                let productColor = item.variantColor;
+
+                if (!productColor || productColor === "Standard Config" || productColor === "Default") {
+                    if (item.product && item.product.variants) {
+                        const matchingVariant = item.product.variants.find(v => String(v._id) === String(item.variantId));
+                        
+                        if (matchingVariant && matchingVariant.attributes && matchingVariant.attributes.color) {
+                            productColor = matchingVariant.attributes.color;
+                        } else if (matchingVariant && matchingVariant.color) {
+                            productColor = matchingVariant.color;
+                        }
                     }
+                }
+
+                if (!productColor || productColor === "Standard Config") {
+                    productColor = "Standard Edition";
                 }
 
                 return {
@@ -220,6 +230,8 @@ const cancelOrderItem = async (req, res) => {
         order.items[itemIndex].cancellationReason = reason || "No reason provided";
 
         const targetItem = order.items[itemIndex];
+        
+        // Verified alignment with Product Schema
         await Product.findOneAndUpdate(
             { _id: targetItem.product, "variants._id": targetItem.variantId },
             { 
@@ -252,8 +264,25 @@ const returnOrderItem = async (req, res) => {
         const itemIndex = order.items.findIndex(item => String(item.variantId) === String(variantId));
         if (itemIndex === -1) return res.status(404).json({ success: false, message: "Item not found in order." });
 
+        if (order.items[itemIndex].status === 'Returned') {
+            return res.status(400).json({ success: false, message: "Item has already been returned." });
+        }
+
         order.items[itemIndex].status = 'Returned';
-        order.items[itemIndex].returnReason = reason;
+        order.items[itemIndex].returnReason = reason || "No reason provided";
+
+        const targetItem = order.items[itemIndex];
+
+        // INVENTORY SYNC FOR USER RETURNS
+        await Product.findOneAndUpdate(
+            { _id: targetItem.product, "variants._id": targetItem.variantId },
+            { 
+                $inc: { 
+                    "variants.$.quantity": targetItem.quantity,
+                    "stock": targetItem.quantity 
+                } 
+            }
+        );
 
         await order.save();
         return res.status(200).json({ success: true });
@@ -267,23 +296,17 @@ const downloadInvoice = async (req, res) => {
     try {
         const orderId = req.params.id;
         
-        // Fetch the full order document with populated product data
         const order = await Order.findById(orderId).populate('items.product');
         if (!order) {
             return res.status(404).send("Invoice error: Order not found.");
         }
 
-        // Initialize a clean, blank PDF canvas
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
 
-        // Stream configuration to trigger an immediate automatic download in browser
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=Invoice-${order.orderId}.pdf`);
         doc.pipe(res);
 
-        // PDF DESIGN 
-
-        //  BRAND HEADER SECTION
         doc.fillColor('#1d1d1f').fontSize(24).font('Helvetica-Bold').text('iZen', 50, 50);
         doc.fontSize(10).font('Helvetica').fillColor('#86868b').text('Premium Tech Ecosystem', 50, 80);
 
@@ -292,10 +315,8 @@ const downloadInvoice = async (req, res) => {
            .text(`Invoice ID: #INV-${order.orderId}`, 350, 72, { width: 195, align: 'right' })
            .text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, 350, 88, { width: 195, align: 'right' });
 
-        // Simple divider rule
         doc.moveTo(50, 115).lineTo(545, 115).strokeColor('#e5e5ea').lineWidth(1).stroke();
 
-        // SHIPPING & PAYMENT DETAILS 
         doc.fontSize(11).font('Helvetica-Bold').fillColor('#1d1d1f').text('Shipping Details', 50, 135);
         doc.fontSize(10).font('Helvetica').fillColor('#333333')
            .text(order.shippingAddress.name, 50, 155)
@@ -308,10 +329,8 @@ const downloadInvoice = async (req, res) => {
            .text(order.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : order.paymentMethod, 350, 155)
            .text(`Payment Status: Verified`, 350, 170);
 
-        // Another divider rule
         doc.moveTo(50, 230).lineTo(545, 230).strokeColor('#e5e5ea').stroke();
 
-        //  PRODUCTS TABLE HEADER 
         let yPosition = 255;
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#1d1d1f');
         doc.text('Item Description', 50, yPosition);
@@ -319,25 +338,22 @@ const downloadInvoice = async (req, res) => {
         doc.text('Qty', 395, yPosition, { width: 40, align: 'center' });
         doc.text('Total', 455, yPosition, { width: 90, align: 'right' });
 
-        // Table Header underline
         doc.moveTo(50, yPosition + 15).lineTo(545, yPosition + 15).strokeColor('#e5e5ea').stroke();
         yPosition += 25;
 
-        // LOOPING THROUGH ITEMS 
         doc.font('Helvetica').fillColor('#333333');
         order.items.forEach(item => {
             const itemTotal = item.price * item.quantity;
             const displayName = item.name + (item.variantColor ? ` (${item.variantColor})` : '');
 
             doc.text(displayName, 50, yPosition, { width: 240 });
-            doc.text(`Rs. ${item.price.toLocaleString('en-IN')}`, 300, yPosition, { width: 80, align: 'right' }); // 🌟 Fixed currency prefix
+            doc.text(`Rs. ${item.price.toLocaleString('en-IN')}`, 300, yPosition, { width: 80, align: 'right' }); 
             doc.text(item.quantity.toString(), 395, yPosition, { width: 40, align: 'center' });
-            doc.text(`Rs. ${itemTotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });   // 🌟 Fixed currency prefix
+            doc.text(`Rs. ${itemTotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });   
 
             yPosition += 25;
         });
 
-        // SUMMARY CALCULATION BLOCK 
         yPosition += 15;
         doc.moveTo(300, yPosition).lineTo(545, yPosition).strokeColor('#e5e5ea').stroke();
         yPosition += 10;
@@ -361,10 +377,8 @@ const downloadInvoice = async (req, res) => {
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#1d1d1f').text('Grand Total:', 300, yPosition);
         doc.text(`Rs. ${order.totalAmount.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
 
-        // FOOTER NOTE
         doc.fontSize(9).font('Helvetica').fillColor('#86868b').text('Thank you for shopping with iZen! For support, reach out to help@izen.com', 50, 720, { align: 'center', width: 495 });
 
-        // Finalize document compilation
         doc.end();
     } catch (error) {
         console.error("PDF generation crash:", error);
