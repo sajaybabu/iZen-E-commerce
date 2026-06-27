@@ -18,6 +18,8 @@ router.post('/place-order', checkoutController.placeOrder);
 
 router.post('/orders/cancel-item', checkoutController.cancelOrderItem);
 router.post('/orders/return-item', checkoutController.returnOrderItem);
+router.post('/orders/cancel-all', checkoutController.cancelAllOrderItems);
+router.post('/orders/return-all', checkoutController.returnAllOrderItems);
 
 router.get('/orders/:id/invoice', checkoutController.downloadInvoice);
 

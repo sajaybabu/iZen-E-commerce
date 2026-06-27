@@ -139,8 +139,6 @@ const moveAllToCart = async (req, res) => {
       });
     }
 
-    // Automatically purge successfully migrated elements from the wishlist to keep it clean
-    // (Only runs for items that successfully moved into the user's cart)
     return res.status(200).json({
       success: true,
       message: `Successfully allocated ${itemsAddedCount} configuration architecture profile layouts directly into your active cart layout.`,

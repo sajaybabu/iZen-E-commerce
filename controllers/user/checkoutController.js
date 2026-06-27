@@ -386,6 +386,109 @@ const downloadInvoice = async (req, res) => {
     }
 };
 
+const cancelAllOrderItems = async (req, res) => {
+    try {
+        const { orderId } = req.body;
+        const userId = req.session.user?.id || req.session.user?._id || req.session.user_id;
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Session unauthenticated." });
+        }
+
+        const order = await Order.findOne({ _id: orderId, user: userId });
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order records not found." });
+        }
+
+        const lowercaseStatus = order.status ? order.status.toLowerCase() : '';
+        if (lowercaseStatus === 'cancelled' || lowercaseStatus === 'delivered' || lowercaseStatus === 'returned') {
+            return res.status(400).json({ success: false, message: "Order state cannot be cancelled at this stage." });
+        }
+
+        let totalRefundAmount = 0;
+
+        for (const item of order.items) {
+            if (item.status && item.status.toLowerCase() !== 'cancelled') {
+                await Product.findOneAndUpdate(
+                    { _id: item.product, "variants._id": item.variantId },
+                    { 
+                        $inc: { 
+                            "variants.$.quantity": item.quantity,
+                            "stock": item.quantity 
+                        } 
+                    }
+                );
+                
+                totalRefundAmount += (item.price * item.quantity);
+                item.status = 'Cancelled';
+                item.cancellationReason = "Bulk cancellation requested by customer.";
+            }
+        }
+
+        order.status = 'Cancelled';
+        order.totalAmount = Math.max(0, order.totalAmount - totalRefundAmount);
+        order.subtotal = Math.max(0, order.subtotal - totalRefundAmount);
+
+        if (order.paymentStatus === 'Paid') {
+            order.paymentStatus = 'Refunded';
+        }
+
+        await order.save();
+        return res.status(200).json({ success: true, message: "Entire order successfully cancelled." });
+
+    } catch (error) {
+        console.error("Bulk cancellation processing crash:", error);
+        return res.status(500).json({ success: false, message: "Internal server error processing bulk cancellation." });
+    }
+};
+
+const returnAllOrderItems = async (req, res) => {
+    try {
+        const { orderId, reason } = req.body;
+        const userId = req.session.user?.id || req.session.user?._id || req.session.user_id;
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Session unauthenticated." });
+        }
+
+        const order = await Order.findOne({ _id: orderId, user: userId });
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        const eligibleForReturn = order.items.some(item => item.status.toLowerCase() === 'delivered');
+        if (!eligibleForReturn) {
+            return res.status(400).json({ success: false, message: "Bulk returns are only restricted to orders with delivered content." });
+        }
+
+        for (const item of order.items) {
+            if (item.status.toLowerCase() === 'delivered' || item.status === 'Pending') {
+                item.status = 'Returned'; 
+                item.returnReason = reason || "Bulk order return request.";
+
+                await Product.findOneAndUpdate(
+                    { _id: item.product, "variants._id": item.variantId },
+                    { 
+                        $inc: { 
+                            "variants.$.quantity": item.quantity,
+                            "stock": item.quantity 
+                        } 
+                    }
+                );
+            }
+        }
+
+        order.status = 'Returned'; 
+        await order.save();
+        return res.status(200).json({ success: true, message: "Entire order has been successfully processed for return." });
+
+    } catch (error) {
+        console.error("Bulk return processing crash:", error);
+        return res.status(500).json({ success: false, message: "Internal server error logging bulk return tracking." });
+    }
+};
+
+
 module.exports = {
     getCheckoutPage,
     selectAddress,
@@ -396,5 +499,7 @@ module.exports = {
     getOrderDetailsPage,
     cancelOrderItem,
     returnOrderItem,
-    downloadInvoice
+    downloadInvoice,
+    cancelAllOrderItems,
+    returnAllOrderItems
 };
