@@ -151,7 +151,6 @@
         color: #ffffff;
     }
 
-    /* Classy Minimalist Apple Style Secondary Button */
     .apple-btn-invoice {
         color: var(--apple-black);
         background-color: #ffffff;
@@ -170,6 +169,13 @@
         background-color: var(--apple-black);
         color: #ffffff;
         border-color: var(--apple-black);
+    }
+
+    /* Clean Multi-Action Layout Controls */
+    .bulk-action-wrapper {
+        display: flex;
+        gap: 10px;
+        margin-top: 0.5rem;
     }
 
     .summary-box {
@@ -215,8 +221,21 @@
         <div>
             <h1 class="fw-bold tracking-tight mb-1" style="font-size: 2rem;">Order Details</h1>
             <p class="text-muted small mb-0">Placed on <%= order.date %></p>
+            
+            <div class="bulk-action-wrapper">
+                <% let currentMacroStatus = order.status.toLowerCase(); %>
+                <% if (currentMacroStatus === 'pending' || currentMacroStatus === 'processing') { %>
+                    <button class="apple-btn-danger btn-sm rounded-3" onclick="handleCancelAllOrders('<%= order._id %>')">
+                        <i class="bi bi-x-circle me-1"></i> Cancel Entire Order
+                    </button>
+                <% } else if (currentMacroStatus === 'delivered') { %>
+                    <button class="apple-btn-warning btn-sm rounded-3" onclick="handleReturnAllOrders('<%= order._id %>')">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Return Entire Order
+                    </button>
+                <% } %>
+            </div>
         </div>
-        <div>
+        <div class="text-sm-end">
             <span class="text-muted me-2 small">ID: <strong class="text-dark"><%= order.orderId %></strong></span>
             <span class="badge-status text-capitalize"><%= order.status %></span>
         </div>
@@ -275,6 +294,7 @@
                         </div>
                         
                         <span class="badge bg-light text-dark border small">Qty: <%= item.quantity %></span>
+                        <span class="ms-1 text-capitalize small text-muted font-monospace">State: <%= item.status %></span>
                     </div>
                 </div>
                 
@@ -284,22 +304,24 @@
                     </span>
 
                     <div class="action-button-container d-flex flex-column gap-2 mt-sm-2">
-                        <% if (item.status.toLowerCase() === 'pending' || item.status.toLowerCase() === 'processing' || item.status.toLowerCase() === 'shipped') { %>
-                            <button class="apple-btn-danger" onclick="handleCancelItem('<%= order._id || order.id %>', '<%= item.variantId %>')">
+                        <% let localItemStatus = item.status.toLowerCase(); %>
+                        <% if (localItemStatus === 'pending' || localItemStatus === 'processing' || localItemStatus === 'shipped') { %>
+                            <button class="apple-btn-danger" onclick="handleCancelItem('<%= order._id %>', '<%= item.variantId %>')">
                                 Cancel Item
                             </button>
-                        <% } else if (item.status.toLowerCase() === 'delivered') { %>
-                            <!-- Invoice Download Link Rendered Exclusively For Delivered States -->
+                        <% } else if (localItemStatus === 'delivered') { %>
                             <a href="/checkout/orders/<%= order._id %>/invoice" class="apple-btn-invoice">
                                 <i class="bi bi-download "></i> Download Invoice
                             </a>
-                            <button class="apple-btn-warning" onclick="handleReturnItem('<%= order._id || order.id %>', '<%= item.variantId %>')">
+                            <button class="apple-btn-warning" onclick="handleReturnItem('<%= order._id %>', '<%= item.variantId %>')">
                                 Return Item
                             </button>
-                        <% } else if (item.status.toLowerCase() === 'cancelled') { %>
+                        <% } else if (localItemStatus === 'cancelled') { %>
                             <span class="badge bg-danger-subtle text-danger px-3 py-2 small rounded-pill fw-bold">Cancelled</span>
-                        <% } else if (item.status.toLowerCase() === 'returned') { %>
+                        <% } else if (localItemStatus === 'returned') { %>
                             <span class="badge bg-secondary-subtle text-secondary px-3 py-2 small rounded-pill fw-bold">Returned</span>
+                        <% } else if (localItemStatus === 'return request pending') { %>
+                            <span class="badge bg-warning-subtle text-warning px-3 py-2 small rounded-pill fw-bold">Return Review</span>
                         <% } else { %>
                             <span class="badge bg-light text-dark border px-2 py-1 small text-capitalize"><%= item.status %></span>
                         <% } %>
@@ -332,8 +354,88 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+async function handleCancelAllOrders(orderId) {
+    const { isConfirmed } = await Swal.fire({
+        title: 'Cancel Entire Order?',
+        text: "This operation cancels all items in this delivery configuration and restocks inventory.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Cancel All',
+        cancelButtonText: 'Dismiss',
+        confirmButtonColor: '#ff3b30',
+        cancelButtonColor: '#86868b',
+        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title' }
+    });
+
+    if (isConfirmed) {
+        try {
+            const response = await fetch('/checkout/orders/cancel-all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId })
+            });
+            const data = await response.json();
+            if (data.success) {
+                Swal.fire({
+                    title: 'Order Wiped!',
+                    text: data.message,
+                    icon: 'success',
+                    confirmButtonColor: '#0071e3'
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message || 'Processing cancellation array failed.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Communication channel fault during processing.', 'error');
+        }
+    }
+}
+
+async function handleReturnAllOrders(orderId) {
+    const { value: reason, isConfirmed } = await Swal.fire({
+        title: 'Bulk Return Manifest',
+        input: 'text',
+        inputLabel: 'Specify a reason for requesting a return on all delivered devices:',
+        inputPlaceholder: 'Describe technical or performance issues...',
+        showCancelButton: true,
+        confirmButtonText: 'Submit Bulk Return',
+        cancelButtonText: 'Dismiss',
+        confirmButtonColor: '#ff6b00',
+        cancelButtonColor: '#86868b',
+        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title', input: 'apple-swal-input' },
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return 'A valid description parameter is mandatory for bulk processing validation.';
+            }
+        }
+    });
+
+    if (isConfirmed && reason) {
+        try {
+            const response = await fetch('/checkout/orders/return-all', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, reason })
+            });
+            const data = await response.json();
+            if (data.success) {
+                Swal.fire({
+                    title: 'Return Request Logged!',
+                    text: data.message,
+                    icon: 'success',
+                    confirmButtonColor: '#0071e3'
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.message || 'Processing return array failed.', 'error');
+            }
+        } catch (err) {
+            Swal.fire('Error', 'Communication channel fault during processing.', 'error');
+        }
+    }
+}
+
 async function handleCancelItem(orderId, variantId) {
-    if (!orderId || orderId === "undefined" || orderId === "") {
+    if (!orderId) {
         Swal.fire('Error', 'Unable to retrieve valid Order Reference Identifier.', 'error');
         return;
     }
@@ -348,11 +450,7 @@ async function handleCancelItem(orderId, variantId) {
         cancelButtonText: 'Keep Item',
         confirmButtonColor: '#ff3b30',
         cancelButtonColor: '#86868b',
-        customClass: {
-            popup: 'apple-swal-popup',
-            title: 'apple-swal-title',
-            input: 'apple-swal-input'
-        }
+        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title', input: 'apple-swal-input' }
     });
 
     if (isConfirmed) {
@@ -381,7 +479,7 @@ async function handleCancelItem(orderId, variantId) {
 }
 
 async function handleReturnItem(orderId, variantId) {
-    if (!orderId || orderId === "undefined" || orderId === "") {
+    if (!orderId) {
         Swal.fire('Error', 'Unable to retrieve valid Order Reference Identifier.', 'error');
         return;
     }
@@ -396,11 +494,7 @@ async function handleReturnItem(orderId, variantId) {
         cancelButtonText: 'Keep Item',
         confirmButtonColor: '#ff6b00',
         cancelButtonColor: '#86868b',
-        customClass: {
-            popup: 'apple-swal-popup',
-            title: 'apple-swal-title',
-            input: 'apple-swal-input'
-        },
+        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title', input: 'apple-swal-input' },
         inputValidator: (value) => {
             if (!value || !value.trim()) {
                 return 'A reason is required to submit a return request!';
