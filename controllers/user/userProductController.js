@@ -45,10 +45,7 @@ const getProductDetailPage = async (req, res) => {
 
     // If product is blocked, deleted, or category unlisted
     if (!detailData) {
-      // If you have req.flash set up, use this:
       if (req.flash) req.flash('error', 'This product is currently unavailable.');
-      
-      // Otherwise, we pass a query string that your allProducts page can read
       return res.redirect('/allProducts?message=unavailable');
     }
 

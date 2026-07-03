@@ -138,7 +138,7 @@ class CartService {
           targetProduct = await Product.findById(new mongoose.Types.ObjectId(String(targetProdId))).lean();
         }
         
-        // Fallback fallback lookups
+        // fallback lookups
         if (!targetProduct && targetVariantId && mongoose.Types.ObjectId.isValid(String(targetVariantId))) {
           targetProduct = await Product.findOne({ "variants._id": new mongoose.Types.ObjectId(String(targetVariantId)) }).lean();
         }
@@ -146,14 +146,14 @@ class CartService {
         if (targetProduct) {
           const itemObj = item.toObject ? item.toObject() : item;
           
-          // Try to find the exact variant matching our saved ID
+          // Try to find the exact variant matching saved ID
           let specificVariant = null;
           if (targetProduct.variants && targetProduct.variants.length > 0) {
             specificVariant = targetProduct.variants.find(v => String(v._id) === String(targetVariantId));
             
             // If the exact variant ID is missing (because admin deleted/recreated it),
             // but the product has active variants, automatically pair it with the first available one 
-            // and update the cart item so it seamlessly recovers when restocked!
+            // and update the cart item so it seamlessly recovers when restocked
             if (!specificVariant && targetProduct.variants.length > 0) {
               specificVariant = targetProduct.variants[0]; // Fallback to the live version
               item.variantId = specificVariant._id; // Update the ID on the Mongoose document object

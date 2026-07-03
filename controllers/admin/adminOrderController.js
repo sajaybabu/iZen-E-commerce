@@ -67,10 +67,10 @@ const updateItemStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: "Target order or item configuration not located." });
         }
         
-        return res.status(200).json({ success: true, message: "Product status synchronized and inventory adjusted successfully." });
+        return res.status(200).json({ success: true, message: "Product status synchronized successfully." });
     } catch (error) {
         console.error("Error modifying individual item status state:", error);
-        return res.status(500).json({ success: false, message: "Internal server error updating item status." });
+        return res.status(400).json({ success: false, message: error.message || "Internal server error updating item status." });
     }
 };
 

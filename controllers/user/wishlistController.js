@@ -1,6 +1,7 @@
 const Wishlist = require('../../models/wishlistModel');
 const Product = require('../../models/Product');
-const cartService = require('../../services/user/cartService'); // Integrated to map configurations safely
+const Category = require('../../models/categoryModel'); // Added Category model import
+const cartService = require('../../services/user/cartService'); 
 const mongoose = require('mongoose');
 
 const getWishlistPage = async (req, res) => {
@@ -10,7 +11,16 @@ const getWishlistPage = async (req, res) => {
 
     const objUserId = new mongoose.Types.ObjectId(String(userId));
     
-    // Find wishlist and populate
+    // Fetch all unlisted or deleted categories from the database
+    const hiddenCategories = await Category.find({ 
+      $or: [{ isListed: false }, { isDeleted: true }] 
+    }).lean();
+
+    // Create a lowercase list of hidden category names for robust string matching
+    const hiddenCategoryNames = hiddenCategories.map(cat => cat.name.trim().toLowerCase());
+    const hiddenCategoryIds = hiddenCategories.map(cat => cat._id.toString());
+
+    // Find wishlist and populate product data
     let wishlist = await Wishlist.findOne({ userId: objUserId }).populate({
       path: 'items.productId',
       model: 'Product'
@@ -20,22 +30,29 @@ const getWishlistPage = async (req, res) => {
       wishlist = { items: [] };
     }
 
-    wishlist.items = wishlist.items.map(item => {
-      // If Mongoose could not find a matching product by this ID string, preserve the ID so it can be deleted!
+    // Filter out missing, blocked, deleted, OR unlisted category items
+    wishlist.items = wishlist.items.filter(item => {
       if (!item.productId) {
-        return {
-          ...item,
-          productId: {
-            _id: item._id || 'broken_reference', // Try to use the subdocument item id or a placeholder
-            name: 'Premium Hardware Configuration (Orphaned Reference)',
-            images: ['/uploads/default-apple.png'],
-            variants: [{ price: 0, quantity: 0, attributes: { ram: 'N/A', storage: 'N/A', color: 'Default' } }]
-          },
-          isOrphaned: true,
-          actualDatabaseId: item.productId // Keep it hidden for deletion routes
-        };
+        return false; // Product no longer exists in DB
       }
-      return item;
+
+      // Check root product block/delete properties
+      if (item.productId.isBlocked === true || item.productId.isDeleted === true) {
+        return false; 
+      }
+
+      // Check if product belongs to a hidden/unlisted category
+      const productCategoryStr = String(item.productId.category || '').trim().toLowerCase();
+      
+      const isCategoryHidden = 
+        hiddenCategoryNames.includes(productCategoryStr) || 
+        hiddenCategoryIds.includes(String(item.productId.category));
+
+      if (isCategoryHidden) {
+        return false; // Skip displaying this item since its category is unlisted
+      }
+
+      return true;
     });
 
     return res.render('user/wishlist', {
@@ -60,12 +77,23 @@ const addToWishlist = async (req, res) => {
     const objUserId = new mongoose.Types.ObjectId(String(userId));
     const objProdId = new mongoose.Types.ObjectId(String(productId));
 
+    // Verify product status before allowing it into the wishlist layout array
+    const targetProd = await Product.findById(objProdId).lean();
+    if (!targetProd || targetProd.isBlocked || targetProd.isDeleted) {
+      return res.status(400).json({ success: false, message: "This item cannot be tracked." });
+    }
+
+    // Double check parent category listing status
+    const parentCategory = await Category.findOne({ name: targetProd.category }).lean();
+    if (parentCategory && (parentCategory.isListed === false || parentCategory.isDeleted === true)) {
+      return res.status(400).json({ success: false, message: "This product's ecosystem is currently hidden." });
+    }
+
     let wishlist = await Wishlist.findOne({ userId: objUserId });
     if (!wishlist) {
       wishlist = new Wishlist({ userId: objUserId, items: [] });
     }
 
-    // Prevent duplicate entries inside the items array
     const itemExists = wishlist.items.some(item => String(item.productId) === String(productId));
     if (itemExists) {
       return res.status(400).json({ success: false, message: "Item is already configured in your wishlist." });
@@ -87,13 +115,8 @@ const removeFromWishlist = async (req, res) => {
     const userId = req.session?.user?.id || req.session?.user?._id;
 
     if (!userId) return res.status(401).json({ success: false, message: "Unauthorized context." });
-    if (!productId || productId === 'Unknown' || productId === 'broken_reference') {
-      return res.status(400).json({ success: false, message: "Cannot remove item using an unallocated reference string id. Please wipe this item entry directly from your Compass collection database tracking model." });
-    }
-
     const objUserId = new mongoose.Types.ObjectId(String(userId));
 
-    // Pull the item out matching the productId value string
     await Wishlist.updateOne(
       { userId: objUserId },
       { $pull: { items: { productId: new mongoose.Types.ObjectId(String(productId)) } } }

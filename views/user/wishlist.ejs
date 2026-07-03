@@ -53,6 +53,12 @@
         .wishlist-item-row:hover {
             background-color: #fafafa;
         }
+        .row-unavailable {
+            background-color: #fdfefe;
+        }
+        .text-line-through {
+            text-decoration: line-through;
+        }
     </style>
 </head>
 
@@ -86,17 +92,12 @@
         </div>
     </nav>
 
-    
-
     <% 
-      // Filter items to ensure productId populated cleanly from the DB reference pipeline
-      let validItems = [];
-      if (wishlist && wishlist.items) {
-          validItems = wishlist.items.filter(item => item.productId !== null && typeof item.productId === 'object');
-      }
+      // Retain all items passed from the controller instead of filtering out unpopulated entries
+      let totalItems = (wishlist && wishlist.items) ? wishlist.items : []; 
     %>
 
-    <% if (validItems.length > 0) { %>
+    <% if (totalItems.length > 0) { %>
         <div class="main-content">
             <div class="container py-5">
                 <h3 class="fw-bold text-dark mb-4"><i class="bi bi-heart me-2"></i>Favored Configurations</h3>
@@ -114,39 +115,60 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <% validItems.forEach((item, index) => { %>
-                                            <% const prod = item.productId; %>
-                                            <% const primaryVariant = (prod.variants && prod.variants.length > 0) ? prod.variants[0] : null; %>
+                                        <% totalItems.forEach((item, index) => { %>
+                                            <% 
+                                               const prod = item.productId; 
+                                               // Core availability flag checker
+                                               const isSystemGhost = !prod || typeof prod !== 'object';
+                                               const isBlockedOrDeleted = !isSystemGhost && (prod.isBlocked || prod.isDeleted);
+                                               const primaryVariant = (!isSystemGhost && prod.variants && prod.variants.length > 0) ? prod.variants[0] : null;
+                                               const totalStock = primaryVariant ? primaryVariant.quantity : (prod ? prod.stock : 0);
+                                               const isOutOfStock = totalStock < 1;
+                                               
+                                               // Consolidated functional status flags
+                                               const isCurrentlyUnavailable = isSystemGhost || isBlockedOrDeleted || isOutOfStock || item.isOrphaned;
+                                               const itemIdentifier = isSystemGhost ? (item._id || index) : prod._id;
+                                            %>
                                             
-                                            <tr class="wishlist-item-row border-bottom" id="tableRow-<%= prod._id %>">
+                                            <tr class="wishlist-item-row border-bottom <%= isCurrentlyUnavailable ? 'row-unavailable text-muted' : '' %>" id="tableRow-<%= itemIdentifier %>">
                                                 <td class="ps-4 py-4">
                                                     <div class="d-flex align-items-center">
-                                                        <% 
-                                                          // Prioritize hardware variant specific asset files before default container models
-                                                          let rawImg = '/uploads/default-apple.png';
-                                                          if (primaryVariant && primaryVariant.images && primaryVariant.images.length > 0) {
-                                                              rawImg = primaryVariant.images[0];
-                                                          } else if (prod.images && prod.images.length > 0) {
-                                                              rawImg = prod.images[0];
-                                                          }
-                                                          let finalImgPath = rawImg.startsWith('/') ? rawImg : '/' + rawImg;
-                                                        %>
-                                                        <img src="<%= finalImgPath %>" alt="<%= prod.name %>" class="rounded-2 border p-1 me-3 bg-white" width="70" height="70" style="object-fit: contain;">
-                                                        <div>
-                                                            <h6 class="mb-1 fw-bold text-dark"><%= prod.name %></h6>
+                                                        <% if (!isSystemGhost) { %>
                                                             <% 
-                                                              let totalStock = primaryVariant ? primaryVariant.quantity : prod.stock;
-                                                              if (prod.isBlocked || prod.isDeleted || totalStock < 1 || item.isOrphaned) { 
+                                                              let rawImg = '/uploads/default-apple.png';
+                                                              if (primaryVariant && primaryVariant.images && primaryVariant.images.length > 0) {
+                                                                  rawImg = primaryVariant.images[0];
+                                                              } else if (prod.images && prod.images.length > 0) {
+                                                                  rawImg = prod.images[0];
+                                                              }
+                                                              let finalImgPath = rawImg.startsWith('/') ? rawImg : '/' + rawImg;
                                                             %>
-                                                                <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded small">Out of Stock</span>
-                                                            <% } else { %>
-                                                                <span class="badge bg-success-subtle text-success px-2 py-1 rounded small">In Stock</span>
-                                                            <% } %>
-                                                        </div>
+                                                            <img src="<%= finalImgPath %>" alt="<%= prod.name %>" class="rounded-2 border p-1 me-3 bg-white <%= isCurrentlyUnavailable ? 'opacity-50' : '' %>" width="70" height="70" style="object-fit: contain;">
+                                                            <div>
+                                                                <h6 class="mb-1 fw-bold <%= isCurrentlyUnavailable ? 'text-secondary text-line-through' : 'text-dark' %>"><%= prod.name %></h6>
+                                                                <% if (isBlockedOrDeleted) { %>
+                                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded small">Deconfigured from Ecosystem</span>
+                                                                <% } else if (isOutOfStock) { %>
+                                                                    <span class="badge bg-warning-subtle text-warning px-2 py-1 rounded small">Out of Stock</span>
+                                                                <% } else if (item.isOrphaned) { %>
+                                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded small">Pipeline Severed</span>
+                                                                <% } else { %>
+                                                                    <span class="badge bg-success-subtle text-success px-2 py-1 rounded small">In Stock</span>
+                                                                <% } %>
+                                                            </div>
+                                                        <% } else { %>
+                                                            <div class="rounded-2 border p-1 me-3 bg-light d-flex align-items-center justify-content-center border-dashed" style="width: 70px; height: 70px;">
+                                                                <i class="bi bi-exclamation-octagon text-danger fs-4"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-1 fw-bold text-danger text-opacity-75">Item Currently Unavailable</h6>
+                                                                <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded small">Hardware Entry Removed</span>
+                                                            </div>
+                                                        <% } %>
                                                     </div>
                                                 </td>
-                                                <td class="text-muted small">
-                                                    <% if (primaryVariant && primaryVariant.attributes) { %>
+                                                <td class="small">
+                                                    <% if (!isSystemGhost && primaryVariant && primaryVariant.attributes) { %>
                                                         <% 
                                                           let ram = primaryVariant.attributes.ram || primaryVariant.attributes.RAM || 'Standard';
                                                           let storage = primaryVariant.attributes.storage || primaryVariant.attributes.Storage || 'Default';
@@ -154,30 +176,36 @@
                                                         %>
                                                         <%= ram %> | <%= storage %> | <%= color %>
                                                     <% } else { %>
-                                                        Standard Architecture
+                                                        <span class="text-muted text-opacity-50">—</span>
                                                     <% } %>
                                                 </td>
-                                                <td class="fw-semibold text-dark">
-                                                    <% 
-                                                        let rawPrice = primaryVariant ? primaryVariant.price : (prod.price || 0);
-                                                        let price = Number(rawPrice); 
-                                                        let discount = Number(prod.discount || 0); 
-                                                        let finalPrice = Math.floor(price - (price * (discount / 100)));
-                                                    %>
-                                                    &#8377;<%= finalPrice.toLocaleString('en-IN') %>
+                                                <td class="fw-semibold">
+                                                    <% if (!isSystemGhost) { %>
+                                                        <% 
+                                                            let rawPrice = primaryVariant ? primaryVariant.price : (prod.price || 0);
+                                                            let price = Number(rawPrice); 
+                                                            let discount = Number(prod.discount || 0); 
+                                                            let finalPrice = Math.floor(price - (price * (discount / 100)));
+                                                        %>
+                                                        <span class="<%= isCurrentlyUnavailable ? 'text-decoration-line-through text-muted' : 'text-dark' %>">
+                                                            &#8377;<%= finalPrice.toLocaleString('en-IN') %>
+                                                        </span>
+                                                    <% } else { %>
+                                                        <span class="text-muted text-opacity-50">—</span>
+                                                    <% } %>
                                                 </td>
                                                 <td class="text-center pe-4">
                                                     <div class="d-flex align-items-center justify-content-center gap-3">
-                                                        <% if (primaryVariant && primaryVariant.quantity > 0 && !prod.isBlocked && !item.isOrphaned) { %>
+                                                        <% if (!isCurrentlyUnavailable && primaryVariant) { %>
                                                             <button class="btn btn-dark btn-sm px-3 py-2 rounded shadow-sm" onclick='addToCart("<%= primaryVariant._id %>")'>
                                                                 <i class="bi bi-cart-plus me-1"></i> Add to Cart
                                                             </button>
                                                         <% } else { %>
-                                                            <button class="btn btn-secondary btn-sm px-3 py-2 rounded" disabled>Unavailable</button>
+                                                            <button class="btn btn-secondary btn-sm px-3 py-2 rounded" disabled style="opacity: 0.4;">Unavailable</button>
                                                         <% } %>
                                                         <i class="bi bi-trash3 text-muted cursor-pointer fs-5 px-2 py-1 rounded hover-danger" 
                                                            style="transition: color 0.2s;"
-                                                           onclick='removeProduct("<%= prod._id %>")'
+                                                           onclick='removeProduct("<%= itemIdentifier %>")'
                                                            onmouseover="this.style.color='#dc3545'" 
                                                            onmouseout="this.style.color='#6c757d'"></i>
                                                     </div>
@@ -196,18 +224,20 @@
                             <p class="text-muted small mb-4">Migrate all selectable hardware profiles matching available inventory layouts into your cart layout.</p>
                             
                             <% 
-                              // Collect only matching variant identifiers that are active and inside warehouse bounds
                               let validVariantIds = [];
-                              validItems.forEach(item => {
+                              totalItems.forEach(item => {
                                   const prod = item.productId;
-                                  const variant = (prod.variants && prod.variants.length > 0) ? prod.variants[0] : null;
-                                  if (variant && variant._id && variant.quantity > 0 && !prod.isBlocked && !item.isOrphaned) {
-                                      validVariantIds.push(String(variant._id));
+                                  if (prod && typeof prod === 'object' && !prod.isBlocked && !prod.isDeleted && !item.isOrphaned) {
+                                      const variant = (prod.variants && prod.variants.length > 0) ? prod.variants[0] : null;
+                                      if (variant && variant._id && variant.quantity > 0) {
+                                          validVariantIds.push(String(variant._id));
+                                      }
                                   }
                               });
                             %>
                             
                             <button class="btn btn-proceed text-white w-100 py-2.5 d-flex align-items-center justify-content-center gap-2" 
+                                    <%= validVariantIds.length === 0 ? 'disabled style=opacity:0.5;' : '' %>
                                     onclick='moveAllToCart(<%- JSON.stringify(validVariantIds) %>)'>
                                 <i class="bi bi-box-arrow-in-right"></i> Move all to Cart
                             </button>
@@ -268,7 +298,8 @@
                             window.location.reload();
                         }
                     } else {
-                        Swal.fire({ icon: "error", title: "Action Failed", text: resData.message || "Failed removing configuration entry.", confirmButtonColor: "#111" });
+                        // Fallback structural page sync if localized DOM manipulation drops bounds
+                        window.location.reload();
                     }
                 } catch (err) {
                     console.error("Remove configuration trace fail:", err);
@@ -294,12 +325,7 @@
                 if (response.ok && res.success) {
                     window.location.href = '/cart';
                 } else {
-                    Swal.fire({
-                        icon: "warning",
-                        title: "Notice",
-                        text: res.message || "Unable to register configuration into your cart ecosystem.",
-                        confirmButtonColor: "#111"
-                    });
+                    Swal.fire({ icon: "warning", title: "Notice", text: res.message || "Unable to register configuration into your cart ecosystem.", confirmButtonColor: "#111" });
                 }
             } catch (err) {
                 console.error("Cart action error exception:", err);
@@ -308,15 +334,7 @@
         }
 
         async function moveAllToCart(variantIds) {
-            if (!variantIds || variantIds.length === 0) {
-                Swal.fire({
-                    icon: "info",
-                    title: "Allocation Empty",
-                    text: "No items inside your wishlist match active warehouse stock rules.",
-                    confirmButtonColor: "#111"
-                });
-                return;
-            }
+            if (!variantIds || variantIds.length === 0) return;
 
             try {
                 const response = await fetch('/wishlist/moveAllToCart', {
@@ -331,16 +349,10 @@
                 }
 
                 const data = await response.json();
-
                 if (response.ok && data.success) {
                     window.location.href = "/cart";
                 } else {
-                    Swal.fire({
-                        icon: "warning",
-                        title: "Allocation Conflict",
-                        text: data.message || "Some products in this set could not be allocated due to supply drops.",
-                        confirmButtonColor: "#111"
-                    });
+                    Swal.fire({ icon: "warning", title: "Allocation Conflict", text: data.message || "Some products could not be allocated due to supply drops.", confirmButtonColor: "#111" });
                 }
             } catch (err) {
                 console.error("Bulk migration trace exception:", err);

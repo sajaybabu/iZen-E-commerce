@@ -414,13 +414,29 @@
         if (!files.length) return;
         
         confirmedVariants[id] = false; 
-        let allowedLength = (files.length > 5) ? 5 : files.length;
+        
+        // Define accepted MIME types and clean extensions matching multer configuration
+        const allowedImageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        let validFilesArray = [];
+
+        // Pre-validate every selected asset for format conformance before loading CropperJS
+        for (let idx = 0; idx < files.length; idx++) {
+            if (!allowedImageMimeTypes.includes(files[idx].type)) {
+                Swal.fire({ 
+                    icon: "warning", // Minimalist caution exclamation icon
+                    title: "Unsupported File Format", 
+                    text: `"${files[idx].name}" is not a valid image format. Only JPEG, JPG, PNG, and WEBP assets are accepted.`,
+                    confirmButtonColor: "#000", // Clean black button accent
+                });
+                imageInput.value = ''; // Clean input reference array instantly
+                return; // Terminate execution to block broken views
+            }
+            validFilesArray.push(files[idx]);
+        }
+
+        let allowedLength = (validFilesArray.length > 5) ? 5 : validFilesArray.length;
         
         for (let i = 0; i < allowedLength; i++) {
-            if (!files[i].type.startsWith("image/")) {
-                Swal.fire({ icon: "error", title: "Invalid File", text: "Only image formats are accepted" });
-                continue;
-            }
             if (imageCount[id] === undefined) imageCount[id] = 0;
             if (imageCount[id] >= 5) {
                 Swal.fire({ icon: "warning", title: "Limit Exceeded", text: "Maximum 5 images allowed per variant." });
@@ -458,7 +474,7 @@
                     });
                 };
             };
-            reader.readAsDataURL(files[i]);
+            reader.readAsDataURL(validFilesArray[i]);
         }
         imageInput.value = '';
     }

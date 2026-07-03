@@ -2,7 +2,6 @@ const Product = require('../../models/Product');
 const Category = require('../../models/categoryModel'); 
 const mongoose = require('mongoose');
 
-// Definitive methods for handling shop listings and single product views
 const getAllProductsData = async (filterParams) => {
   try {
     const { page, search, category, minPrice, maxPrice, sort } = filterParams;
@@ -10,20 +9,32 @@ const getAllProductsData = async (filterParams) => {
     const currentPage = parseInt(page) || 1;
     const skip = (currentPage - 1) * limit;
 
-    // Base query: only pull active, non-deleted inventory
-    let query = { isBlocked: false, isDeleted: false };
+    // Fetch all categories that are unlisted or deleted by admin
+    const hiddenCategories = await Category.find({ 
+      $or: [{ isListed: false }, { isDeleted: true }] 
+    }).lean();
 
-    //  Safe Text Search
+    // Collect names and ObjectIDs of hidden categories 
+    const hiddenCategoryNames = hiddenCategories.map(cat => new RegExp(`^${cat.name.trim()}$`, 'i'));
+    const hiddenCategoryIds = hiddenCategories.map(cat => cat._id.toString());
+
+    // exclude blocked, deleted, or products belonging to hidden categories
+    let query = { 
+      isBlocked: false, 
+      isDeleted: false,
+      category: { $nin: [...hiddenCategoryNames, ...hiddenCategoryIds] }
+    };
+
+    // Safe Text Search
     if (search && search.trim() !== "") {
       query.name = { $regex: new RegExp(search.trim(), 'i') };
     }
 
-    // SAFE CATEGORY PARSING WITH CASE-INSENSITIVE REGEX PATTERN 
+    // Safe Category Parsing with filtering logic
     if (category && category !== 'all') {
       if (mongoose.Types.ObjectId.isValid(category)) {
         const foundCategory = await Category.findById(category);
         if (foundCategory) {
-    
           const caseInsensitiveCategoryRegex = new RegExp(`^${foundCategory.name.trim()}$`, 'i');
           query.$or = [
             { category: caseInsensitiveCategoryRegex },
@@ -38,6 +49,7 @@ const getAllProductsData = async (filterParams) => {
       }
     }
 
+    // Price boundary configurations
     if (minPrice || maxPrice) {
       const priceFilter = [
         { "variants.price": {} },
@@ -58,7 +70,7 @@ const getAllProductsData = async (filterParams) => {
           { $or: query.$or },
           { $or: priceFilter }
         ];
-        delete query.$or; // Remove root level clashing $or key
+        delete query.$or; 
       } else {
         query.$or = priceFilter;
       }
@@ -84,10 +96,10 @@ const getAllProductsData = async (filterParams) => {
         sortQuery.createdAt = -1; 
     }
 
-    // Fetch live categories for selection bars
-    const categories = await Category.find({ isListed: true });
+    // Only load active sidebars selectors 
+    const categories = await Category.find({ isListed: true, isDeleted: { $ne: true } });
 
-    // Execute paginated selection query
+    // Execute safe query mapping constraints
     const products = await Product.find(query)
       .sort(sortQuery)
       .skip(skip)
@@ -111,7 +123,6 @@ const getAllProductsData = async (filterParams) => {
 
 const getProductDetailData = async (variantId) => {
   try {
-    // Fetch parent product configuration safely
     const productDoc = await Product.findOne({ 
       'variants._id': variantId, 
       isBlocked: false, 
@@ -120,7 +131,6 @@ const getProductDetailData = async (variantId) => {
     
     if (!productDoc) return null;
 
-    // Safe Category Lookup (Prevents any CastErrors if category is stored as plain text string)
     let parentCategory = null;
     const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(productDoc.category);
 
@@ -135,21 +145,24 @@ const getProductDetailData = async (variantId) => {
       parentCategory = await Category.findOne({ name: productDoc.category });
     }
 
-    // Securely redirect if parent category has been unlisted by an admin
-    if (!parentCategory || parentCategory.isListed === false) {
+    if (!parentCategory || parentCategory.isListed === false || parentCategory.isDeleted === true) {
       return null;
     }
 
-    // Extract sub-variant instance reference cleanly
     const activeVariant = productDoc.variants.id(variantId);
     if (!activeVariant) return null;
     
-    //related recommendations inside the exact same category ecosystem
+    // Fetch safe suggestions using unlisted configuration blocks
+    const hiddenCategories = await Category.find({ $or: [{ isListed: false }, { isDeleted: true }] }).lean();
+    const hiddenCategoryNames = hiddenCategories.map(cat => new RegExp(`^${cat.name.trim()}$`, 'i'));
+    const hiddenCategoryIds = hiddenCategories.map(cat => cat._id.toString());
+
     const exploreMore = await Product.find({ 
       _id: { $ne: productDoc._id }, 
       category: productDoc.category,
       isBlocked: false,
-      isDeleted: false 
+      isDeleted: false,
+      category: { $nin: [...hiddenCategoryNames, ...hiddenCategoryIds] }
     }).limit(4);
 
     return {

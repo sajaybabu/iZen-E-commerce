@@ -17,7 +17,6 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
     const existingOrder = await Order.findById(orderId);
     if (!existingOrder) return null;
 
-    // Added strict .toString() casting to fix type mismatch mismatch between ObjectId and String payload identifiers
     const targetedItem = existingOrder.items.find(item => 
         item.variantId && item.variantId.toString() === variantId.toString()
     );
@@ -29,7 +28,22 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
 
     const oldStatus = targetedItem.status;
 
-    //array sub-document updates
+    if (oldStatus === 'Cancelled' || oldStatus === 'Returned') {
+        throw new Error(`Cannot change status. This item has already been ${oldStatus.toLowerCase()} and is locked.`);
+    }
+
+    if (oldStatus === 'Delivered') {
+        if (newStatus !== 'Delivered' && newStatus !== 'Returned' && newStatus !== 'Return Requested') {
+            throw new Error("Cannot revert a delivered item back to a previous logistics state.");
+        }
+    }
+
+    if ((oldStatus === 'Shipped' || oldStatus === 'Out for Delivery') && newStatus === 'Pending') {
+        throw new Error(`Cannot roll back status to pending once the item has been ${oldStatus.toLowerCase()}.`);
+    }
+    
+
+    // Array sub-document updates
     const updatedOrder = await Order.findOneAndUpdate(
         { 
             _id: orderId, 
@@ -43,7 +57,7 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
 
     if (!updatedOrder) return null;
 
-    //  INVENTORY STOCK MONITOR
+    // INVENTORY STOCK MONITOR
     const isRestockingState = ['Cancelled', 'Returned'].includes(newStatus);
     const wasAlreadyRestocked = ['Cancelled', 'Returned'].includes(oldStatus);
 
@@ -62,7 +76,6 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
         );
     } 
     else if (!isRestockingState && wasAlreadyRestocked) {
-        // if admin moves item from Canceled back to standard workflow
         await Product.findOneAndUpdate(
             { 
                 _id: targetedItem.product, 
@@ -77,7 +90,7 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
         );
     }
 
-    //  TRANSACTION SETTLEMENT AUTOMATION LINKS
+    // TRANSACTION SETTLEMENT AUTOMATION LINKS
     let paymentUpdate = {};
 
     if (updatedOrder.paymentMethod === 'COD' && newStatus === 'Delivered') {
@@ -105,7 +118,8 @@ const fetchFilteredOrders = async ({ page, limit, search, status, sort }) => {
     if (status && status !== 'All') {
         query['items.status'] = status;
     }
-
+    
+    
     if (search) {
         const searchRegex = new RegExp(search.trim(), 'i');
         

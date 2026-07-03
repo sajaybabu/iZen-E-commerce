@@ -23,7 +23,6 @@
         }
         .sidebar { transition: transform 0.3s ease; }
         
-        /* Premium Core Workspace Design */
         .glass-panel {
             background: #ffffff;
             border: 1px solid var(--apple-border);
@@ -43,7 +42,6 @@
         .order-title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; color: var(--apple-black); }
         .meta-timestamp { color: #86868b; font-size: 0.95rem; font-weight: 400; }
         
-        /* Minimalist Select Structural Overhaul */
         .premium-dropdown {
             background-color: var(--apple-bg);
             border: 1px solid var(--apple-border);
@@ -78,7 +76,6 @@
         .data-string { font-size: 1.05rem; font-weight: 500; color: var(--apple-black); }
         .data-sub { font-size: 0.9rem; color: #6e6e73; }
 
-        /* Fine Detail Grid Tables */
         .premium-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
         .premium-table th {
             padding: 12px 10px;
@@ -159,11 +156,10 @@
                                     <tr>
                                         <td>
                                             <div class="fw-semibold text-dark"><%= item.name %></div>
-                                            
                                             <% if (item.variantColor && item.variantColor.trim() !== '') { %>
                                                 <div class="data-sub text-muted mt-1" style="font-size: 0.8rem;">
                                                     <span class="text-muted text-capitalize">
-                                                        <%= item.variant %>
+                                                        <%= item.variantColor %>
                                                     </span>
                                                 </div>
                                             <% } %>
@@ -171,15 +167,17 @@
                                         <td class="text-center text-secondary fw-medium"><%= item.quantity %></td>
                                         <td class="text-end fw-semibold text-dark">Rs. <%= item.price.toLocaleString('en-IN') %></td>
                                         <td class="text-end">
-                                            <select class="premium-dropdown" onchange="updateItemStatus('<%= order._id %>', '<%= item.variantId %>', this)">
-    <option value="Pending" <%= item.status === 'Pending' ? 'selected' : '' %>>Pending</option>
-    <option value="Shipped" <%= item.status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
-    <option value="Out for Delivery" <%= item.status === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
-    <option value="Delivered" <%= item.status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
-    <option value="Cancelled" <%= item.status === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
-    <option value="Return Requested" <%= item.status === 'Return Requested' ? 'selected' : '' %>>Return Requested</option>
-    <option value="Returned" <%= item.status === 'Returned' ? 'selected' : '' %>>Returned</option>
-</select>
+                                            <select class="premium-dropdown" 
+                                                    data-current-status="<%= item.status %>"
+                                                    onchange="updateItemStatus('<%= order._id %>', '<%= item.variantId %>', this)">
+                                                <option value="Pending" <%= item.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                                                <option value="Shipped" <%= item.status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                                                <option value="Out for Delivery" <%= item.status === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
+                                                <option value="Delivered" <%= item.status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
+                                                <option value="Cancelled" <%= item.status === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+                                                <option value="Return Requested" <%= item.status === 'Return Requested' ? 'selected' : '' %>>Return Requested</option>
+                                                <option value="Returned" <%= item.status === 'Returned' ? 'selected' : '' %>>Returned</option>
+                                            </select>
                                         </td>
                                     </tr>
                                 <% }) %>
@@ -201,34 +199,51 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-      async function updateItemStatus(orderId, variantId, selectorElement) {
-    const newStatus = selectorElement.value;
-    
-    try {
-        const response = await fetch('/admin/orders/update-item-status', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId, variantId, status: newStatus }) // Payload name key
-        });
+    async function updateItemStatus(orderId, variantId, selectorElement) {
+        const newStatus = selectorElement.value;
+        const initialStatus = selectorElement.getAttribute('data-current-status');
 
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            Swal.fire({ 
-                icon: 'success', 
-                title: 'Product State Synchronized', 
-                text: `This specific item is now marked as ${newStatus}.`, 
-                timer: 1500, 
-                showConfirmButton: false 
+        if (newStatus === initialStatus) return;
+        
+        try {
+            const response = await fetch('/admin/orders/update-item-status', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, variantId, status: newStatus })
             });
-        } else {
-            Swal.fire({ icon: 'error', title: 'Update Aborted', text: data.message || 'Could not update item state.' });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // Update internal attributes on local view
+                selectorElement.setAttribute('data-current-status', newStatus);
+                
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Status Synchronized', 
+                    text: `This item is now marked as ${newStatus}.`, 
+                    timer: 1500, 
+                    showConfirmButton: false 
+                });
+            } else {
+                // Revert dropdown element structure selection selection
+                selectorElement.value = initialStatus;
+                Swal.fire({ 
+                    icon: 'warning', 
+                    title: 'Action Restrained', 
+                    text: data.message || 'Illegal step update configuration sequence.' 
+                });
+            }
+        } catch (err) {
+            console.error("Transmission Failure:", err);
+            selectorElement.value = initialStatus;
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Ecosystem Sync Error', 
+                text: 'Network request rejected.' 
+            });
         }
-    } catch (err) {
-        console.error("Transmission Failure:", err);
-        Swal.fire({ icon: 'error', title: 'Ecosystem Sync Error', text: 'Network request rejected.' });
     }
-}
     </script>
 </body>
 </html>

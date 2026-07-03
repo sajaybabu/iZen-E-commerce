@@ -14,7 +14,6 @@ const addToCart = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing item configuration identifiers." });
     }
 
-    // Await database writing logic execution completely
     const processingCart = await cartService.addItemToCart(userId, variantId);
 
     return res.status(200).json({ 
@@ -48,7 +47,6 @@ const updateQuantity = async (req, res) => {
     const { variantId, action, change } = req.body;
     const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
     
-
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized execution context." });
     }
@@ -63,7 +61,6 @@ const updateQuantity = async (req, res) => {
     }
 
     if (!resolvedAction) {
-      console.log("Rejecting: Could not resolve action string");
       return res.status(400).json({ success: false, message: "Missing matching action execution directives." });
     }
 
@@ -77,7 +74,6 @@ const updateQuantity = async (req, res) => {
 
 const removeProduct = async (req, res) => {
   try {
-    
     const { variantId } = req.params;
     const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
 
@@ -99,135 +95,88 @@ const getCartPage = async (req, res) => {
     if (!userId) return res.redirect('/login');
 
     let cartData = await cartService.getCartDetails(userId);
-
     let filteredItems = [];
-    let itemsToPurge = [];
-    let hasInvalidOrUnlistedItems = false;
 
     if (cartData.cart && cartData.cart.items) {
       cartData.cart.items.forEach(item => {
         const rawItem = item.toObject ? item.toObject() : item;
-        
-        // Fetch properties from the service layer output
         const productDoc = rawItem.productDoc || rawItem.productId || rawItem.product;
         const activeVariant = rawItem.variantDoc;
         const categoryDoc = rawItem.categoryDoc;
-        if (!productDoc) {
-          if (rawItem.variantId) {
-            itemsToPurge.push(String(rawItem.variantId));
-          }
-          return; // Skip rendering only if the whole product is deleted from DB
-        }
 
-        // Check product block status OR parent category unlisted status
+        if (!productDoc) return; 
+
+        // Check if item should be hidden
         const isProductHidden = 
           productDoc.isBlocked === true || 
           productDoc.isDeleted === true || 
           (categoryDoc && categoryDoc.isListed === false) ||
           (categoryDoc && categoryDoc.isDeleted === true);
 
-        // If activeVariant is missing OR quantity is 0 or less, mark it as Out of Stock
-        //  even if the admin panel completely deletes the variant from the product, it stays on screen
+        // Completely omit blocked/deleted items from user display list
+        if (isProductHidden) {
+          return; 
+        }
+
         const isOutOfStock = !activeVariant || 
                              activeVariant.quantity === undefined || 
                              activeVariant.quantity <= 0 || 
                              rawItem.quantity > activeVariant.quantity;
 
-        if (isProductHidden || isOutOfStock) {
-          hasInvalidOrUnlistedItems = true; 
-        }
-
         filteredItems.push({
           ...rawItem,
           productDoc: productDoc,
-          // Fallback variant document context so EJS rendering engine doesn't break
           variantDoc: activeVariant || { quantity: 0, price: productDoc.price || 0 },
-          isBlockedItem: isProductHidden,
+          isBlockedItem: false,
           isOutOfStockItem: isOutOfStock
         });
       });
 
-      // Background cleanup ONLY if the master product collection row is completely null
-      if (itemsToPurge.length > 0) {
-        for (let variantId of itemsToPurge) {
-          await cartService.removeItemFromCart(userId, variantId);
-        }
-        cartData = await cartService.getCartDetails(userId);
-        
-        filteredItems = [];
-        hasInvalidOrUnlistedItems = false;
-        
-        if (cartData.cart && cartData.cart.items) {
-          cartData.cart.items.forEach(item => {
-            const rawItem = item.toObject ? item.toObject() : item;
-            const productDoc = rawItem.productDoc;
-            const activeVariant = rawItem.variantDoc;
-            const catDoc = rawItem.categoryDoc;
-            
-            if (productDoc) {
-              const isProductHidden = productDoc.isBlocked === true || productDoc.isDeleted === true || (catDoc && catDoc.isListed === false);
-              const isOutOfStock = !activeVariant || activeVariant.quantity === undefined || activeVariant.quantity <= 0 || rawItem.quantity > activeVariant.quantity;
-              
-              if (isProductHidden || isOutOfStock) {
-                hasInvalidOrUnlistedItems = true;
-              }
-              filteredItems.push({ 
-                ...rawItem, 
-                productDoc, 
-                variantDoc: activeVariant || { quantity: 0, price: productDoc.price || 0 },
-                isBlockedItem: isProductHidden,
-                isOutOfStockItem: isOutOfStock
-              });
-            }
-          });
-        }
-      }
-      
       cartData.cart.items = filteredItems;
     }
     
     return res.render('user/cart', {
       user: req.session.user, 
       cart: cartData.cart,
-      checkoutReady: !hasInvalidOrUnlistedItems && filteredItems.length > 0,
-      fallbackItemsFound: hasInvalidOrUnlistedItems
+      checkoutReady: filteredItems.length > 0 && !filteredItems.some(i => i.isOutOfStockItem),
+      fallbackItemsFound: filteredItems.some(i => i.isOutOfStockItem)
     });
   } catch (error) {
     console.error("EJS Render capture error:", error);
     return res.redirect('/');
   }
 };
+
 const getCheckoutPage = async (req, res) => {
   try {
     const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
     if (!userId) return res.redirect('/login');
 
     const cartData = await cartService.getCartDetails(userId);
-    let systemCheckoutReady = cartData.checkoutReady;
+    let systemCheckoutReady = true;
 
-    if (cartData.cart && cartData.cart.items) {
-      for (let item of cartData.cart.items) {
-        const rawItem = item.toObject ? item.toObject() : item;
-        const productDoc = rawItem.productId || rawItem.product;
-        const categoryDoc = rawItem.categoryDoc;
-        
-        let activeVariant = null;
-        if (productDoc && productDoc.variants) {
-          const targetId = String(rawItem.variantId || rawItem.variant || '');
-          activeVariant = productDoc.variants.find(v => String(v._id) === targetId);
-        }
+    if (!cartData.cart || !cartData.cart.items || cartData.cart.items.length === 0) {
+      return res.redirect('/cart');
+    }
 
-        // Hard security block check
-        if (!productDoc || !activeVariant || productDoc.isBlocked === true || productDoc.isDeleted === true || (categoryDoc && categoryDoc.isListed === false) || activeVariant.quantity <= 0 || rawItem.quantity > activeVariant.quantity) {
-          systemCheckoutReady = false;
-          break;
-        }
+    for (let item of cartData.cart.items) {
+      const rawItem = item.toObject ? item.toObject() : item;
+      const productDoc = rawItem.productDoc || rawItem.productId;
+      const categoryDoc = rawItem.categoryDoc;
+      const activeVariant = rawItem.variantDoc;
+
+      if (!productDoc || productDoc.isBlocked === true || productDoc.isDeleted === true || 
+          (categoryDoc && categoryDoc.isListed === false) || !activeVariant || 
+          activeVariant.quantity <= 0 || rawItem.quantity > activeVariant.quantity) {
+        systemCheckoutReady = false;
+        break;
       }
     }
 
-    if (!systemCheckoutReady || !cartData.cart || !cartData.cart.items || cartData.cart.items.length === 0) {
+    if (!systemCheckoutReady) {
       return res.redirect('/cart'); 
     }
+    
     return res.render('user/checkout', { 
       user: req.session.user, 
       cart: cartData.cart 

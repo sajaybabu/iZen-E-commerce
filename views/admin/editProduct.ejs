@@ -407,10 +407,29 @@
         }
     }
 
-    function initiateCroppingProcess(inputRef, cardNumber, variantIndex) {
+   function initiateCroppingProcess(inputRef, cardNumber, variantIndex) {
         if (!inputRef.files || inputRef.files.length === 0) return;
         
-        activeFilesQueue = Array.from(inputRef.files);
+        // Match the strict image criteria from multer validation rules
+        const allowedImageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        const inputFilesArray = Array.from(inputRef.files);
+
+        // Scan array indices to capture documents/PDFs files
+       for (let idx = 0; idx < inputFilesArray.length; idx++) {
+            if (!allowedImageMimeTypes.includes(inputFilesArray[idx].type)) {
+                Swal.fire({
+                    icon: "warning", 
+                    title: "Unsupported File Format",
+                    text: `"${inputFilesArray[idx].name}" is not a valid image format. Only JPEG, JPG, PNG, and WEBP assets are accepted.`,
+                    confirmButtonColor: "#000" 
+                });
+                inputRef.value = ""; 
+                activeFilesQueue = []; 
+                return; 
+            }
+        }
+
+        activeFilesQueue = inputFilesArray;
         activeQueueIndex = 0;
         targetCardNumberRef = cardNumber;
         targetVariantIndexRef = variantIndex;

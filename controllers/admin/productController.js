@@ -92,7 +92,7 @@ exports.deleteProduct = async (req, res) => {
 
 exports.searchProducts = async (req, res) => {
     try {
-        // Standardized parameter parsing to keep terms active during page transitions
+        // parameter parsing to keep terms active during page transitions
         const name = req.query.name || req.body.name;
 
         if (!name || name.trim() === "") {
@@ -105,7 +105,7 @@ exports.searchProducts = async (req, res) => {
         const limit = 5; 
         const skip = (page - 1) * limit;
 
-        // Pass structured skip parameters to service query
+        // Pass skip parameters to service query
         const products = await productService.searchProducts({ 
             name: searchQueryText, 
             skip, 
@@ -140,7 +140,7 @@ exports.getEditProductPage = async (req, res) => {
         if (!product || product.isDeleted) {
             return res.status(404).send("Error: Product not found or has been deleted.");
         }
-
+        
         res.render('admin/editproduct', { product });
     } catch (error) {
         console.error(error);
