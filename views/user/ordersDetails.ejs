@@ -1,0 +1,538 @@
+<%- include('../partials/User/userHeader') %>
+
+<style>
+    :root {
+        --apple-black: #1d1d1f;
+        --apple-gray: #f5f5f7;
+        --apple-border: #e5e5ea;
+        --izen-orange: #ff6b00;
+        --status-bg: #e3f2fd;
+        --status-text: #0d47a1;
+        --apple-blue: #0071e3;
+    }
+
+    body {
+        background-color: #fbfbfd;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: var(--apple-black);
+    }
+
+    .order-container {
+        max-width: 900px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+    }
+
+    .back-link {
+        color: #86868b;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+    }
+    .back-link:hover {
+        color: var(--apple-black);
+    }
+
+    .main-card {
+        background: #ffffff;
+        border: 1px solid var(--apple-border);
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+        margin-top: 1rem;
+    }
+
+    .badge-status {
+        background-color: var(--status-bg);
+        color: var(--status-text);
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+        padding: 2rem;
+        border-bottom: 1px solid var(--apple-border);
+        background-color: #fafafa;
+    }
+
+    .info-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #86868b;
+        margin-bottom: 0.5rem;
+    }
+
+    .product-row {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 2rem;
+        border-bottom: 1px solid var(--apple-border);
+    }
+
+    @media (min-width: 576px) {
+        .product-row {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+        }
+    }
+
+    .product-details {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .product-img-box {
+        width: 70px;
+        height: 70px;
+        background-color: var(--apple-gray);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .product-img-box img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        padding: 6px;
+    }
+
+    .variant-badge {
+        font-size: 0.75rem;
+        background: var(--apple-gray);
+        color: #1d1d1f;
+        padding: 4px 10px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        font-weight: 600;
+        border: 1px solid var(--apple-border);
+    }
+
+    .apple-btn-danger {
+        color: #ff3b30;
+        border: 1px solid #ff3b30;
+        background: transparent;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .apple-btn-danger:hover {
+        background: #ff3b30;
+        color: #ffffff;
+    }
+
+    .apple-btn-warning {
+        color: var(--izen-orange);
+        border: 1px solid var(--izen-orange);
+        background: transparent;
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .apple-btn-warning:hover {
+        background: var(--izen-orange);
+        color: #ffffff;
+    }
+
+    .apple-btn-invoice {
+        color: var(--apple-black);
+        background-color: #ffffff;
+        border: 1px solid var(--apple-border);
+        padding: 6px 14px;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+    }
+    .apple-btn-invoice:hover {
+        background-color: var(--apple-black);
+        color: #ffffff;
+        border-color: var(--apple-black);
+    }
+
+    .bulk-action-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 0.5rem;
+    }
+
+    .summary-box {
+        max-width: 320px;
+        margin-left: auto;
+        padding: 2rem;
+    }
+
+    .summary-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+        color: #1d1d1f;
+    }
+
+    /* Clean form controls matching Apple aesthetic */
+    .inline-action-card {
+        max-width: 400px;
+        border: 1px solid var(--apple-border);
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .inline-item-card {
+        width: 260px;
+        border: 1px solid var(--apple-border);
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 0.75rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        text-align: left;
+    }
+</style>
+
+<div class="order-container">
+    <a href="/checkout/orders/my-orders" class="back-link"><i class="bi bi-chevron-left"></i> Back to Orders History</a>
+
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mt-3 gap-2">
+        <div>
+            <h1 class="fw-bold tracking-tight mb-1" style="font-size: 2rem;">Order Details</h1>
+            <p class="text-muted small mb-0">Placed on <%= order.date %></p>
+            
+            <div class="bulk-action-wrapper align-items-start">
+                <% let currentMacroStatus = order.status.toLowerCase(); %>
+                <% if (currentMacroStatus === 'pending' || currentMacroStatus === 'processing') { %>
+                    <button class="apple-btn-danger btn-sm rounded-3" onclick="toggleInlinePanel('bulk-cancel-panel')">
+                        <i class="bi bi-x-circle me-1"></i> Cancel Entire Order
+                    </button>
+                    
+                    <!-- Inline Bulk Cancel Panel -->
+                    <div id="bulk-cancel-panel" class="d-none inline-action-card mt-2">
+                        <label class="small fw-semibold text-muted mb-1 d-block">Why are you cancelling this order?</label>
+                        <select id="bulk-cancel-select" class="form-select form-select-sm rounded-2 border-secondary mb-2" onchange="toggleCustomInput(this, 'bulk-cancel-manual')">
+                            <option value="">-- Choose cancellation reason --</option>
+                            <option value="Incorrect product selection">Incorrect product selection (Model/Color)</option>
+                            <option value="Found a better price elsewhere">Found a better price elsewhere</option>
+                            <option value="Delivery timeline is too long">Delivery timeline is too long</option>
+                            <option value="Order placed by mistake">Order placed by mistake</option>
+                            <option value="MANUAL">Other (Type reason manually below)</option>
+                        </select>
+                        <input type="text" id="bulk-cancel-manual" class="form-control form-control-sm rounded-2 border-secondary mb-2 d-none" placeholder="Enter custom reason here...">
+                        <button class="btn btn-danger btn-sm w-100 rounded-2" onclick="submitBulkCancel('<%= order._id %>')">Confirm Execution</button>
+                    </div>
+
+                <% } else if (currentMacroStatus === 'delivered') { %>
+                    <button class="apple-btn-warning btn-sm rounded-3" onclick="toggleInlinePanel('bulk-return-panel')">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Return Entire Order
+                    </button>
+
+                    <!-- Inline Bulk Return Panel -->
+                    <div id="bulk-return-panel" class="d-none inline-action-card mt-2">
+                        <label class="small fw-semibold text-muted mb-1 d-block">Reason for returning this cargo configuration:</label>
+                        <select id="bulk-return-select" class="form-select form-select-sm rounded-2 border-secondary mb-2" onchange="toggleCustomInput(this, 'bulk-return-manual')">
+                            <option value="">-- Choose return reason --</option>
+                            <option value="Defective device / Technical failure">Defective device / Technical failure</option>
+                            <option value="Product physically damaged on arrival">Product physically damaged on arrival</option>
+                            <option value="Incorrect variant received">Incorrect variant received</option>
+                            <option value="Performance does not match expectations">Performance does not match expectations</option>
+                            <option value="MANUAL">Other (Type reason manually below)</option>
+                        </select>
+                        <input type="text" id="bulk-return-manual" class="form-control form-control-sm rounded-2 border-secondary mb-2 d-none" placeholder="Enter operational hardware issues...">
+                        <button class="btn btn-warning btn-sm text-white w-100 rounded-2" onclick="submitBulkReturn('<%= order._id %>')">Submit Return Claim</button>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+        <div class="text-sm-end">
+            <span class="text-muted me-2 small">ID: <strong class="text-dark"><%= order.orderId %></strong></span>
+            <span class="badge-status text-capitalize"><%= order.status %></span>
+        </div>
+    </div>
+
+    <div class="main-card">
+        <div class="info-grid">
+            <div>
+                <div class="info-title">Shipping Address</div>
+                <div class="fw-bold mb-1"><%= order.shippingAddress.fullname %></div>
+                <div class="text-muted small" style="line-height: 1.4;">
+                    <%= order.shippingAddress.address %><br>
+                    Pincode: <%= order.shippingAddress.pincode %><br>
+                    Phone: <%= order.shippingAddress.phone %>
+                </div>
+            </div>
+            <div>
+                <div class="info-title">Payment Method</div>
+                <div class="fw-bold text-dark"><%= order.paymentMethod %></div>
+                <div class="text-muted small mt-1">Status: <span class="text-warning fw-bold">Verified</span></div>
+            </div>
+            <div>
+                <div class="info-title">Delivery Commitment</div>
+                <div class="fw-bold" style="color: #34c759;"><i class="bi bi-truck me-1"></i> Standard Delivery</div>
+                <div class="text-muted small">Expected within 3-5 operational business days.</div>
+            </div>
+        </div>
+
+        <% order.items.forEach(item => { %>
+            <div class="product-row">
+                <div class="product-details">
+                    <div class="product-img-box">
+                        <img src="<%= item.image.startsWith('/') ? item.image : '/' + item.image %>" alt="<%= item.name %>" onerror="this.onerror=null; this.src='/images/login.png';">
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-1" style="font-size: 1.05rem;"><%= item.name %></h5>
+                        
+                        <div class="mb-2">
+                            <% 
+                                let displayColor = item.variantColor || item.variant;
+                                let isGenericConfig = !displayColor || 
+                                                      displayColor === 'Standard Config' || 
+                                                      displayColor === 'Default Config' || 
+                                                      displayColor === 'Base Specification' || 
+                                                      displayColor === 'Standard Edition' ||
+                                                      displayColor.trim() === '';
+                            %>
+
+                            <% if (!isGenericConfig) { %>
+                                <span class="variant-badge">
+                                    <span class="text-capitalize"><%= displayColor %></span>
+                                </span>
+                            <% } else { %>
+                                <span class="variant-badge text-muted" style="font-style: italic; background: none; border: none; padding: 0;">Standard Edition</span>
+                            <% } %>
+                        </div>
+                        
+                        <span class="badge bg-light text-dark border small">Qty: <%= item.quantity %></span>
+                        <span class="ms-1 text-capitalize small text-muted font-monospace">State: <%= item.status %></span>
+                    </div>
+                </div>
+                
+                <div class="text-sm-end d-flex flex-row flex-sm-column align-items-center align-items-sm-end justify-content-between gap-2">
+                    <span class="fw-bold d-block" style="font-size: 1.1rem;">
+                        ₹<%= (item.price * item.quantity).toLocaleString('en-IN') %>
+                    </span>
+
+                    <div class="action-button-container d-flex flex-column align-items-end gap-2 mt-sm-2">
+                        <% let localItemStatus = item.status.toLowerCase(); %>
+                        <% if (localItemStatus === 'pending' || localItemStatus === 'processing' || localItemStatus === 'shipped') { %>
+                            <button class="apple-btn-danger" onclick="toggleInlinePanel('item-cancel-panel-<%= item.variantId %>')">
+                                Cancel Item
+                            </button>
+
+                            <!-- Inline Single Cancel Panel -->
+                            <div id="item-cancel-panel-<%= item.variantId %>" class="d-none inline-item-card mt-1">
+                                <select id="select-cancel-<%= item.variantId %>" class="form-select form-select-sm mb-2" onchange="toggleCustomInput(this, 'manual-cancel-<%= item.variantId %>')">
+                                    <option value="">-- Choose Reason --</option>
+                                    <option value="Incorrect product selection">Incorrect specs chosen</option>
+                                    <option value="Found a better price elsewhere">Better price found</option>
+                                    <option value="Order placed by mistake">Placed by mistake</option>
+                                    <option value="MANUAL">Other (Type below)</option>
+                                </select>
+                                <input type="text" id="manual-cancel-<%= item.variantId %>" class="form-control form-control-sm mb-2 d-none" placeholder="Specify explanation...">
+                                <button class="btn btn-danger btn-sm w-100 py-1 style-form-btn" onclick="submitItemCancel('<%= order._id %>', '<%= item.variantId %>')">Confirm</button>
+                            </div>
+
+                        <% } else if (localItemStatus === 'delivered') { %>
+                            <a href="/checkout/orders/<%= order._id %>/invoice" class="apple-btn-invoice">
+                                <i class="bi bi-download "></i> Download Invoice
+                            </a>
+                            <button class="apple-btn-warning" onclick="toggleInlinePanel('item-return-panel-<%= item.variantId %>')">
+                                Return Item
+                            </button>
+
+                            <!-- Inline Single Return Panel -->
+                            <div id="item-return-panel-<%= item.variantId %>" class="d-none inline-item-card mt-1">
+                                <select id="select-return-<%= item.variantId %>" class="form-select form-select-sm mb-2" onchange="toggleCustomInput(this, 'manual-return-<%= item.variantId %>')">
+                                    <option value="">-- Choose Reason --</option>
+                                    <option value="Defective device / Technical failure">Defective system/device</option>
+                                    <option value="Product physically damaged on arrival">Damaged on arrival</option>
+                                    <option value="Incorrect variant received">Incorrect hardware model</option>
+                                    <option value="MANUAL">Other (Type below)</option>
+                                </select>
+                                <input type="text" id="manual-return-<%= item.variantId %>" class="form-control form-control-sm mb-2 d-none" placeholder="Specify issue details...">
+                                <button class="btn btn-warning btn-sm text-white w-100 py-1" onclick="submitItemReturn('<%= order._id %>', '<%= item.variantId %>')">Request Return</button>
+                            </div>
+
+                        <% } else if (localItemStatus === 'cancelled') { %>
+                            <span class="badge bg-danger-subtle text-danger px-3 py-2 small rounded-pill fw-bold">Cancelled</span>
+                        <% } else if (localItemStatus === 'returned') { %>
+                            <span class="badge bg-secondary-subtle text-secondary px-3 py-2 small rounded-pill fw-bold">Returned</span>
+                        <% } else if (localItemStatus === 'return request pending') { %>
+                            <span class="badge bg-warning-subtle text-warning px-3 py-2 small rounded-pill fw-bold">Return Review</span>
+                        <% } else { %>
+                            <span class="badge bg-light text-dark border px-2 py-1 small text-capitalize"><%= item.status %></span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        <% }) %>
+
+        <div class="summary-box">
+            <div class="summary-line">
+                <span class="text-muted">Subtotal</span>
+                <span>₹<%= order.summary.subtotal.toLocaleString('en-IN') %></span>
+            </div>
+            <div class="summary-line">
+                <span class="text-muted">Shipping Charges</span>
+                <span>₹<%= order.summary.shipping %></span>
+            </div>
+            <div class="summary-line">
+                <span class="text-muted">Discount Applied</span>
+                <span class="text-success">-₹<%= order.summary.discount.toLocaleString('en-IN') %></span>
+            </div>
+            <hr style="border-top: 1px dashed var(--apple-border); margin: 1rem 0;">
+            <div class="summary-line fw-bold" style="font-size: 1.2rem;">
+                <span>Total Amount</span>
+                <span style="color: var(--apple-black);">₹<%= order.summary.total.toLocaleString('en-IN') %></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// Toggle functional modules
+function toggleInlinePanel(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) el.classList.toggle('d-none');
+}
+
+// Reveal secondary textbox overlay based on dropdown strategy selection
+function toggleCustomInput(selectEl, manualInputId) {
+    const manualInput = document.getElementById(manualInputId);
+    if (selectEl.value === 'MANUAL') {
+        manualInput.classList.remove('d-none');
+        manualInput.focus();
+    } else {
+        manualInput.classList.add('d-none');
+        manualInput.value = '';
+    }
+}
+
+// Helper to scrape data from select or text box fallback structures
+function parseResolvedReason(selectId, manualInputId) {
+    const selectVal = document.getElementById(selectId).value;
+    if (selectVal === 'MANUAL') {
+        return document.getElementById(manualInputId).value.trim();
+    }
+    return selectVal;
+}
+
+async function submitBulkCancel(orderId) {
+    const finalReason = parseResolvedReason('bulk-cancel-select', 'bulk-cancel-manual');
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Data Missing', text: 'You must select or write an execution verification reason statement.' });
+        return;
+    }
+
+    try {
+        const response = await fetch('/checkout/orders/cancel-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Order Wiped!', text: data.message, icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Processing validation failed.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Communication channel fault during processing.', 'error');
+    }
+}
+
+async function submitBulkReturn(orderId) {
+    const finalReason = parseResolvedReason('bulk-return-select', 'bulk-return-manual');
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Data Missing', text: 'An explicit operational explanation is mandatory for a mass returns claim.' });
+        return;
+    }
+
+    try {
+        const response = await fetch('/checkout/orders/return-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Return Logged!', text: data.message, icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Processing parameters rejected.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Communication channel fault during processing.', 'error');
+    }
+}
+
+async function submitItemCancel(orderId, variantId) {
+    const finalReason = parseResolvedReason(`select-cancel-${variantId}`, `manual-cancel-${variantId}`);
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Action Denied', text: 'Please define an explanation category code pattern.' });
+        return;
+    }
+
+    try {
+        const response = await fetch('/checkout/orders/cancel-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, variantId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Cancelled!', text: 'Item entry state has updated successfully.', icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Failed processing entry logic adjustments.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Failed to communicate with runtime pipeline.', 'error');
+    }
+}
+
+async function submitItemReturn(orderId, variantId) {
+    const finalReason = parseResolvedReason(`select-return-${variantId}`, `manual-return-${variantId}`);
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Action Denied', text: 'A reason parameter structure must be configured before submission.' });
+        return;
+    }
+
+    try {
+        const response = await fetch('/checkout/orders/return-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, variantId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Submitted!', text: 'Your unique device return profile validation query is pending confirmation.', icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Request transmission tracking failure context.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Failed to communicate with runtime pipeline.', 'error');
+    }
+}
+</script>
+
+<%- include('../partials/User/userFooter') %>

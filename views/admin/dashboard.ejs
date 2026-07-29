@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iZen | Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --primary-color: #4361ee;
+            --bg-light: #f8f9fa;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            overflow-x: hidden;
+        }
+        #content {
+            padding: 25px;
+            transition: all 0.3s;
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                left: 0;
+                width: 200px;
+                height: 100vh;
+                background-color: #000;
+                color: white;
+                z-index: 1050;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <%- include("../partials/admin/navbar.ejs") %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-0">
+                <%- include("../partials/admin/sidebarLinks.ejs") %>
+            </div>
+
+            <div class="col-12 col-md-10 ms-md-auto mt-4 mt-md-0" id="content">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold text-dark">Dashboard Overview</h2>
+                    
+                    <div class="d-flex align-items-center bg-white p-2 rounded shadow-sm border">
+                        <label class="me-2 text-muted small fw-bold ms-2">RANGE:</label>
+                        <select id="filterRange" class="form-select form-select-sm border-0" style="width: 140px; cursor: pointer;">
+                            <option value="today">Today</option>
+                            <option value="weekly">This Week</option>
+                            <option value="monthly" selected>This Month</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                        <button type="button" id="applyBtn" class="btn btn-primary btn-sm ms-2 px-3" onclick="applyFilter(event)">
+                            Apply
+                        </button>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="stat-icon bg-primary text-white me-3"><i class="bi bi-currency-rupee"></i></div>
+                                <div>
+                                    <p class="text-muted mb-0 small">Total Revenue</p>
+                                    <h4 class="mb-0 fw-bold" id="totalRevenue">
+                                        ₹<%= (typeof totalRevenue !== 'undefined' ? totalRevenue : 0).toLocaleString('en-IN') %>
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3">
+                            <div class="d-flex align-items-center">
+                                <div class="stat-icon bg-success text-white me-3"><i class="bi bi-cart-check"></i></div>
+                                <div>
+                                    <p class="text-muted mb-0 small">Total Orders</p>
+                                    <h4 class="mb-0 fw-bold" id="totalOrders">
+                                        <%= typeof totalOrders !== 'undefined' ? totalOrders : 0 %>
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-lg-8">
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="fw-bold mb-0">Sales Analytics</h5>
+                                <i class="bi bi-graph-up text-primary"></i>
+                            </div>
+                            <div id="salesChart"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card p-4">
+                            <h5 class="fw-bold mb-4">Top Selling Products</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="small">Product</th>
+                                            <th class="small text-end">Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="topSellingBody">
+                                        <% if (typeof topSellingProducts !== 'undefined' && topSellingProducts.length > 0) { %>
+                                            <% topSellingProducts.forEach(ele => { %>
+                                                <tr>
+                                                    <td class="small fw-medium text-truncate" style="max-width: 150px;"><%= ele.productName %></td>
+                                                    <td class="small text-end">₹<%= ele.price.toLocaleString('en-IN') %></td>
+                                                </tr>
+                                            <% }) %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="2" class="text-center text-muted small py-4">No products sold in this period</td>
+                                            </tr>
+                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/admin/modals') %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <script>
+        const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+
+        const initialChartValues = <%- JSON.stringify(typeof chartValues !== 'undefined' ? chartValues : []) %>;
+        const initialChartDates = <%- JSON.stringify(typeof chartDates !== 'undefined' ? chartDates : []) %>;
+
+        const chartOptions = {
+            series: [{ name: 'Revenue', data: initialChartValues }],
+            chart: { type: 'area', height: 350, toolbar: { show: false } },
+            colors: ['#4361ee'],
+            stroke: { curve: 'smooth', width: 3 },
+            xaxis: { categories: initialChartDates }
+        };
+
+        const chart = new ApexCharts(document.querySelector("#salesChart"), chartOptions);
+        chart.render();
+
+        async function applyFilter(event) {
+            event.preventDefault();
+            const btn = document.getElementById('applyBtn');
+            const filterValue = document.getElementById('filterRange').value;
+            
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+
+            try {
+                const response = await fetch(`/admin/dashboard-filter?filter=${filterValue}`);
+                const res = await response.json();
+
+                if (res.success) {
+                    document.getElementById('totalRevenue').innerText = formatter.format(res.totalRevenue || 0);
+                    document.getElementById('totalOrders').innerText = res.totalOrders || 0;
+
+                    const tbody = document.getElementById('topSellingBody');
+                    if (res.topSellingProducts && res.topSellingProducts.length > 0) {
+                        tbody.innerHTML = res.topSellingProducts.map(ele => `
+                            <tr>
+                                <td class="small fw-medium">${ele.productName}</td>
+                                <td class="small text-end">${formatter.format(ele.price)}</td>
+                            </tr>`).join('');
+                    }
+
+                    chart.updateOptions({ xaxis: { categories: res.chartDates || [] } });
+                    chart.updateSeries([{ data: res.chartValues || [] }]);
+                }
+            } catch (error) {
+                console.error("Filter Error:", error);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Apply";
+            }
+        }
+
+        // Mobile responsive sidebar layout toggle script binding link logic mapping
+        const sidebarElement = document.querySelector('.sidebar');
+        const triggerMenuBtn = document.getElementById('menuToggle');
+
+        if (triggerMenuBtn) {
+            triggerMenuBtn.addEventListener('click', () => {
+                sidebarElement.classList.toggle('show');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,104 +1,151 @@
-const userSchema = require('../../models/userModel'); // Adjust path to your user model
-const bcrypt = require('bcrypt');
-const salt = 10;
+const customerService = require('../../services/admin/customerService');
 
-// 1. List Users with Pagination and Sorting (Latest First)
-const loadUserManagement = async (req, res) => {
+const loadUsers = async (req, res) => {
     try {
-        const userCount = await userSchema.countDocuments();
-        const limit = 5;
-        // Sorting by _id: -1 ensures the newest users appear at the top
-        const users = await userSchema.find().sort({ _id: -1 }).limit(limit);
 
-        const data = {
-            users,
-            nextPage: 1,
-            prevPage: 0,
-            prevDisable: "disabled",
-            nextDisable: limit >= userCount ? "disabled" : null
-        };
+        const page =
+            parseInt(req.query.page) || 1;
 
-        res.render('admin/userManagement', data);
-    } catch (err) {
-        console.error("User management load error:", err);
-        res.status(500).send("Internal Server Error");
-    }
-};
-
-// 2. Block User
-const blockUser = async (req, res) => {
-    try {
-        const { id } = req.body;
-        await userSchema.findByIdAndUpdate(id, { $set: { isBlocked: true } });
-        
-        res.status(200).json({ message: "User has been blocked" });
-    } catch (err) {
-        res.status(500).json({ message: "Error blocking user" });
-    }
-};
-
-// 3. Unblock User
-const unBlockUser = async (req, res) => {
-    try {
-        const { id } = req.body;
-        await userSchema.findByIdAndUpdate(id, { $set: { isBlocked: false } });
-        res.status(200).json({ message: "User has been unblocked" });
-    } catch (err) {
-        res.status(500).json({ message: "Error unblocking user" });
-    }
-};
-
-// 4. Pagination Logic
-const pagination = async (req, res) => {
-    try {
-        const pageNo = Number(req.params.page) || 0;
-        const limit = 5;
-        const userCount = await userSchema.countDocuments();
-        
-        const users = await userSchema.find()
-            .sort({ _id: -1 })
-            .skip(limit * pageNo)
-            .limit(limit);
+        const result =
+            await customerService.getUsers(page);
 
         res.render('admin/userManagement', {
-            users,
-            nextPage: pageNo + 1,
-            prevPage: pageNo - 1,
-            prevDisable: pageNo === 0 ? "disabled" : null,
-            nextDisable: (pageNo * limit + limit >= userCount) ? "disabled" : null
+            users: result.users,
+            currentPage: page,
+            limit: result.limit,
+            nextPage: page + 1,
+            prevPage: page - 1,
+            prevDisable:
+                page <= 1 ? "disabled" : "",
+            nextDisable:
+                page >= result.totalPages
+                    ? "disabled"
+                    : "",
+            search: ""
         });
+
     } catch (err) {
-        res.status(500).send("Pagination error");
+
+        console.error(err);
+
+        res.status(500).send(
+            "Error loading users"
+        );
     }
 };
 
-// 5. Search User (Backend Logic)
 const searchUser = async (req, res) => {
     try {
-        const { username } = req.body;
-        if (!username) return res.redirect('/admin/users');
 
-        // Search for user by name (Case-insensitive)
-        const users = await userSchema.find({
-            username: { $regex: username, $options: 'i' }
-        });
+        const searchName =
+            req.body.username
+                ? req.body.username.trim()
+                : "";
+
+        const users =
+            await customerService.searchUsers(
+                searchName
+            );
 
         res.render('admin/userManagement', {
             users,
-            nextPage: null,
-            prevPage: null,
+            currentPage: 1,
+            limit: 8,
+            nextPage: 1,
+            prevPage: 1,
             prevDisable: "disabled",
-            nextDisable: "disabled"
+            nextDisable: "disabled",
+            search: searchName
         });
+
     } catch (err) {
-        res.status(500).send("Search error");
+
+        console.error(err);
+
+        res.status(500).send(
+            "Search failed"
+        );
+    }
+};
+
+const addUserPage = async (req, res) => {
+    res.render('admin/addUser', {
+        message: null
+    });
+};
+
+const addUser = async (req, res) => {
+    try {
+
+        const {
+            username,
+            email,
+            password,
+            phone
+        } = req.body;
+
+        await customerService.createUser(
+            username,
+            email,
+            password,
+            phone
+        );
+
+        res.redirect(
+            '/admin/userManagement'
+        );
+
+    } catch (error) {
+
+        res.render('admin/addUser', {
+            message: error.message
+        });
+    }
+};
+
+const blockUser = async (req, res) => {
+    try {
+
+        await customerService.blockUser(
+            req.body.id
+        );
+
+        res.status(200).json({
+            success: true
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false
+        });
+    }
+};
+
+const unBlockUser = async (req, res) => {
+    try {
+
+        await customerService.unBlockUser(
+            req.body.id
+        );
+
+        res.status(200).json({
+            success: true
+        });
+
+    } catch (err) {
+
+        res.status(500).json({
+            success: false
+        });
     }
 };
 
 module.exports = {
-    loadUserManagement,
+    loadUsers,
+    searchUser,
+    addUserPage,
+    addUser,
     blockUser,
-    unBlockUser,
-    pagination,
-    searchUser
+    unBlockUser
 };

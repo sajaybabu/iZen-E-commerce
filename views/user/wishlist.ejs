@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>iZen Wishlist Architecture</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            font-family: "Titillium Web", sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f8f9fa;
+        }
+        .main-content {
+            flex: 1 0 auto;
+        }
+        footer {
+            flex-shrink: 0;
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        .btn-proceed {
+            background-color: #111;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+        .btn-proceed:hover {
+            background-color: #2b2b2b;
+        }
+        .navbar {
+            padding: 0.8rem 1rem;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+            letter-spacing: 1px;
+        }
+        .wishlist-item-row {
+            transition: background-color 0.2s ease;
+        }
+        .wishlist-item-row:hover {
+            background-color: #fafafa;
+        }
+        .row-unavailable {
+            background-color: #fdfefe;
+        }
+        .text-line-through {
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg bg-black shadow-sm">
+        <div class="container">
+            <a class="navbar-brand text-light d-flex align-items-center" href="/">
+                <i class="bi bi-apple me-2"></i> iZen
+            </a>
+            <button class="navbar-toggler bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav mx-auto text-center mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link text-light" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link text-light" href="/allProducts">Shop</a></li>
+                </ul>
+
+                <div class="d-lg-flex flex-column flex-lg-row align-items-center gap-5">
+                    <div class="d-flex align-items-center justify-content-center gap-5 mt-lg-0 mt-3 mb-3 mb-lg-1">
+                        <a href="/wishlist" class="text-light fs-5"><i class="bi bi-heart-fill text-danger"></i></a>
+                        <a href="/cart" class="text-light fs-5"><i class="bi bi-cart3"></i></a>
+                        <a href="/profile" class="text-light fs-5"><i class="bi bi-person-circle"></i></a>
+                    </div>
+                    <div class="d-flex justify-content-center">
+                        <a href="/logout" class="btn btn-outline-light btn-sm px-3">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <% 
+      // Retain all items passed from the controller instead of filtering out unpopulated entries
+      let totalItems = (wishlist && wishlist.items) ? wishlist.items : []; 
+    %>
+
+    <% if (totalItems.length > 0) { %>
+        <div class="main-content">
+            <div class="container py-5">
+                <h3 class="fw-bold text-dark mb-4"><i class="bi bi-heart me-2"></i>Favored Configurations</h3>
+                <div class="row g-4">
+                    <div class="col-lg-9">
+                        <div class="bg-white rounded-3 shadow-sm border overflow-hidden">
+                            <div class="table-responsive">
+                                <table class="table table-borderless align-middle mb-0">
+                                    <thead class="text-muted border-bottom table-light">
+                                        <tr>
+                                            <th class="ps-4 py-3">Product Specs</th>
+                                            <th class="py-3">Configuration</th>
+                                            <th class="py-3">Price Hierarchy</th>
+                                            <th class="py-3 text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% totalItems.forEach((item, index) => { %>
+                                            <% 
+                                               const prod = item.productId; 
+                                               // Core availability flag checker
+                                               const isSystemGhost = !prod || typeof prod !== 'object';
+                                               const isBlockedOrDeleted = !isSystemGhost && (prod.isBlocked || prod.isDeleted);
+                                               const primaryVariant = (!isSystemGhost && prod.variants && prod.variants.length > 0) ? prod.variants[0] : null;
+                                               const totalStock = primaryVariant ? primaryVariant.quantity : (prod ? prod.stock : 0);
+                                               const isOutOfStock = totalStock < 1;
+                                               
+                                               // Consolidated functional status flags
+                                               const isCurrentlyUnavailable = isSystemGhost || isBlockedOrDeleted || isOutOfStock || item.isOrphaned;
+                                               const itemIdentifier = isSystemGhost ? (item._id || index) : prod._id;
+                                            %>
+                                            
+                                            <tr class="wishlist-item-row border-bottom <%= isCurrentlyUnavailable ? 'row-unavailable text-muted' : '' %>" id="tableRow-<%= itemIdentifier %>">
+                                                <td class="ps-4 py-4">
+                                                    <div class="d-flex align-items-center">
+                                                        <% if (!isSystemGhost) { %>
+                                                            <% 
+                                                              let rawImg = '/uploads/default-apple.png';
+                                                              if (primaryVariant && primaryVariant.images && primaryVariant.images.length > 0) {
+                                                                  rawImg = primaryVariant.images[0];
+                                                              } else if (prod.images && prod.images.length > 0) {
+                                                                  rawImg = prod.images[0];
+                                                              }
+                                                              let finalImgPath = rawImg.startsWith('/') ? rawImg : '/' + rawImg;
+                                                            %>
+                                                            <img src="<%= finalImgPath %>" alt="<%= prod.name %>" class="rounded-2 border p-1 me-3 bg-white <%= isCurrentlyUnavailable ? 'opacity-50' : '' %>" width="70" height="70" style="object-fit: contain;">
+                                                            <div>
+                                                                <h6 class="mb-1 fw-bold <%= isCurrentlyUnavailable ? 'text-secondary text-line-through' : 'text-dark' %>"><%= prod.name %></h6>
+                                                                <% if (isBlockedOrDeleted) { %>
+                                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded small">Deconfigured from Ecosystem</span>
+                                                                <% } else if (isOutOfStock) { %>
+                                                                    <span class="badge bg-warning-subtle text-warning px-2 py-1 rounded small">Out of Stock</span>
+                                                                <% } else if (item.isOrphaned) { %>
+                                                                    <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded small">Pipeline Severed</span>
+                                                                <% } else { %>
+                                                                    <span class="badge bg-success-subtle text-success px-2 py-1 rounded small">In Stock</span>
+                                                                <% } %>
+                                                            </div>
+                                                        <% } else { %>
+                                                            <div class="rounded-2 border p-1 me-3 bg-light d-flex align-items-center justify-content-center border-dashed" style="width: 70px; height: 70px;">
+                                                                <i class="bi bi-exclamation-octagon text-danger fs-4"></i>
+                                                            </div>
+                                                            <div>
+                                                                <h6 class="mb-1 fw-bold text-danger text-opacity-75">Item Currently Unavailable</h6>
+                                                                <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded small">Hardware Entry Removed</span>
+                                                            </div>
+                                                        <% } %>
+                                                    </div>
+                                                </td>
+                                                <td class="small">
+                                                    <% if (!isSystemGhost && primaryVariant && primaryVariant.attributes) { %>
+                                                        <% 
+                                                          let ram = primaryVariant.attributes.ram || primaryVariant.attributes.RAM || 'Standard';
+                                                          let storage = primaryVariant.attributes.storage || primaryVariant.attributes.Storage || 'Default';
+                                                          let color = primaryVariant.attributes.color || primaryVariant.attributes.Color || 'Silver';
+                                                        %>
+                                                        <%= ram %> | <%= storage %> | <%= color %>
+                                                    <% } else { %>
+                                                        <span class="text-muted text-opacity-50">—</span>
+                                                    <% } %>
+                                                </td>
+                                                <td class="fw-semibold">
+                                                    <% if (!isSystemGhost) { %>
+                                                        <% 
+                                                            let rawPrice = primaryVariant ? primaryVariant.price : (prod.price || 0);
+                                                            let price = Number(rawPrice); 
+                                                            let discount = Number(prod.discount || 0); 
+                                                            let finalPrice = Math.floor(price - (price * (discount / 100)));
+                                                        %>
+                                                        <span class="<%= isCurrentlyUnavailable ? 'text-decoration-line-through text-muted' : 'text-dark' %>">
+                                                            &#8377;<%= finalPrice.toLocaleString('en-IN') %>
+                                                        </span>
+                                                    <% } else { %>
+                                                        <span class="text-muted text-opacity-50">—</span>
+                                                    <% } %>
+                                                </td>
+                                                <td class="text-center pe-4">
+                                                    <div class="d-flex align-items-center justify-content-center gap-3">
+                                                        <% if (!isCurrentlyUnavailable && primaryVariant) { %>
+                                                            <button class="btn btn-dark btn-sm px-3 py-2 rounded shadow-sm" onclick='addToCart("<%= primaryVariant._id %>")'>
+                                                                <i class="bi bi-cart-plus me-1"></i> Add to Cart
+                                                            </button>
+                                                        <% } else { %>
+                                                            <button class="btn btn-secondary btn-sm px-3 py-2 rounded" disabled style="opacity: 0.4;">Unavailable</button>
+                                                        <% } %>
+                                                        <i class="bi bi-trash3 text-muted cursor-pointer fs-5 px-2 py-1 rounded hover-danger" 
+                                                           style="transition: color 0.2s;"
+                                                           onclick='removeProduct("<%= itemIdentifier %>")'
+                                                           onmouseover="this.style.color='#dc3545'" 
+                                                           onmouseout="this.style.color='#6c757d'"></i>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3">
+                        <div class="bg-white p-4 rounded-3 border shadow-sm sticky-top" style="top: 20px;">
+                            <h5 class="fw-bold text-dark mb-3">Bulk Allocation</h5>
+                            <p class="text-muted small mb-4">Migrate all selectable hardware profiles matching available inventory layouts into your cart layout.</p>
+                            
+                            <% 
+                              let validVariantIds = [];
+                              totalItems.forEach(item => {
+                                  const prod = item.productId;
+                                  if (prod && typeof prod === 'object' && !prod.isBlocked && !prod.isDeleted && !item.isOrphaned) {
+                                      const variant = (prod.variants && prod.variants.length > 0) ? prod.variants[0] : null;
+                                      if (variant && variant._id && variant.quantity > 0) {
+                                          validVariantIds.push(String(variant._id));
+                                      }
+                                  }
+                              });
+                            %>
+                            
+                            <button class="btn btn-proceed text-white w-100 py-2.5 d-flex align-items-center justify-content-center gap-2" 
+                                    <%= validVariantIds.length === 0 ? 'disabled style=opacity:0.5;' : '' %>
+                                    onclick='moveAllToCart(<%- JSON.stringify(validVariantIds) %>)'>
+                                <i class="bi bi-box-arrow-in-right"></i> Move all to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% } else { %>
+        <div class="main-content d-flex align-items-center justify-content-center px-5" style="min-height: 70vh;">
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-heart text-muted opacity-25" style="font-size: 5.5rem;"></i>
+                </div>
+                <h4 class="fw-bold text-dark mb-2">Your wishlist is currently unallocated</h4>
+                <p class="text-muted mb-4 max-w-md mx-auto" style="max-width: 400px;">Save premium hardware core configurations you plan to inspect and check out later.</p>
+                <a href="/allProducts" class="btn btn-proceed text-white px-4 py-2.5 fs-6 shadow-sm">
+                    <i class="bi bi-cpu me-2"></i>Explore Ecosystem
+                </a>
+            </div>
+        </div>
+    <% } %>
+
+    <%- include("../partials/user/userFooter.ejs") %>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function removeProduct(productId) {
+            const result = await Swal.fire({
+                title: "Drop Configuration?",
+                text: "Are you sure you want to remove this hardware from your favorites layout?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: "#111",
+                cancelButtonColor: "#6c757d",
+                confirmButtonText: "Confirm"
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`/wishlist/remove/${productId}`, {
+                        method: "DELETE"
+                    });
+
+                    if (response.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+
+                    const resData = await response.json();
+
+                    if (response.ok && resData.success) {
+                        const row = document.getElementById(`tableRow-${productId}`);
+                        if (row) row.remove();
+                        
+                        if (document.querySelectorAll('.wishlist-item-row').length === 0) {
+                            window.location.reload();
+                        }
+                    } else {
+                        // Fallback structural page sync if localized DOM manipulation drops bounds
+                        window.location.reload();
+                    }
+                } catch (err) {
+                    console.error("Remove configuration trace fail:", err);
+                    Swal.fire({ icon: "error", title: "Error Context", text: "Network connection breakdown.", confirmButtonColor: "#111" });
+                }
+            }
+        }
+
+        async function addToCart(variantId) {
+            try {
+                const response = await fetch('/cart/add', { 
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ variantId: variantId })
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const res = await response.json();
+                if (response.ok && res.success) {
+                    window.location.href = '/cart';
+                } else {
+                    Swal.fire({ icon: "warning", title: "Notice", text: res.message || "Unable to register configuration into your cart ecosystem.", confirmButtonColor: "#111" });
+                }
+            } catch (err) {
+                console.error("Cart action error exception:", err);
+                window.location.href = '/cart';
+            }
+        }
+
+        async function moveAllToCart(variantIds) {
+            if (!variantIds || variantIds.length === 0) return;
+
+            try {
+                const response = await fetch('/wishlist/moveAllToCart', {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ variantIds })
+                });
+                
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    window.location.href = "/cart";
+                } else {
+                    Swal.fire({ icon: "warning", title: "Allocation Conflict", text: data.message || "Some products could not be allocated due to supply drops.", confirmButtonColor: "#111" });
+                }
+            } catch (err) {
+                console.error("Bulk migration trace exception:", err);
+                window.location.href = "/cart";
+            }
+        }
+    </script>
+</body>
+
+</html>

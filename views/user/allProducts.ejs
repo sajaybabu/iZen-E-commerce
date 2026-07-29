@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iZen | Shop Apple Products</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { background-color: #f8f9fa; font-family: "Titillium Web", sans-serif; overflow-x: hidden; }
+    .navbar-brand { font-weight: bold; font-size: 1.5rem; }
+    .container { max-width: 85%; }
+    .navbar { padding: 0.8rem 1rem; }
+    .nav-link:hover { color: #EF6627 !important; }
+    .btn-izen { background-color: #EF6627; color: white; border: none; }
+    .btn-izen:hover { background-color: #d4561f; color: white; }
+    .sidebar { background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .badge-clear { background: #6c757d; color: white; font-size: 0.75rem; text-decoration: none; border-radius: 20px; padding: 2px 8px; }
+    
+    .product-card { position: relative; z-index: 1; overflow: hidden; }
+    .img-container { position: relative; width: 100%; height: 250px; background-color: #fff; z-index: 2; }
+    .product-card img { width: 100%; height: 100%; object-fit: contain; padding: 15px; }
+    .wishlist-icon-btn { position: absolute; top: 15px; end: 15px; font-size: 1.35rem; cursor: pointer; z-index: 10 !important; transition: transform 0.2s ease; }
+    .wishlist-icon-btn:hover { transform: scale(1.15); }
+  </style>
+</head>
+<body>
+  
+ 
+<%- include("../partials/user/shopHeader.ejs") %>
+  <div class="container-fluid mt-4 px-4">
+    <div class="row">
+      
+      <div class="col-xl-3 d-xl-block d-none align-self-start p-3 sidebar border">
+        <form action="/allProducts" method="GET" id="desktopFilterForm">
+          <input type="hidden" name="search" value="<%= typeof search !== 'undefined' ? search : '' %>">
+          
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold mb-0">Filters</h4>
+            <% if((typeof selectedCategory !== 'undefined' && selectedCategory && selectedCategory !== 'all') || (typeof minPrice !== 'undefined' && minPrice) || (typeof maxPrice !== 'undefined' && maxPrice) || (typeof selectedSort !== 'undefined' && selectedSort)) { %>
+              <a href="/allProducts" class="badge-clear">Clear All</a>
+            <% } %>
+          </div>
+
+          <div class="mb-4">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3">Categories</h6>
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="category" id="cat-all" value="all" <%= (!typeof selectedCategory !== 'undefined' || !selectedCategory || selectedCategory === 'all') ? 'checked' : '' %>>
+              <label class="form-check-label text-dark" for="cat-all">All Devices</label>
+            </div>
+            <% if (typeof categories !== 'undefined' && categories.length > 0) { %>
+              <% categories.forEach(ele => { %>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="category" id="cat-<%= ele._id %>" value="<%= ele._id %>" <%= (typeof selectedCategory !== 'undefined' && String(selectedCategory) === String(ele._id)) ? 'checked' : '' %>>
+                  <label class="form-check-label text-dark" for="cat-<%= ele._id %>"><%= ele.name %></label>
+                </div>
+              <% }) %>
+            <% } %>
+          </div>
+
+          <div class="mb-4">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3">Price Range (₹)</h6>
+            <div class="d-flex gap-2 align-items-center">
+              <input type="number" name="minPrice" id="min" class="form-control form-control-sm" placeholder="Min" min="0" value="<%= typeof minPrice !== 'undefined' ? minPrice : '' %>">
+              <span class="text-muted">-</span>
+              <input type="number" name="maxPrice" id="max" class="form-control form-control-sm" placeholder="Max" min="0" value="<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>">
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3">Sort By</h6>
+            <select name="sort" class="form-select form-select-sm">
+              <option value="" <%= (typeof selectedSort === 'undefined' || !selectedSort) ? 'selected' : '' %>>Default Sorting</option>
+              <option value="priceLowToHigh" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'priceLowToHigh') ? 'selected' : '' %>>Price: Low to High</option>
+              <option value="priceHighToLow" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'priceHighToLow') ? 'selected' : '' %>>Price: High to Low</option>
+              <option value="aa-zz" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'aa-zz') ? 'selected' : '' %>>Name: A to Z</option>
+              <option value="zz-aa" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'zz-aa') ? 'selected' : '' %>>Name: Z to A</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-izen w-100 rounded-pill py-2 mt-2">Apply Settings</button>
+        </form>
+      </div>
+
+      <div class="col-12 col-xl-9">
+        <section id="featured" class="pb-5">
+          <div class="container-fluid p-0">
+            <% if (typeof products !== 'undefined' && products && products.length > 0) { %>
+              <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-4">
+                <% products.forEach(ele => { %>
+                  <% 
+                    const mainProductId = String(ele._id); 
+                    
+                    let resolvedVariantId = '';
+                    if (ele.variants && ele.variants.length > 0) {
+                      resolvedVariantId = ele.variants[0]._id ? String(ele.variants[0]._id) : String(ele.variants[0]);
+                    } else {
+                      resolvedVariantId = mainProductId;
+                    }
+
+                    let targetPrice = 0;
+                    if (ele.variants && ele.variants[0]) {
+                      targetPrice = ele.variants[0].unitPrice || ele.variants[0].price || 0;
+                    }
+                    
+                    let inWishlist = false;
+                    if (typeof wishlist !== 'undefined' && wishlist?.items) {
+                      wishlist.items.forEach((item) => {
+                        if (item.productId) {
+                          const dbProdId = item.productId._id ? String(item.productId._id) : String(item.productId);
+                          if (dbProdId === mainProductId) { 
+                            inWishlist = true; 
+                          }
+                        }
+                      });
+                    }
+                  %>
+                  
+                  <div class="col" style="cursor: pointer;" onclick="viewProduct('<%= resolvedVariantId %>')">
+                    <div class="card product-card h-100 border-0 shadow-sm rounded-3">
+                      
+                      <div class="img-container">
+                        <img src="<%= ele.images && ele.images[0] ? '/' + ele.images[0].replace(/^\//, '') : '/uploads/default-apple.png' %>" class="card-img-top" alt="<%= ele.name %>">
+                      </div>
+                      
+                      <div class="card-body d-flex flex-column justify-content-between text-center bg-white">
+                        <div>
+                          <span class="badge bg-light text-secondary mb-2 px-2.5 py-1.5"><%= ele.brand || 'Apple' %></span>
+                          <h6 class="fw-bold text-dark text-truncate px-2 mb-1"><%= ele.name %></h6>
+                          
+                        </div>
+
+                        <div>
+                          <div class="d-flex gap-2 justify-content-center align-items-center mb-3">
+                            <span class="text-success fw-bold fs-5">
+                              ₹<%= targetPrice.toLocaleString('en-IN') %>
+                            </span>
+                          </div>
+
+                          <button class="btn btn-outline-dark btn-sm w-100 rounded-pill" onclick="addToCart('<%= resolvedVariantId %>', event)">
+                            <i class="bi bi-cart-plus me-1"></i> Add to Cart
+                          </button>
+                        </div>
+                      </div>
+
+                      <% if (inWishlist) { %>
+                        <i class="bi bi-heart-fill wishlist-icon-btn text-danger" onclick="removeFromWishlist('<%= mainProductId %>', this, event)"></i>
+                      <% } else { %>
+                        <i class="bi bi-heart wishlist-icon-btn text-muted" onclick="addtoWishList('<%= mainProductId %>', this, event)"></i>
+                      <% } %>
+
+                    </div>
+                  </div> 
+                <% }) %>
+              </div>
+            <% } else { %>
+              <div class="text-center py-5 bg-white rounded-3 border shadow-sm">
+                <i class="bi bi-search text-muted display-1"></i>
+                <h4 class="mt-3 fw-bold">No iZen matching results found</h4>
+                <p class="text-muted">Try removing parameters or adjusting search targets.</p>
+                <a href="/allProducts" class="btn btn-izen rounded-pill px-4 mt-2">View All Products</a>
+              </div>
+            <% } %>
+          </div>
+        </section>
+
+        <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+  <nav aria-label="Product catalog navigation" class="my-5">
+    <div class="d-flex justify-content-center align-items-center gap-1">
+      
+      <!-- Previous Page Button -->
+      <a href="/allProducts?page=<%= currentPage - 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+         class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center p-0 <%= currentPage <= 1 ? 'disabled text-muted opacity-25' : '' %>"
+         style="width: 40px; height: 40px; transition: all 0.2s ease;">
+        <i class="bi bi-chevron-left fs-5"></i>
+      </a>
+      
+      <!-- Numbered Page Blocks -->
+      <% 
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+        }
+      %>
+
+      <% if (startPage > 1) { %>
+        <a href="/allProducts?page=1&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+           class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center fw-medium p-0"
+           style="width: 40px; height: 40px;">1</a>
+        <% if (startPage > 2) { %>
+          <span class="text-muted px-1 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">&bull;&bull;&bull;</span>
+        <% } %>
+      <% } %>
+
+      <% for(let i = startPage; i <= endPage; i++) { %>
+        <% if (i === currentPage) { %>
+          <!-- Active Page State -->
+          <span class="btn text-white rounded-3 d-flex align-items-center justify-content-center fw-bold p-0 shadow-sm" 
+                style="width: 40px; height: 40px; background-color: #EF6627; cursor: default;">
+            <%= i %>
+          </span>
+        <% } else { %>
+          <!-- Inactive Page State -->
+          <a href="/allProducts?page=<%= i %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+             class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center fw-medium p-0 text-dark"
+             style="width: 40px; height: 40px; transition: all 0.2s ease;"
+             onmouseover="this.style.backgroundColor='#f1f1f1'"
+             onmouseout="this.style.backgroundColor='transparent'">
+            <%= i %>
+          </a>
+        <% } %>
+      <% } %>
+
+      <% if (endPage < totalPages) { %>
+        <% if (endPage < totalPages - 1) { %>
+          <span class="text-muted px-1 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">&bull;&bull;&bull;</span>
+        <% } %>
+        <a href="/allProducts?page=<%= totalPages %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+           class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center fw-medium p-0"
+           style="width: 40px; height: 40px;"><%= totalPages %></a>
+      <% } %>
+
+      <!-- Next Page Button -->
+      <a href="/allProducts?page=<%= currentPage + 1 %>&search=<%= encodeURIComponent(search || '') %>&category=<%= typeof selectedCategory !== 'undefined' ? selectedCategory : '' %>&minPrice=<%= typeof minPrice !== 'undefined' ? minPrice : '' %>&maxPrice=<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>&sort=<%= typeof selectedSort !== 'undefined' ? selectedSort : '' %>" 
+         class="btn btn-outline-dark border-0 rounded-3 d-flex align-items-center justify-content-center p-0 <%= currentPage >= totalPages ? 'disabled text-muted opacity-25' : '' %>" 
+         style="width: 40px; height: 40px; transition: all 0.2s ease;">
+        <i class="bi bi-chevron-right fs-5"></i>
+      </a>
+
+    </div>
+  </nav>
+<% } %>
+      </div>
+
+    </div>
+  </div>
+
+
+  <%- include("../partials/user/userFooter.ejs") %>
+
+  <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="fw-bold">Filter Canvas</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body px-4">
+          <form action="/allProducts" method="GET" id="mobileFilterForm">
+            <input type="hidden" name="search" value="<%= typeof search !== 'undefined' ? search : '' %>">
+            
+            <div class="mb-3">
+              <p class="fw-bold mb-2">Category</p>
+              <div class="form-check mb-1">
+                <input class="form-check-input" type="radio" name="category" id="m-cat-all" value="all" <%= (!typeof selectedCategory !== 'undefined' || !selectedCategory || selectedCategory === 'all') ? 'checked' : '' %>>
+                <label class="form-check-label" for="m-cat-all">All Devices</label>
+              </div>
+              <% if (typeof categories !== 'undefined' && categories.length > 0) { %>
+                <% categories.forEach(ele => { %>
+                  <div class="form-check mb-1">
+                    <input class="form-check-input" type="radio" name="category" id="m-cat-<%= ele._id %>" value="<%= ele._id %>" <%= (typeof selectedCategory !== 'undefined' && String(selectedCategory) === String(ele._id)) ? 'checked' : '' %>>
+                    <label class="form-check-label" for="m-cat-<%= ele._id %>"><%= ele.name %></label>
+                  </div>
+                <% }) %>
+              <% } %>
+            </div>
+
+            <div class="mb-3">
+              <p class="fw-bold mb-2">Price range</p>
+              <div class="d-flex gap-2 align-items-center">
+                <input type="number" name="minPrice" class="form-control" placeholder="Min" min="0" value="<%= typeof minPrice !== 'undefined' ? minPrice : '' %>">
+                <span>-</span>
+                <input type="number" name="maxPrice" class="form-control" placeholder="Max" min="0" value="<%= typeof maxPrice !== 'undefined' ? maxPrice : '' %>">
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <p class="fw-bold mb-2">Sort by</p>
+              <select name="sort" class="form-select">
+                <option value="" <%= (typeof selectedSort === 'undefined' || !selectedSort) ? 'selected' : '' %>>Default</option>
+                <option value="priceLowToHigh" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'priceLowToHigh') ? 'selected' : '' %>>Price: Low to High</option>
+                <option value="priceHighToLow" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'priceHighToLow') ? 'selected' : '' %>>Price: High to Low</option>
+                <option value="aa-zz" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'aa-zz') ? 'selected' : '' %>>Name: A to Z</option>
+                <option value="zz-aa" <%= (typeof selectedSort !== 'undefined' && selectedSort === 'zz-aa') ? 'selected' : '' %>>Name: Z to A</option>
+              </select>
+            </div>
+
+            <div class="d-flex gap-2 mb-2">
+              <button type="button" class="btn btn-light flex-grow-1" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-izen flex-grow-1">Apply Filters</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // Global SweetAlert configuration for clean, professional look
+    const Toast = Swal.mixin({
+      toast: false,
+      position: 'center',
+      showConfirmButton: true,
+      confirmButtonColor: '#000000', // Premium black buttons instead of blue
+      customClass: {
+        popup: 'rounded-4 shadow',
+        title: 'fw-bold text-dark'
+      }
+    });
+
+    function viewProduct(id) {
+      window.location.href = `/productDetail/${id}`;
+    }
+
+    async function addToCart(variantId, event) {
+      event.stopPropagation();
+      
+      if (!variantId || variantId === "undefined" || variantId === "") {
+        Toast.fire({
+          icon: "info",
+          title: "Product Selection",
+          text: "We couldn't resolve this specific product option right now. Please refresh and try again."
+        });
+        return;
+      }
+
+      try {
+        const request = await fetch('/cart/add', {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ variantId: variantId })
+        });
+        
+        const res = await request.json();
+        
+        if (res.message == "out of stock") {
+          Toast.fire({ 
+            icon: "warning", 
+            title: "Stock Allocation", 
+            text: "Sorry, we don't have enough stock to fulfill your request right now." 
+          });
+          return;
+        }
+        if (res.message == "max quantity of product reached") {
+          Toast.fire({ 
+            icon: "info", 
+            title: "Quantity Limit", 
+            text: "You have reached the maximum purchase limit allowed per order for this device configuration." 
+          });
+          return;
+        }
+        
+        if (request.status === 200) {
+          window.location.href = '/cart';
+        } else if (request.status === 423) {
+          Toast.fire({ 
+            icon: "warning", 
+            title: "Availability Status", 
+            text: res.message || "This product is temporarily restricted or unavailable for checkout." 
+          });
+        } else {
+          Toast.fire({ 
+            icon: "warning", 
+            title: "Notice", 
+            text: res.message || "We encountered an issue adding this item to your cart. Please try again." 
+          });
+        }
+      } catch (err) {
+        console.error("Cart error payload stack:", err);
+      }
+    }
+
+    async function addtoWishList(resolvedId, element, event) {
+      event.stopPropagation();
+      try {
+        const request = await fetch('/wishlist/add', {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: resolvedId }) 
+        });
+        
+        const res = await request.json();
+
+        if (request.status === 200) {
+          Swal.fire({ 
+            icon: 'success', 
+            title: 'Added to Wishlist', 
+            showConfirmButton: false, 
+            timer: 1200,
+            customClass: { popup: 'rounded-4 shadow' }
+          }).then(() => window.location.reload());
+        } else {
+          // Instead of showing a heavy "Error" popup when it's already there
+          if (res.message && res.message.toLowerCase().includes('already')) {
+            Toast.fire({ 
+              icon: "info", 
+              title: "Wishlist Update", 
+              text: "Item is already in your wishlist " 
+            });
+          } else {
+            Toast.fire({ 
+              icon: "info", 
+              title: "Notice", 
+              text: res.message || "Could not update your wishlist properties at this moment." 
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Wishlist frontend tracing error:", err);
+      }
+    }
+
+    async function removeFromWishlist(resolvedId, element, event) {
+      event.stopPropagation();
+      try {
+        const request = await fetch(`/wishlist/remove/${resolvedId}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" }
+        });
+        
+        const res = await request.json();
+
+        if (request.status === 200) {
+          Swal.fire({ 
+            icon: 'success', 
+            title: 'Removed from Wishlist', 
+            showConfirmButton: false, 
+            timer: 1200,
+            customClass: { popup: 'rounded-4 shadow' }
+          }).then(() => window.location.reload());
+        } else {
+          Toast.fire({ 
+            icon: "warning", 
+            title: "Notice", 
+            text: res.message || "Could not complete item eviction from wishlist." 
+          });
+        }
+      } catch (err) {
+        console.error("Wishlist removal tracing error:", err);
+      }
+    }
+  </script>
+</body>
+</html>

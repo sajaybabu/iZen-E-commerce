@@ -1,15 +1,19 @@
 const checkSession = (req, res, next) => {
-    // Force the browser to verify with the server every time
-    // This prevents seeing the admin panel after logout via the back button
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
     res.set('Expires', '0');
 
+    // If an active admin session is found, proceed
     if (req.session && req.session.admin) {
-        next();
-    } else {
-        res.redirect('/admin/login');
+        return next();
+    } 
+    
+    // IF a customer attempts to access an admin page, reject them
+    if (req.session && req.session.user) {
+        return res.redirect('/'); // Take them back to user home
     }
+
+    res.redirect('/admin/login');
 };
 
 const hasSession = (req, res, next) => {

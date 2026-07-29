@@ -1,53 +1,113 @@
-<div class="">
-    <div onclick="location.href='/admin/dashboard'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-grid fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Dashboard</a>
-    </div>
+<style>
+    .sidebar-wrapper {
+        min-height: calc(100vh - 56px);
+        border-right: 1px solid #f0f0f2; /* Ultra-crisp thin border */
+        background-color: #ffffff;
+        padding-top: 1.25rem;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    /* Sleek, tailored spacing with zero bulk */
+    .sidebar-link-item {
+        display: flex;
+        align-items: center;
+        position: relative;
+        padding: 9px 20px; /* Perfectly balanced density */
+        margin-bottom: 2px; /* Tight vertical rhythm */
+        color: #6e6e73; /* Refined neutral gray */
+        transition: color 0.15s ease;
+        text-decoration: none;
+    }
+    
+    .sidebar-link-item i {
+        color: #86868b;
+        font-size: 1.15rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px; /* Hard baseline alignment for icons */
+        transition: color 0.15s ease;
+    }
+    
+    .sidebar-link-item a {
+        font-size: 0.9rem;
+        font-weight: 500;
+        letter-spacing: -0.1px;
+        color: inherit;
+    }
 
-    <div onclick="location.href='/admin/salesReport'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-receipt fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Sales report</a>
-    </div>
+    /* Crisp text highlight on hover without background box clutter */
+    .sidebar-link-item:hover {
+        color: #000000;
+    }
 
-    <div onclick="location.href='/admin/product'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-box-seam fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Product</a>
-    </div>
+    .sidebar-link-item:hover i {
+        color: #000000;
+    }
+    
+    /* Clean, understated active indicator */
+    .sidebar-link-item.active {
+        color: #000000;
+    }
+    .sidebar-link-item.active::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 20%;
+        height: 60%;
+        width: 3px;
+        background-color: #000000;
+        border-radius: 0 2px 2px 0;
+    }
+</style>
 
-    <div onclick="location.href='/admin/category'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-layers fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Category</a>
-    </div>
+<div class="d-flex flex-column justify-content-between sidebar-wrapper">
+    <div>
+        <div onclick="location.href='/admin/dashboard'" class="sidebar-link-item" style="cursor: pointer;">
+            <i class="bi bi-grid"></i>
+            <a class="ms-2 text-decoration-none">Dashboard</a>
+        </div>
 
-    <div onclick="location.href='/admin/orders'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">        
-        <i class="bi bi-hdd-stack fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Order</a>
-    </div>
+        <div onclick="location.href='/admin/salesReport'" class="sidebar-link-item" style="cursor: pointer;">
+            <i class="bi bi-receipt"></i>
+            <a class="ms-2 text-decoration-none">Sales report</a>
+        </div>
 
-    <div onclick="location.href='/admin/coupon'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-ticket-perforated fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Coupon</a>
-    </div>
+        <div onclick="location.href='/admin/products'" class="sidebar-link-item" style="cursor: pointer;">
+            <i class="bi bi-box-seam"></i>
+            <a class="ms-2 text-decoration-none">Product</a>
+        </div>
 
-    <div onclick="location.href='/admin/offer'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-tags fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Offer</a>
-    </div>
-
-    <div onclick="location.href='/admin/brand'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-wordpress fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Brand</a>
-    </div>
-
-    <div onclick="location.href='/admin/users'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-people fs-4"></i>
-        <a class="fs-6 pb-3 px-3 py-1 mb-0 text-secondary text-decoration-none">Customers</a>
-    </div>
+        <!-- Category Active State Frame -->
+       <div onclick="location.href='/admin/category'" class="sidebar-link-item" style="cursor: pointer;">
+    <i class="bi bi-layers"></i>
+    <a class="ms-2 text-decoration-none">Category</a>
 </div>
 
-<div class="mt-5">    
-    <div onclick="location.href='/admin/logout'" class="test ps-2 pb-3 px-3 py-1" style="cursor: pointer;">
-        <i class="bi bi-box-arrow-right fs-4"></i>
-        <a class="fs-6 px-3 pb-3 mb-0 text-secondary text-decoration-none">Logout</a>
+        <div onclick="location.href='/admin/orders'" class="sidebar-link-item" style="cursor: pointer;">        
+            <i class="bi bi-hdd-stack"></i>
+            <a class="ms-2 text-decoration-none">Orders</a>
+        </div>
+
+        <div onclick="location.href='/admin/coupon'" class="sidebar-link-item" style="cursor: pointer;">
+            <i class="bi bi-ticket-perforated"></i>
+            <a class="ms-2 text-decoration-none">Coupon</a>
+        </div>
+
+        <div onclick="location.href='/admin/offer'" class="sidebar-link-item" style="cursor: pointer;">
+            <i class="bi bi-tags"></i>
+            <a class="ms-2 text-decoration-none">Offer</a>
+        </div>
+
+        <div onclick="location.href='/admin/brand'" class="sidebar-link-item" style="cursor: pointer;">
+            <i class="bi bi-wordpress"></i>
+            <a class="ms-2 text-decoration-none">Brand</a>
+        </div>
+
+        <div onclick="location.href='/admin/userManagement'" class="sidebar-link-item" style="cursor: pointer;">
+            <i class="bi bi-people"></i>
+            <a class="ms-2 text-decoration-none">Customers</a>
+        </div>
     </div>
+
 </div>

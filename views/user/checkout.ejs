@@ -1,0 +1,616 @@
+<%- include('../partials/User/userHeader') %>
+
+<style>
+    :root {
+        --apple-black: #1d1d1f;
+        --apple-gray: #f5f5f7;
+        --apple-border: #d2d2d7;
+        --izen-orange: #ff6b00;
+        --izen-orange-hover: #e05e00;
+    }
+
+    body {
+        color: var(--apple-black);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background-color: #ffffff;
+    }
+
+    /* Address Cards Styling */
+    .style-address-card {
+        transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+        border-radius: 12px;
+        position: relative;
+        background: #ffffff;
+        border: 2px solid var(--apple-border);
+    }
+
+    .style-address-card:hover {
+        border-color: #86868b;
+    }
+
+    .style-address-card.active-selection {
+        border-color: var(--izen-orange) !important;
+        box-shadow: 0 4px 12px rgba(255, 107, 0, 0.08);
+    }
+
+    /* Highlighted Edit Button */
+    .btn-edit-address {
+        background-color: var(--apple-black);
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 20px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.2s ease;
+        border: none;
+    }
+
+    .btn-edit-address:hover {
+        background-color: var(--izen-orange);
+        color: #ffffff;
+    }
+
+    .product-thumbnail {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+        background: var(--apple-gray);
+        border-radius: 8px;
+        padding: 4px;
+    }
+
+    .btn-izen-primary {
+        background-color: var(--izen-orange);
+        color: white;
+        border: none;
+        transition: background-color 0.2s ease;
+    }
+
+    .btn-izen-primary:hover {
+        background-color: var(--izen-orange-hover);
+        color: white;
+    }
+    
+    .payment-icon {
+        height: 18px;
+        object-fit: contain;
+    }
+</style>
+
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold m-0 tracking-tight">Checkout</h2>
+        <a href="/cart" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-arrow-left"></i> Return to Cart
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            
+            <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--apple-gray); border-radius: 16px;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold m-0">Shipping Address</h5>
+                    <button class="btn btn-sm btn-dark rounded-pill px-3 py-1.5 small" onclick="addNewAddressToggle()">+ Add New Address</button>
+                </div>
+
+                <div class="row g-3">
+                    <% 
+                        let addressList = [];
+                        if (locals.address) {
+                            if (Array.isArray(address)) addressList = address;
+                            else if (address.addresses) addressList = address.addresses;
+                            else if (address.billingAddress) addressList = address.billingAddress;
+                        }
+                    %>
+                    <% if (addressList && addressList.length > 0) { %>
+                        <% addressList.forEach((addr, idx) => { %>
+                            <div class="col-md-6">
+                                <div class="card p-3 h-100 style-address-card <%= addr.isSelected ? 'active-selection' : '' %>" 
+                                     onclick="selectAddressRoute('<%= idx %>', '<%= addr._id %>')">
+                                    
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <span class="badge bg-dark rounded-pill small px-2 py-1"><%= addr.addressType || 'Home' %></span>
+                                        <% if(addr.isSelected) { %>
+                                            <span class="badge rounded-pill small text-white" style="background-color: var(--izen-orange);">Selected</span>
+                                        <% } %>
+                                    </div>
+                                    
+                                    <div class="fw-bold text-dark small mb-1"><%= addr.fullname %></div>
+                                    <p class="text-muted small m-0 mb-3" style="line-height: 1.4; font-size: 0.85rem;">
+                                        <%= addr.address %><br>
+                                        Pincode: <%= addr.pincode %><br>
+                                        Phone: <%= addr.phone %>
+                                    </p>
+                                    
+                                    <script type="application/json" id="address-data-<%= idx %>">
+                                        {
+                                            "id": "<%= addr._id %>",
+                                            "fullname": "<%= addr.fullname %>",
+                                            "phone": "<%= addr.phone %>",
+                                            "email": "<%= addr.email || '' %>",
+                                            "pincode": "<%= addr.pincode %>",
+                                            "addressType": "<%= addr.addressType || 'Home' %>",
+                                            "address": "<%= addr.address %>"
+                                        }
+                                    </script>
+
+                                    <div class="mt-auto pt-2 border-top d-flex justify-content-end">
+                                        <button class="btn-edit-address" onclick="event.stopPropagation(); populateEditAddress('<%= idx %>')">
+                                            <i class="bi bi-pencil-square me-1"></i>Edit
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="col-12">
+                            <p class="text-muted small text-center p-4 bg-white rounded border border-dashed m-0">No saved addresses found. Please add a new shipping address to continue.</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <div id="productTable" class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 16px;">
+                <h5 class="fw-bold mb-3">Review Your Items</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle m-0">
+                        <thead>
+                            <tr class="text-muted small border-bottom">
+                                <th class="pb-2">Product</th>
+                                <th class="text-center pb-2">Quantity</th>
+                                <th class="text-end pb-2">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (locals.cart && cart.length > 0) { 
+                                let items = cart[0].items || cart[0].products || [];
+                                items.forEach((item, index) => { 
+                                    let variant = item.variantId || {};
+                                    let product = item.productId || {};
+                                    let productName = product.name || "iOS Product";
+                                    let productPrice = variant.price || product.price || 0;
+                                    let productImage = (product.images && product.images.length > 0) ? product.images[0] : '/assets/images/default-device.png';
+                            %>
+                                <tr class="border-bottom">
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <img src="<%= productImage %>" alt="<%= productName %>" class="product-thumbnail">
+                                            <div>
+                                                <div class="fw-bold text-dark small"><%= productName %></div>
+                                                <div class="text-muted small">&#8377; <%= productPrice %></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center py-3">
+                                        <span class="fw-bold text-secondary text-center small">x<%= item.quantity %></span>
+                                    </td>
+                                    <td class="text-end fw-bold text-dark subtotal-price py-3" id="subTotal-<%= index %>">
+                                        &#8377; <%= item.quantity * productPrice %>
+                                    </td>
+                                </tr>
+                            <% }) } else { %>
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">Your cart is currently empty.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="editAddress" class="card border-0 shadow-sm p-4 mb-4 d-none" style="border-radius: 16px; background: var(--apple-gray);">
+                <h5 class="fw-bold mb-3" id="formActionTitle">Address Information</h5>
+                <input type="hidden" id="addressIdField" value="">
+                <input type="hidden" id="addressIndexField" value="">
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted fw-bold">Full Name</label>
+                        <input type="text" id="fullname" class="form-control border-0 p-2" style="border-radius: 8px;">
+                        <div id="fullnameMsg" class="text-danger small mt-1"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted fw-bold">Phone Number</label>
+                        <input type="text" id="phone" class="form-control border-0 p-2" style="border-radius: 8px;">
+                        <div id="phoneMsg" class="text-danger small mt-1"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-muted fw-bold">Email Address</label>
+                        <input type="email" id="email" class="form-control border-0 p-2" style="border-radius: 8px;">
+                        <div id="emailMsg" class="text-danger small mt-1"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted fw-bold">6-Digit Pincode</label>
+                        <input type="text" id="pincode" class="form-control border-0 p-2" style="border-radius: 8px;">
+                        <div id="pincodeMsg" class="text-danger small mt-1"></div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small text-muted fw-bold d-block mb-2">Address Type</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="addressType" id="typeHome" value="Home" checked>
+                            <label class="form-check-label small" for="typeHome">Home</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="addressType" id="typeWork" value="Work">
+                            <label class="form-check-label small" for="typeWork">Work</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-muted fw-bold">Street Address Details</label>
+                        <textarea id="address" class="form-control border-0 p-2" rows="3" style="border-radius: 8px;"></textarea>
+                        <div id="addressMsg" class="text-danger small mt-1"></div>
+                    </div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <button class="btn btn-dark rounded-pill px-4" onclick="saveAddressAction()">Save Address</button>
+                    <button class="btn btn-light rounded-pill px-4" onclick="cancelEdit()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 16px;">
+                <h5 class="fw-bold mb-3">Choose Payment Method</h5>
+                
+             <!--  <div class="form-check p-3 rounded mb-2 border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
+                    <div>
+                        <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="upi" value="UPI" checked>
+                        <label class="form-check-label fw-bold small text-dark" for="upi" style="cursor: pointer;">Pay via UPI</label>
+                    </div>
+                    <div>
+                        <img src="https://img.icons8.com/color/48/google-pay.png" alt="Google Pay" class="payment-icon">
+                    </div>
+                </div>
+                
+                <div class="form-check p-3 rounded mb-2 border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
+                    <div>
+                        <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="wallet" value="Wallet">
+                        <label class="form-check-label fw-bold small text-dark" for="wallet" style="cursor: pointer;">
+                            iZen Wallet <span class="text-muted font-monospace small ms-1">(Balance: &#8377;<%= locals.wallet?.balance || 0 %>)</span>
+                        </label>
+                    </div>
+                </div>
+                -->
+                
+                <div class="form-check p-3 rounded border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
+                    <div>
+                        <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="cod" value="COD">
+                        <label class="form-check-label fw-bold small text-dark" for="cod" style="cursor: pointer;">Cash on Delivery (COD)</label>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm p-3 position-sticky" style="top: 6rem; border-radius: 14px; background-color: var(--apple-gray); max-width: 360px; margin: 0 auto;">
+                <h6 class="fw-bold mb-2 text-dark uppercase tracking-wide" style="font-size: 0.85rem; letter-spacing: 0.5px;">ORDER SUMMARY</h6>
+                <hr class="my-2 text-muted opacity-20">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-muted mb-1" style="font-size: 0.75rem;">Promo Coupon</label>
+                    <select class="form-select border-0 p-2" id="coupon" onchange="couponSelect(this)" style="border-radius: 8px; font-size: 0.8rem; height: 36px; background-color: #ffffff;">
+                        <option value="0,0,undefined,0">No coupon selected</option>
+                        <% if(locals.coupons) { %>
+                            <% coupons.forEach(coupon => { %>
+                                <option value="<%= coupon.discountPercentage %>,<%= coupon.maxDiscount %>,<%= coupon._id %>,<%= coupon.minPurchase %>">
+                                    <%= coupon.code %> (Get <%= coupon.discountPercentage %>% Off)
+                                </option>
+                            <% }) %>
+                        <% } %>
+                    </select>
+                </div>
+
+                <div class="d-flex justify-content-between py-1.5 text-muted" style="font-size: 0.8rem;">
+                    <span>Subtotal</span>
+                    <span class="fw-semibold text-dark">&#8377;<span id="totalPrice"><%= locals.totalPriceBeforeDiscount || 0 %></span></span>
+                </div>
+                
+                <div class="d-flex justify-content-between py-1.5 text-muted" style="font-size: 0.8rem;">
+                    <span>Discount</span>
+                    <span class="text-success fw-semibold">-<span id="couponDiscount">&#8377;0</span></span>
+                </div>
+                
+                <div class="d-flex justify-content-between py-1.5 text-muted" style="font-size: 0.8rem;">
+                    <span>Shipping</span>
+                    <span class="fw-semibold text-dark">&#8377;50</span>
+                </div>
+                
+                <hr class="my-2 text-muted opacity-20">
+
+                <div class="d-flex justify-content-between align-items-center pt-1 mb-3">
+                    <span class="fw-bold text-dark" style="font-size: 0.9rem;">Total Due</span>
+                    <span class="fw-bold h6 m-0" style="color: var(--izen-orange); font-size: 1.1rem;">&#8377;<span id="payablePrice"><%= (locals.totalPriceBeforeDiscount || 0) + 50 %></span></span>
+                </div>
+                
+                <div class="d-none" id="finalPrice"><%= locals.totalPriceBeforeDiscount || 0 %></div>
+
+                <button class="btn btn-izen-primary w-100 py-2.5 rounded-pill fw-bold" style="font-size: 0.85rem;" onclick="placeOrder()">
+                    Place Order
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    window.addEventListener("unload", function () {});
+
+    // Capturing initial dynamic state variables from template engine context data
+    let activeAddressId = "<%= (locals.address && Array.isArray(address) && address.find(a => a.isSelected)) ? address.find(a => a.isSelected)._id : '' %>";
+    const cartId = "<%= (locals.cart && locals.cart[0]) ? locals.cart[0]._id : '' %>";
+    const walletBalance = Number("<%= locals.wallet?.balance || 0 %>");
+    
+    let discountAmount = 0;
+    let couponId;
+
+    async function selectAddressRoute(index, addressDocId) {
+        try {
+            const response = await fetch('/checkout/select-address', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ index, addressId: addressDocId })
+            });
+            if(response.ok) {
+                window.location.reload();
+            } else {
+                console.error("Failed to alter server address state selection context flag.");
+            }
+        } catch(err) {
+            console.error("Error setting active address:", err);
+        }
+    }
+
+    function addNewAddressToggle() {
+        document.getElementById("productTable").classList.add("d-none");
+        document.getElementById("editAddress").classList.remove("d-none");
+        document.getElementById("formActionTitle").textContent = "Add New Shipping Address";
+        
+        document.getElementById("addressIdField").value = "";
+        document.getElementById("addressIndexField").value = "";
+        
+        document.getElementById("fullname").value = "";
+        document.getElementById("phone").value = "";
+        document.getElementById("email").value = "";
+        document.getElementById("pincode").value = "";
+        document.getElementById("address").value = "";
+        window.location.href = "#editAddress";
+    }
+
+    function populateEditAddress(index) {
+        document.getElementById("productTable").classList.add("d-none");
+        document.getElementById("editAddress").classList.remove("d-none");
+        document.getElementById("formActionTitle").textContent = "Edit Shipping Address";
+        
+        const rawJson = document.getElementById(`address-data-${index}`).textContent;
+        const addrData = JSON.parse(rawJson);
+        
+        document.getElementById("addressIdField").value = addrData.id || addrData._id; // Accommodate native document reference formats safely
+        document.getElementById("addressIndexField").value = index;
+        
+        document.getElementById("fullname").value = addrData.fullname;
+        document.getElementById("phone").value = addrData.phone;
+        document.getElementById("email").value = addrData.email;
+        document.getElementById("pincode").value = addrData.pincode;
+        document.getElementById("address").value = addrData.address;
+        
+        if (addrData.addressType === "Work") {
+            document.getElementById("typeWork").checked = true;
+        } else {
+            document.getElementById("typeHome").checked = true;
+        }
+        
+        window.location.href = "#editAddress";
+    }
+
+    function cancelEdit() {
+        document.getElementById("productTable").classList.remove("d-none");
+        document.getElementById("editAddress").classList.add("d-none");
+        window.location.href = "#productTable";
+    }
+
+    async function saveAddressAction() {
+        const fullnameRegex = /^(?=.{2,}$)(?!\s+$)[A-Za-z]+(?:[ '.][A-Za-z]+)*$/;
+        const phoneRegex = /^(?!\s+$)\d{7,15}$/;
+        const emailRegex = /^(?!\s+$)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+        const pincodeRegex = /^(?!\s+$)\d{6}$/;
+        const addressRegex = /^(?!\s*$).{5,}$/;
+
+        const fullnameMsg = document.getElementById("fullnameMsg");
+        const phoneMsg = document.getElementById("phoneMsg");
+        const emailMsg = document.getElementById("emailMsg");
+        const pincodeMsg = document.getElementById("pincodeMsg");
+        const addressMsg = document.getElementById("addressMsg");
+
+        const fullname = document.getElementById("fullname");
+        const phone = document.getElementById("phone");
+        const email = document.getElementById("email");
+        const pincode = document.getElementById("pincode");
+        const address = document.getElementById("address");
+        const addressType = document.querySelector('input[name="addressType"]:checked');
+        
+        const targetAddressId = document.getElementById("addressIdField").value;
+        const targetIndex = document.getElementById("addressIndexField").value;
+
+        fullnameMsg.textContent = ""; phoneMsg.textContent = ""; emailMsg.textContent = ""; pincodeMsg.textContent = ""; addressMsg.textContent = "";
+
+        let isValid = true;
+        if (!fullnameRegex.test(fullname.value)) { fullnameMsg.textContent = "Please enter a valid full name."; isValid = false; }
+        if (!phoneRegex.test(phone.value)) { phoneMsg.textContent = "Please enter a valid mobile number (7 to 15 digits)."; isValid = false; }
+        if (!emailRegex.test(email.value)) { emailMsg.textContent = "Please enter a correct email address format."; isValid = false; }
+        if (!pincodeRegex.test(pincode.value)) { pincodeMsg.textContent = "Please enter a correct 6-digit postal pincode."; isValid = false; }
+        if (!addressRegex.test(address.value)) { addressMsg.textContent = "Please fill out address details fully."; isValid = false; }
+
+        if (!isValid) return;
+
+        const endpoint = '/checkout/edit-address';
+        const method = 'PATCH'; 
+
+        try {
+            const request = await fetch(endpoint, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    fullname: fullname.value, 
+                    phone: phone.value, 
+                    email: email.value, 
+                    pincode: pincode.value,
+                    address: address.value, 
+                    addressType: addressType.value || "Home", 
+                    addressId: targetAddressId || undefined, 
+                    index: targetIndex || undefined
+                })
+            });
+            
+            if (request.ok) {
+                Swal.fire({ icon: "success", title: "Saved!", text: "Your address details have been recorded successfully.", confirmButtonColor: "#ff6b00" })
+                .then(() => window.location.reload());
+            } else {
+                const data = await request.json();
+                Swal.fire({ icon: "error", title: "Error", text: data.message || "Failed to save address info." });
+            }
+        } catch (err) {
+            console.error("Error saving address record:", err);
+        }
+    }
+
+    async function placeOrder() {
+        const totalPriceBeforeDiscount = Number(document.getElementById("totalPrice").textContent);
+        const payablePrice = Number(document.getElementById("payablePrice").textContent);
+        const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+
+        const coupon = document.getElementById("coupon");
+        let minPurchasePrice = 0;
+        
+        if (coupon && coupon.value) {
+            const splitVals = coupon.value.split(",");
+            if(splitVals.length >= 4) {
+                minPurchasePrice = Number(splitVals[3] || 0);
+            }
+        }
+
+        if (totalPriceBeforeDiscount < minPurchasePrice) {
+            Swal.fire({
+                icon: "warning",
+                title: "Minimum Amount Required",
+                text: `You need a subtotal of at least ₹${minPurchasePrice} to apply this promo coupon.`
+            });
+            return;
+        }
+        
+        if (activeAddressId === "") {
+            Swal.fire({ icon: "error", title: "Address Required", text: "Please pick or click to highlight a delivery address to continue." });
+            return;
+        }
+        if (!paymentMethod) {
+            Swal.fire({ icon: "error", title: "Payment Method Required", text: "Please select your preferred payment option." });
+            return;
+        }
+
+        try {
+            const request = await fetch('/checkout/place-order', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    addressId: activeAddressId, 
+                    cartId, 
+                    totalPriceBeforeDiscount, 
+                    payablePrice, 
+                    discountAmount, 
+                    paymentMethod, 
+                    couponId: couponId || undefined 
+                })
+            });
+            
+            const result = await request.json();
+            
+            if (request.ok && (request.status === 200 || result.success)) {
+                window.location.href = "/checkout/order-success";
+            } else {
+                Swal.fire({ icon: "error", title: "Checkout Error", text: result.message || "Could not complete your transaction." });
+            }
+        } catch (err) {
+            console.error("Order fulfillment pipeline crash:", err);
+            Swal.fire({ icon: "error", title: "Error", text: "Something went wrong handling your checkout transaction." });
+        }
+    }
+
+    function couponSelect(element) {
+        recalculateSummary();
+    }
+
+    function recalculateSummary() {
+        const totalElements = document.querySelectorAll('.subtotal-price');
+        let totalPrice = 0;
+        totalElements.forEach(ele => {
+            totalPrice += Number(ele.innerHTML.replace(/[^\d]/g, ''));
+        });
+        
+        const coupon = document.getElementById("coupon");
+        let discountPercentage = 0;
+        let maxDiscountPrice = 0;
+        let selectedCouponId = undefined;
+
+        if (coupon && coupon.value) {
+            const splitVals = coupon.value.split(",");
+            discountPercentage = Number(splitVals[0] || 0);
+            maxDiscountPrice = Number(splitVals[1] || 0);
+            selectedCouponId = splitVals[2] || undefined;
+        }
+
+        couponId = selectedCouponId;
+        const couponDiscount = Number(discountPercentage);
+        const discountableAmount = totalPrice * (couponDiscount / 100);
+        const couponvalue = document.getElementById("couponDiscount");
+       
+        let payableAmount;
+        if (discountableAmount > maxDiscountPrice && maxDiscountPrice > 0) {
+            discountAmount = Number(maxDiscountPrice);
+            payableAmount = Math.floor(totalPrice - maxDiscountPrice);
+            if (couponvalue) couponvalue.innerHTML = `&#8377;${maxDiscountPrice}`;  
+        } else { 
+            discountAmount = Math.round(discountableAmount);
+            payableAmount = Math.floor(totalPrice - discountableAmount);
+            if (couponvalue) couponvalue.innerHTML = `&#8377;${discountAmount}`;  
+        }
+
+        // Wallet Balance Control checks
+        const wallet = document.getElementById("wallet");
+        if (wallet) {
+            if (payableAmount > walletBalance) {
+                if(wallet.checked) {
+                    wallet.checked = false;    
+                    const upiElement = document.getElementById("upi");
+                    if (upiElement) upiElement.checked = true;      
+                }
+                wallet.disabled = true; 
+            } else { 
+                wallet.removeAttribute("disabled");                
+            }
+        }
+
+        // COD Maximum Limit constraint checks
+        const cod = document.getElementById("cod");
+        if (cod) {
+            if (payableAmount >= 100000) {
+                if (cod.checked) {
+                    cod.checked = false;
+                    const upiElement = document.getElementById("upi");
+                    if (upiElement) upiElement.checked = true;
+                }
+                cod.disabled = true;                        
+            } else {
+                cod.removeAttribute("disabled");    
+            }
+        }
+        
+        if (document.getElementById("totalPrice")) document.getElementById("totalPrice").innerHTML = `${totalPrice}`;
+        if (document.getElementById("finalPrice")) document.getElementById("finalPrice").textContent = payableAmount;
+        if (document.getElementById("payablePrice")) document.getElementById("payablePrice").textContent = payableAmount + 50;
+    }
+</script>
+
+<%- include('../partials/User/userFooter') %>

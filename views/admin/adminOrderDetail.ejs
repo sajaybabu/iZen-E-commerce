@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iZen | Inspect Transaction Context</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root { 
+            --apple-black: #1d1d1f; 
+            --apple-dark-gray: #424245;
+            --apple-border: #e5e5ea; 
+            --apple-bg: #fbfbfd;
+            --apple-blue: #0071e3;
+        }
+        body { 
+            background-color: var(--apple-bg); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            color: var(--apple-black);
+            -webkit-font-smoothing: antialiased;
+        }
+        .sidebar { transition: transform 0.3s ease; }
+        
+        .glass-panel {
+            background: #ffffff;
+            border: 1px solid var(--apple-border);
+            border-radius: 18px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        }
+        .back-nav {
+            text-decoration: none;
+            color: #86868b;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .back-nav:hover { color: var(--apple-blue); }
+        
+        .order-title { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.03em; color: var(--apple-black); }
+        .meta-timestamp { color: #86868b; font-size: 0.95rem; font-weight: 400; }
+        
+        .premium-dropdown {
+            background-color: var(--apple-bg);
+            border: 1px solid var(--apple-border);
+            border-radius: 8px;
+            padding: 0.4rem 2rem 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--apple-black);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%231d1d1f' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 8px;
+            appearance: none;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            width: 170px;
+        }
+        .premium-dropdown:focus {
+            border-color: var(--apple-blue);
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
+            outline: none;
+        }
+
+        .section-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #86868b;
+            margin-bottom: 0.75rem;
+        }
+        .data-string { font-size: 1.05rem; font-weight: 500; color: var(--apple-black); }
+        .data-sub { font-size: 0.9rem; color: #6e6e73; }
+
+        .premium-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .premium-table th {
+            padding: 12px 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #86868b;
+            border-bottom: 1px solid var(--apple-border);
+        }
+        .premium-table td {
+            padding: 20px 10px;
+            border-bottom: 1px solid #f5f5f7;
+            font-size: 0.95rem;
+            vertical-align: middle;
+        }
+        .total-display { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; color: var(--apple-black); }
+
+        @media (max-width: 767.98px) {
+            .sidebar {
+                position: fixed; top: 56px; left: 0; width: 200px; height: 100vh;
+                background-color: #000; color: white; z-index: 1050; transform: translateX(-100%);
+            }
+            .sidebar.show { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+     <%- include("../partials/admin/navbar.ejs") %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar p-0">
+                <%- include("../partials/admin/sidebarLinks.ejs") %>
+            </div>
+
+            <div class="col-12 col-md-10 col-lg-9 my-4 mb-5">
+                
+                <div class="mb-4">
+                    <a href="/admin/orders" class="back-nav"><i class="bi bi-arrow-left-short fs-5 align-middle"></i> Return to Order Registry</a>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom pb-4 mb-5">
+                        <div>
+                            <h1 class="order-title">Order #<%= order.orderId %></h1>
+                            <div class="meta-timestamp mt-1">Transaction Logged: <%= new Date(order.createdAt).toLocaleString('en-IN') %></div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-5">
+                        <div class="col-md-6 mb-4 mb-md-0">
+                            <div class="section-label">Customer Profile</div>
+                            <div class="data-string"><%= order.user?.username || 'Guest User' %></div>
+                            <div class="data-sub mt-1"><%= order.user?.email || 'No email registered' %></div>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="section-label">Settlement Logistics</div>
+                            <div class="data-string"><%= order.paymentMethod || 'Cash On Delivery' %></div>
+                            <div class="data-sub mt-1">Status Checked: Secure</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-2">
+                        <div class="section-label">Manifest Allocation</div>
+                        <table class="premium-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45%">Product Allocation</th>
+                                    <th style="width: 15%" class="text-center">Quantity</th>
+                                    <th style="width: 20%" class="text-end">Unit Valuation</th>
+                                    <th style="width: 20%" class="text-end">Item Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% order.items.forEach(item => { %>
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold text-dark"><%= item.name %></div>
+                                            <% if (item.variantColor && item.variantColor.trim() !== '') { %>
+                                                <div class="data-sub text-muted mt-1" style="font-size: 0.8rem;">
+                                                    <span class="text-muted text-capitalize">
+                                                        <%= item.variantColor %>
+                                                    </span>
+                                                </div>
+                                            <% } %>
+                                        </td>
+                                        <td class="text-center text-secondary fw-medium"><%= item.quantity %></td>
+                                        <td class="text-end fw-semibold text-dark">Rs. <%= item.price.toLocaleString('en-IN') %></td>
+                                        <td class="text-end">
+                                            <% 
+                                                let itemStatusNormalized = item.status.trim().toLowerCase(); 
+                                            %>
+                                            
+                                            <% if (itemStatusNormalized === 'cancelled') { %>
+                                                <span class="badge bg-danger-subtle text-danger px-3 py-2 small rounded-pill fw-bold">Cancelled</span>
+                                            <% } else if (itemStatusNormalized === 'returned') { %>
+                                                <span class="badge bg-secondary-subtle text-secondary px-3 py-2 small rounded-pill fw-bold">Returned</span>
+                                            <% } else { %>
+                                                <select class="premium-dropdown" 
+                                                        data-current-status="<%= item.status %>"
+                                                        onchange="updateItemStatus('<%= order._id %>', '<%= item.variantId %>', this)">
+                                                    
+                                                    <!-- Standard Delivery Flow Options -->
+                                                    <option value="Pending" <%= item.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                                                    <option value="Shipped" <%= item.status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                                                    <option value="Out for Delivery" <%= item.status === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
+                                                    <option value="Delivered" <%= item.status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
+                                                    
+                                                    <!-- Admin Direct Cancel Allowed Only if in Warehouse Start Stages -->
+                                                    <% if (itemStatusNormalized === 'pending' || itemStatusNormalized === 'processing') { %>
+                                                        <option value="Cancelled">Cancelled</option>
+                                                    <% } %>
+
+                                                    <!-- Dynamic Selection Intercept for User Return Request Pipelines -->
+                                                    <% if (itemStatusNormalized === 'return request pending' || itemStatusNormalized === 'return review') { %>
+                                                        <option value="<%= item.status %>" selected hidden>Return Pending</option>
+                                                        <option value="Returned">Approve Return Request</option>
+                                                    <% } %>
+                                                </select>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                                <tr>
+                                    <td></td>
+                                    <td class="text-center pt-4 fw-bold text-secondary">Gross Aggregate</td>
+                                    <td class="text-end pt-4 total-display text-primary" colspan="2">Rs. <%= order.totalAmount.toLocaleString('en-IN') %></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    async function updateItemStatus(orderId, variantId, selectorElement) {
+        const newStatus = selectorElement.value;
+        const initialStatus = selectorElement.getAttribute('data-current-status');
+
+        if (newStatus === initialStatus) return;
+        
+        try {
+            const response = await fetch('/admin/orders/update-item-status', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, variantId, status: newStatus })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                selectorElement.setAttribute('data-current-status', newStatus);
+                
+                Swal.fire({ 
+                    icon: 'success', 
+                    title: 'Status Synchronized', 
+                    text: `This item is now marked as ${newStatus}.`, 
+                    timer: 1500, 
+                    showConfirmButton: false 
+                }).then(() => {
+                    // Refresh view to transform securely closed tracks into cleaner static text badges
+                    if(newStatus === 'Returned' || newStatus === 'Cancelled') {
+                        location.reload();
+                    }
+                });
+            } else {
+                selectorElement.value = initialStatus;
+                Swal.fire({ 
+                    icon: 'warning', 
+                    title: 'Action Restrained', 
+                    text: data.message || 'Illegal step update configuration sequence.' 
+                });
+            }
+        } catch (err) {
+            console.error("Transmission Failure:", err);
+            selectorElement.value = initialStatus;
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Ecosystem Sync Error', 
+                text: 'Network request rejected.' 
+            });
+        }
+    }
+    </script>
+</body>
+</html>
