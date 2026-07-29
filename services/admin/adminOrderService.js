@@ -27,23 +27,40 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
     }
 
     const oldStatus = targetedItem.status;
+    const oldStatusNormalized = oldStatus.trim().toLowerCase();
+    const newStatusNormalized = newStatus.trim().toLowerCase();
 
-    if (oldStatus === 'Cancelled' || oldStatus === 'Returned') {
+    // End state lock validation
+    if (oldStatusNormalized === 'cancelled' || oldStatusNormalized === 'returned') {
         throw new Error(`Cannot change status. This item has already been ${oldStatus.toLowerCase()} and is locked.`);
     }
 
-    if (oldStatus === 'Delivered') {
-        if (newStatus !== 'Delivered' && newStatus !== 'Returned' && newStatus !== 'Return Requested') {
+    // Protection rule for "Returned" approval authorization
+    if (newStatusNormalized === 'returned') {
+        if (oldStatusNormalized !== 'return request pending' && oldStatusNormalized !== 'return review') {
+            throw new Error("Action Denied: Admin cannot mark this item as 'Returned' until the user submits a return request.");
+        }
+    }
+
+    // Protection rule for manual "Cancelled" choices by admin
+    if (newStatusNormalized === 'cancelled') {
+        if (oldStatusNormalized !== 'pending' && oldStatusNormalized !== 'processing') {
+            throw new Error("Action Denied: Admin cannot cancel this item once it has progressed to distribution.");
+        }
+    }
+
+    // Standard Forward Tracking Architecture Rules
+    if (oldStatusNormalized === 'delivered') {
+        if (newStatusNormalized !== 'delivered' && newStatusNormalized !== 'returned') {
             throw new Error("Cannot revert a delivered item back to a previous logistics state.");
         }
     }
 
-    if ((oldStatus === 'Shipped' || oldStatus === 'Out for Delivery') && newStatus === 'Pending') {
+    if ((oldStatusNormalized === 'shipped' || oldStatusNormalized === 'out for delivery') && newStatusNormalized === 'pending') {
         throw new Error(`Cannot roll back status to pending once the item has been ${oldStatus.toLowerCase()}.`);
     }
     
-
-    // Array sub-document updates
+    // Array sub-document updates execution
     const updatedOrder = await Order.findOneAndUpdate(
         { 
             _id: orderId, 
@@ -57,11 +74,12 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
 
     if (!updatedOrder) return null;
 
-    // INVENTORY STOCK MONITOR
-    const isRestockingState = ['Cancelled', 'Returned'].includes(newStatus);
-    const wasAlreadyRestocked = ['Cancelled', 'Returned'].includes(oldStatus);
+    // Fixed Restocking Stock Pipeline Controls
+    const isRestockingState = ['cancelled', 'returned'].includes(newStatusNormalized);
+    const wasAlreadyRestocked = ['cancelled', 'returned'].includes(oldStatusNormalized);
 
     if (isRestockingState && !wasAlreadyRestocked) {
+        // Corrected mapping structure to prevent Casting crashes
         await Product.findOneAndUpdate(
             { 
                 _id: targetedItem.product, 
@@ -90,7 +108,7 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
         );
     }
 
-    // TRANSACTION SETTLEMENT AUTOMATION LINKS
+    // Settlement balance actions
     let paymentUpdate = {};
 
     if (updatedOrder.paymentMethod === 'COD' && newStatus === 'Delivered') {
@@ -118,7 +136,6 @@ const fetchFilteredOrders = async ({ page, limit, search, status, sort }) => {
     if (status && status !== 'All') {
         query['items.status'] = status;
     }
-    
     
     if (search) {
         const searchRegex = new RegExp(search.trim(), 'i');

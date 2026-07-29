@@ -57,7 +57,7 @@
             appearance: none;
             transition: all 0.25s ease;
             cursor: pointer;
-            width: 145px;
+            width: 170px;
         }
         .premium-dropdown:focus {
             border-color: var(--apple-blue);
@@ -145,10 +145,10 @@
                         <table class="premium-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 40%">Product Allocation</th>
+                                    <th style="width: 45%">Product Allocation</th>
                                     <th style="width: 15%" class="text-center">Quantity</th>
                                     <th style="width: 20%" class="text-end">Unit Valuation</th>
-                                    <th style="width: 25%" class="text-end">Item Status</th>
+                                    <th style="width: 20%" class="text-end">Item Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -167,17 +167,37 @@
                                         <td class="text-center text-secondary fw-medium"><%= item.quantity %></td>
                                         <td class="text-end fw-semibold text-dark">Rs. <%= item.price.toLocaleString('en-IN') %></td>
                                         <td class="text-end">
-                                            <select class="premium-dropdown" 
-                                                    data-current-status="<%= item.status %>"
-                                                    onchange="updateItemStatus('<%= order._id %>', '<%= item.variantId %>', this)">
-                                                <option value="Pending" <%= item.status === 'Pending' ? 'selected' : '' %>>Pending</option>
-                                                <option value="Shipped" <%= item.status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
-                                                <option value="Out for Delivery" <%= item.status === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
-                                                <option value="Delivered" <%= item.status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
-                                                <option value="Cancelled" <%= item.status === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
-                                                <option value="Return Requested" <%= item.status === 'Return Requested' ? 'selected' : '' %>>Return Requested</option>
-                                                <option value="Returned" <%= item.status === 'Returned' ? 'selected' : '' %>>Returned</option>
-                                            </select>
+                                            <% 
+                                                let itemStatusNormalized = item.status.trim().toLowerCase(); 
+                                            %>
+                                            
+                                            <% if (itemStatusNormalized === 'cancelled') { %>
+                                                <span class="badge bg-danger-subtle text-danger px-3 py-2 small rounded-pill fw-bold">Cancelled</span>
+                                            <% } else if (itemStatusNormalized === 'returned') { %>
+                                                <span class="badge bg-secondary-subtle text-secondary px-3 py-2 small rounded-pill fw-bold">Returned</span>
+                                            <% } else { %>
+                                                <select class="premium-dropdown" 
+                                                        data-current-status="<%= item.status %>"
+                                                        onchange="updateItemStatus('<%= order._id %>', '<%= item.variantId %>', this)">
+                                                    
+                                                    <!-- Standard Delivery Flow Options -->
+                                                    <option value="Pending" <%= item.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                                                    <option value="Shipped" <%= item.status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                                                    <option value="Out for Delivery" <%= item.status === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
+                                                    <option value="Delivered" <%= item.status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
+                                                    
+                                                    <!-- Admin Direct Cancel Allowed Only if in Warehouse Start Stages -->
+                                                    <% if (itemStatusNormalized === 'pending' || itemStatusNormalized === 'processing') { %>
+                                                        <option value="Cancelled">Cancelled</option>
+                                                    <% } %>
+
+                                                    <!-- Dynamic Selection Intercept for User Return Request Pipelines -->
+                                                    <% if (itemStatusNormalized === 'return request pending' || itemStatusNormalized === 'return review') { %>
+                                                        <option value="<%= item.status %>" selected hidden>Return Pending</option>
+                                                        <option value="Returned">Approve Return Request</option>
+                                                    <% } %>
+                                                </select>
+                                            <% } %>
                                         </td>
                                     </tr>
                                 <% }) %>
@@ -215,7 +235,6 @@
             const data = await response.json();
 
             if (response.ok && data.success) {
-                // Update internal attributes on local view
                 selectorElement.setAttribute('data-current-status', newStatus);
                 
                 Swal.fire({ 
@@ -224,9 +243,13 @@
                     text: `This item is now marked as ${newStatus}.`, 
                     timer: 1500, 
                     showConfirmButton: false 
+                }).then(() => {
+                    // Refresh view to transform securely closed tracks into cleaner static text badges
+                    if(newStatus === 'Returned' || newStatus === 'Cancelled') {
+                        location.reload();
+                    }
                 });
             } else {
-                // Revert dropdown element structure selection selection
                 selectorElement.value = initialStatus;
                 Swal.fire({ 
                     icon: 'warning', 

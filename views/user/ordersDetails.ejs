@@ -171,9 +171,9 @@
         border-color: var(--apple-black);
     }
 
-    /* Clean Multi-Action Layout Controls */
     .bulk-action-wrapper {
         display: flex;
+        flex-direction: column;
         gap: 10px;
         margin-top: 0.5rem;
     }
@@ -192,25 +192,23 @@
         color: #1d1d1f;
     }
 
-    .apple-swal-popup {
-        border-radius: 16px !important;
-        padding: 2rem !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    /* Clean form controls matching Apple aesthetic */
+    .inline-action-card {
+        max-width: 400px;
+        border: 1px solid var(--apple-border);
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
-    .apple-swal-title {
-        font-size: 1.4rem !important;
-        font-weight: 600 !important;
-        color: var(--apple-black) !important;
-    }
-    .apple-swal-input {
-        border: 1px solid var(--apple-border) !important;
-        box-shadow: none !important;
-        border-radius: 8px !important;
-        font-size: 0.95rem !important;
-        height: 44px !important;
-    }
-    .apple-swal-input:focus {
-        border-color: var(--apple-blue) !important;
+    .inline-item-card {
+        width: 260px;
+        border: 1px solid var(--apple-border);
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 0.75rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        text-align: left;
     }
 </style>
 
@@ -222,16 +220,47 @@
             <h1 class="fw-bold tracking-tight mb-1" style="font-size: 2rem;">Order Details</h1>
             <p class="text-muted small mb-0">Placed on <%= order.date %></p>
             
-            <div class="bulk-action-wrapper">
+            <div class="bulk-action-wrapper align-items-start">
                 <% let currentMacroStatus = order.status.toLowerCase(); %>
                 <% if (currentMacroStatus === 'pending' || currentMacroStatus === 'processing') { %>
-                    <button class="apple-btn-danger btn-sm rounded-3" onclick="handleCancelAllOrders('<%= order._id %>')">
+                    <button class="apple-btn-danger btn-sm rounded-3" onclick="toggleInlinePanel('bulk-cancel-panel')">
                         <i class="bi bi-x-circle me-1"></i> Cancel Entire Order
                     </button>
+                    
+                    <!-- Inline Bulk Cancel Panel -->
+                    <div id="bulk-cancel-panel" class="d-none inline-action-card mt-2">
+                        <label class="small fw-semibold text-muted mb-1 d-block">Why are you cancelling this order?</label>
+                        <select id="bulk-cancel-select" class="form-select form-select-sm rounded-2 border-secondary mb-2" onchange="toggleCustomInput(this, 'bulk-cancel-manual')">
+                            <option value="">-- Choose cancellation reason --</option>
+                            <option value="Incorrect product selection">Incorrect product selection (Model/Color)</option>
+                            <option value="Found a better price elsewhere">Found a better price elsewhere</option>
+                            <option value="Delivery timeline is too long">Delivery timeline is too long</option>
+                            <option value="Order placed by mistake">Order placed by mistake</option>
+                            <option value="MANUAL">Other (Type reason manually below)</option>
+                        </select>
+                        <input type="text" id="bulk-cancel-manual" class="form-control form-control-sm rounded-2 border-secondary mb-2 d-none" placeholder="Enter custom reason here...">
+                        <button class="btn btn-danger btn-sm w-100 rounded-2" onclick="submitBulkCancel('<%= order._id %>')">Confirm Execution</button>
+                    </div>
+
                 <% } else if (currentMacroStatus === 'delivered') { %>
-                    <button class="apple-btn-warning btn-sm rounded-3" onclick="handleReturnAllOrders('<%= order._id %>')">
+                    <button class="apple-btn-warning btn-sm rounded-3" onclick="toggleInlinePanel('bulk-return-panel')">
                         <i class="bi bi-arrow-counterclockwise me-1"></i> Return Entire Order
                     </button>
+
+                    <!-- Inline Bulk Return Panel -->
+                    <div id="bulk-return-panel" class="d-none inline-action-card mt-2">
+                        <label class="small fw-semibold text-muted mb-1 d-block">Reason for returning this cargo configuration:</label>
+                        <select id="bulk-return-select" class="form-select form-select-sm rounded-2 border-secondary mb-2" onchange="toggleCustomInput(this, 'bulk-return-manual')">
+                            <option value="">-- Choose return reason --</option>
+                            <option value="Defective device / Technical failure">Defective device / Technical failure</option>
+                            <option value="Product physically damaged on arrival">Product physically damaged on arrival</option>
+                            <option value="Incorrect variant received">Incorrect variant received</option>
+                            <option value="Performance does not match expectations">Performance does not match expectations</option>
+                            <option value="MANUAL">Other (Type reason manually below)</option>
+                        </select>
+                        <input type="text" id="bulk-return-manual" class="form-control form-control-sm rounded-2 border-secondary mb-2 d-none" placeholder="Enter operational hardware issues...">
+                        <button class="btn btn-warning btn-sm text-white w-100 rounded-2" onclick="submitBulkReturn('<%= order._id %>')">Submit Return Claim</button>
+                    </div>
                 <% } %>
             </div>
         </div>
@@ -303,19 +332,47 @@
                         ₹<%= (item.price * item.quantity).toLocaleString('en-IN') %>
                     </span>
 
-                    <div class="action-button-container d-flex flex-column gap-2 mt-sm-2">
+                    <div class="action-button-container d-flex flex-column align-items-end gap-2 mt-sm-2">
                         <% let localItemStatus = item.status.toLowerCase(); %>
                         <% if (localItemStatus === 'pending' || localItemStatus === 'processing' || localItemStatus === 'shipped') { %>
-                            <button class="apple-btn-danger" onclick="handleCancelItem('<%= order._id %>', '<%= item.variantId %>')">
+                            <button class="apple-btn-danger" onclick="toggleInlinePanel('item-cancel-panel-<%= item.variantId %>')">
                                 Cancel Item
                             </button>
+
+                            <!-- Inline Single Cancel Panel -->
+                            <div id="item-cancel-panel-<%= item.variantId %>" class="d-none inline-item-card mt-1">
+                                <select id="select-cancel-<%= item.variantId %>" class="form-select form-select-sm mb-2" onchange="toggleCustomInput(this, 'manual-cancel-<%= item.variantId %>')">
+                                    <option value="">-- Choose Reason --</option>
+                                    <option value="Incorrect product selection">Incorrect specs chosen</option>
+                                    <option value="Found a better price elsewhere">Better price found</option>
+                                    <option value="Order placed by mistake">Placed by mistake</option>
+                                    <option value="MANUAL">Other (Type below)</option>
+                                </select>
+                                <input type="text" id="manual-cancel-<%= item.variantId %>" class="form-control form-control-sm mb-2 d-none" placeholder="Specify explanation...">
+                                <button class="btn btn-danger btn-sm w-100 py-1 style-form-btn" onclick="submitItemCancel('<%= order._id %>', '<%= item.variantId %>')">Confirm</button>
+                            </div>
+
                         <% } else if (localItemStatus === 'delivered') { %>
                             <a href="/checkout/orders/<%= order._id %>/invoice" class="apple-btn-invoice">
                                 <i class="bi bi-download "></i> Download Invoice
                             </a>
-                            <button class="apple-btn-warning" onclick="handleReturnItem('<%= order._id %>', '<%= item.variantId %>')">
+                            <button class="apple-btn-warning" onclick="toggleInlinePanel('item-return-panel-<%= item.variantId %>')">
                                 Return Item
                             </button>
+
+                            <!-- Inline Single Return Panel -->
+                            <div id="item-return-panel-<%= item.variantId %>" class="d-none inline-item-card mt-1">
+                                <select id="select-return-<%= item.variantId %>" class="form-select form-select-sm mb-2" onchange="toggleCustomInput(this, 'manual-return-<%= item.variantId %>')">
+                                    <option value="">-- Choose Reason --</option>
+                                    <option value="Defective device / Technical failure">Defective system/device</option>
+                                    <option value="Product physically damaged on arrival">Damaged on arrival</option>
+                                    <option value="Incorrect variant received">Incorrect hardware model</option>
+                                    <option value="MANUAL">Other (Type below)</option>
+                                </select>
+                                <input type="text" id="manual-return-<%= item.variantId %>" class="form-control form-control-sm mb-2 d-none" placeholder="Specify issue details...">
+                                <button class="btn btn-warning btn-sm text-white w-100 py-1" onclick="submitItemReturn('<%= order._id %>', '<%= item.variantId %>')">Request Return</button>
+                            </div>
+
                         <% } else if (localItemStatus === 'cancelled') { %>
                             <span class="badge bg-danger-subtle text-danger px-3 py-2 small rounded-pill fw-bold">Cancelled</span>
                         <% } else if (localItemStatus === 'returned') { %>
@@ -354,176 +411,126 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-async function handleCancelAllOrders(orderId) {
-    const { isConfirmed } = await Swal.fire({
-        title: 'Cancel Entire Order?',
-        text: "This operation cancels all items in this delivery configuration and restocks inventory.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Cancel All',
-        cancelButtonText: 'Dismiss',
-        confirmButtonColor: '#ff3b30',
-        cancelButtonColor: '#86868b',
-        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title' }
-    });
+// Toggle functional modules
+function toggleInlinePanel(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) el.classList.toggle('d-none');
+}
 
-    if (isConfirmed) {
-        try {
-            const response = await fetch('/checkout/orders/cancel-all', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId })
-            });
-            const data = await response.json();
-            if (data.success) {
-                Swal.fire({
-                    title: 'Order Wiped!',
-                    text: data.message,
-                    icon: 'success',
-                    confirmButtonColor: '#0071e3'
-                }).then(() => location.reload());
-            } else {
-                Swal.fire('Error', data.message || 'Processing cancellation array failed.', 'error');
-            }
-        } catch (err) {
-            Swal.fire('Error', 'Communication channel fault during processing.', 'error');
-        }
+// Reveal secondary textbox overlay based on dropdown strategy selection
+function toggleCustomInput(selectEl, manualInputId) {
+    const manualInput = document.getElementById(manualInputId);
+    if (selectEl.value === 'MANUAL') {
+        manualInput.classList.remove('d-none');
+        manualInput.focus();
+    } else {
+        manualInput.classList.add('d-none');
+        manualInput.value = '';
     }
 }
 
-async function handleReturnAllOrders(orderId) {
-    const { value: reason, isConfirmed } = await Swal.fire({
-        title: 'Bulk Return Manifest',
-        input: 'text',
-        inputLabel: 'Specify a reason for requesting a return on all delivered devices:',
-        inputPlaceholder: 'Describe technical or performance issues...',
-        showCancelButton: true,
-        confirmButtonText: 'Submit Bulk Return',
-        cancelButtonText: 'Dismiss',
-        confirmButtonColor: '#ff6b00',
-        cancelButtonColor: '#86868b',
-        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title', input: 'apple-swal-input' },
-        inputValidator: (value) => {
-            if (!value || !value.trim()) {
-                return 'A valid description parameter is mandatory for bulk processing validation.';
-            }
-        }
-    });
-
-    if (isConfirmed && reason) {
-        try {
-            const response = await fetch('/checkout/orders/return-all', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, reason })
-            });
-            const data = await response.json();
-            if (data.success) {
-                Swal.fire({
-                    title: 'Return Request Logged!',
-                    text: data.message,
-                    icon: 'success',
-                    confirmButtonColor: '#0071e3'
-                }).then(() => location.reload());
-            } else {
-                Swal.fire('Error', data.message || 'Processing return array failed.', 'error');
-            }
-        } catch (err) {
-            Swal.fire('Error', 'Communication channel fault during processing.', 'error');
-        }
+// Helper to scrape data from select or text box fallback structures
+function parseResolvedReason(selectId, manualInputId) {
+    const selectVal = document.getElementById(selectId).value;
+    if (selectVal === 'MANUAL') {
+        return document.getElementById(manualInputId).value.trim();
     }
+    return selectVal;
 }
 
-async function handleCancelItem(orderId, variantId) {
-    if (!orderId) {
-        Swal.fire('Error', 'Unable to retrieve valid Order Reference Identifier.', 'error');
+async function submitBulkCancel(orderId) {
+    const finalReason = parseResolvedReason('bulk-cancel-select', 'bulk-cancel-manual');
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Data Missing', text: 'You must select or write an execution verification reason statement.' });
         return;
     }
 
-    const { value: reason, isConfirmed } = await Swal.fire({
-        title: 'Cancel Item Request',
-        input: 'text',
-        inputLabel: 'Reason for cancellation (Optional):',
-        inputPlaceholder: 'Tell us why you changed your mind...',
-        showCancelButton: true,
-        confirmButtonText: 'Confirm Cancellation',
-        cancelButtonText: 'Keep Item',
-        confirmButtonColor: '#ff3b30',
-        cancelButtonColor: '#86868b',
-        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title', input: 'apple-swal-input' }
-    });
-
-    if (isConfirmed) {
-        try {
-            const response = await fetch('/checkout/orders/cancel-item', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, variantId, reason: reason || "No explicit reason specified" })
-            });
-            const data = await response.json();
-            if (data.success) {
-                Swal.fire({
-                    title: 'Cancelled!',
-                    text: 'The item has been successfully cancelled.',
-                    icon: 'success',
-                    confirmButtonColor: '#0071e3'
-                }).then(() => location.reload());
-            } else {
-                Swal.fire('Error', data.message || 'Failed to process request.', 'error');
-            }
-        } catch (err) {
-            console.error("Cancellation fetch crash:", err);
-            Swal.fire('Error', 'Failed to communicate with the server.', 'error');
+    try {
+        const response = await fetch('/checkout/orders/cancel-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Order Wiped!', text: data.message, icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Processing validation failed.', 'error');
         }
+    } catch (err) {
+        Swal.fire('Error', 'Communication channel fault during processing.', 'error');
     }
 }
 
-async function handleReturnItem(orderId, variantId) {
-    if (!orderId) {
-        Swal.fire('Error', 'Unable to retrieve valid Order Reference Identifier.', 'error');
+async function submitBulkReturn(orderId) {
+    const finalReason = parseResolvedReason('bulk-return-select', 'bulk-return-manual');
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Data Missing', text: 'An explicit operational explanation is mandatory for a mass returns claim.' });
         return;
     }
 
-    const { value: reason, isConfirmed } = await Swal.fire({
-        title: 'Return Request',
-        input: 'text',
-        inputLabel: 'Reason for return (Mandatory):',
-        inputPlaceholder: 'Please describe the issue with the device...',
-        showCancelButton: true,
-        confirmButtonText: 'Submit Return Request',
-        cancelButtonText: 'Keep Item',
-        confirmButtonColor: '#ff6b00',
-        cancelButtonColor: '#86868b',
-        customClass: { popup: 'apple-swal-popup', title: 'apple-swal-title', input: 'apple-swal-input' },
-        inputValidator: (value) => {
-            if (!value || !value.trim()) {
-                return 'A reason is required to submit a return request!';
-            }
+    try {
+        const response = await fetch('/checkout/orders/return-all', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Return Logged!', text: data.message, icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Processing parameters rejected.', 'error');
         }
-    });
+    } catch (err) {
+        Swal.fire('Error', 'Communication channel fault during processing.', 'error');
+    }
+}
 
-    if (isConfirmed && reason) {
-        try {
-            const response = await fetch('/checkout/orders/return-item', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ orderId, variantId, reason })
-            });
-            const data = await response.json();
-            if (data.success) {
-                Swal.fire({
-                    title: 'Submitted!',
-                    text: 'Your return request has been submitted for review.',
-                    icon: 'success',
-                    confirmButtonColor: '#0071e3'
-                }).then(() => location.reload());
-            } else {
-                Swal.fire('Error', data.message || 'Failed to submit request.', 'error');
-            }
-        } catch (err) {
-            console.error("Return reference catch error:", err);
-            Swal.fire('Error', 'Failed to communicate with the server.', 'error');
+async function submitItemCancel(orderId, variantId) {
+    const finalReason = parseResolvedReason(`select-cancel-${variantId}`, `manual-cancel-${variantId}`);
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Action Denied', text: 'Please define an explanation category code pattern.' });
+        return;
+    }
+
+    try {
+        const response = await fetch('/checkout/orders/cancel-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, variantId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Cancelled!', text: 'Item entry state has updated successfully.', icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Failed processing entry logic adjustments.', 'error');
         }
+    } catch (err) {
+        Swal.fire('Error', 'Failed to communicate with runtime pipeline.', 'error');
+    }
+}
+
+async function submitItemReturn(orderId, variantId) {
+    const finalReason = parseResolvedReason(`select-return-${variantId}`, `manual-return-${variantId}`);
+    if (!finalReason) {
+        Swal.fire({ icon: 'warning', title: 'Action Denied', text: 'A reason parameter structure must be configured before submission.' });
+        return;
+    }
+
+    try {
+        const response = await fetch('/checkout/orders/return-item', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, variantId, reason: finalReason })
+        });
+        const data = await response.json();
+        if (data.success) {
+            Swal.fire({ title: 'Submitted!', text: 'Your unique device return profile validation query is pending confirmation.', icon: 'success', confirmButtonColor: '#0071e3' }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message || 'Request transmission tracking failure context.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'Failed to communicate with runtime pipeline.', 'error');
     }
 }
 </script>

@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const passport = require("passport");
 const userController = require("../../controllers/user/userController");
-// 1. CHANGE THIS LINE: Swap out the deleted file for your true controller
 const userProductController = require("../../controllers/user/userProductController");
 const wishlistController = require('../../controllers/user/wishlistController');
 const upload = require('../../config/multer'); 
@@ -12,7 +11,6 @@ const { isLogin, isLogout } = require("../../middlewares/auth");
 router.get("/", userController.loadHome); 
 
 // --- SHOP / PRODUCTS ---
-// 2. CHANGE THIS LINE: Use userProductController instead of allProductController
 router.get("/allProducts", userProductController.getAllProductsPage);
 
 // --- GOOGLE AUTH ---

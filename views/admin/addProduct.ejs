@@ -415,21 +415,19 @@
         
         confirmedVariants[id] = false; 
         
-        // Define accepted MIME types and clean extensions matching multer configuration
         const allowedImageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         let validFilesArray = [];
 
-        // Pre-validate every selected asset for format conformance before loading CropperJS
         for (let idx = 0; idx < files.length; idx++) {
             if (!allowedImageMimeTypes.includes(files[idx].type)) {
                 Swal.fire({ 
-                    icon: "warning", // Minimalist caution exclamation icon
+                    icon: "warning", 
                     title: "Unsupported File Format", 
                     text: `"${files[idx].name}" is not a valid image format. Only JPEG, JPG, PNG, and WEBP assets are accepted.`,
-                    confirmButtonColor: "#000", // Clean black button accent
+                    confirmButtonColor: "#000", 
                 });
-                imageInput.value = ''; // Clean input reference array instantly
-                return; // Terminate execution to block broken views
+                imageInput.value = ''; 
+                return; 
             }
             validFilesArray.push(files[idx]);
         }
@@ -497,7 +495,6 @@
         croppedBlob.variant = variantNumber;
         croppedBlob.imgIndex = targetCountIndex;
         
-        // Evict any existing stale crop calculation for this slot to clear payload bloating
         croppedBlobs = croppedBlobs.filter(b => !(b.variant === variantNumber && b.imgIndex === targetCountIndex));
         croppedBlobs.push(croppedBlob);
         
@@ -518,7 +515,6 @@
         }
         container.remove();
         
-        // Thoroughly clear file lists matching tracking indices
         croppedBlobs = croppedBlobs.filter(b => !(b.variant === variantNumber && b.imgIndex === targetCountIndex));
         
         if (imageCount[variantNumber] > 0) imageCount[variantNumber]--;
@@ -572,6 +568,9 @@
 
         let areAllCardsValid = true;
         let finalVariantsArray = [];
+        let seenAttributeCombinations = new Set();
+        let duplicateFound = false;
+        let duplicateCardElement = null;
 
         for (let i = 0; i < activeCards.length; i++) {
             const card = activeCards[i];
@@ -590,16 +589,49 @@
             const attributesMap = {};
             const subTypes = card.querySelectorAll('.attr-type');
             const subVals = card.querySelectorAll('.attr-val');
+            
+            // Build temporary array to sort properties uniformly
+            let pairs = [];
             subTypes.forEach((typeInput, idx) => {
+                const k = typeInput.value.trim().toLowerCase();
+                const v = subVals[idx].value.trim().toLowerCase();
                 attributesMap[typeInput.value.trim()] = subVals[idx].value.trim();
+                pairs.push(`${k}:${v}`);
             });
+            
+            // Sort to handle cases where attributes are written in different row order
+            pairs.sort();
+            const comboIdentifier = pairs.join('|');
+
+            if (seenAttributeCombinations.has(comboIdentifier)) {
+                duplicateFound = true;
+                duplicateCardElement = card;
+                const errField = document.getElementById(`attrError-${cardId}`);
+                if (errField) {
+                    errField.textContent = "This variant has identical attributes to another configured variant block above. Try a different combination.";
+                }
+            } else {
+                seenAttributeCombinations.add(comboIdentifier);
+            }
 
             finalVariantsArray.push({
-                cardDomId: cardId, // temporary reference for matching tracking blobs
+                cardDomId: cardId, 
                 attributes: attributesMap,
                 quantity: quantityVal,
                 price: priceVal
             });
+        }
+
+        if (duplicateFound) {
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Duplicate Variants', 
+                text: 'Two or more variant cards use the identical attribute combinations. Please correct or remove duplicate settings.' 
+            });
+            if (duplicateCardElement) {
+                duplicateCardElement.scrollIntoView({ behavior: 'smooth' });
+            }
+            return;
         }
 
         if (!areAllCardsValid) return;
@@ -610,10 +642,8 @@
         dataPayload.append('description', description.value.trim());
         dataPayload.append('category', category.value);
         dataPayload.append('brand', 'Apple');
-        
         dataPayload.append('variantsDataJSON', JSON.stringify(finalVariantsArray));
 
-        // Append the correct blobs matching the valid cardDomId
         finalVariantsArray.forEach((variantObj, variantIndex) => {
             const targetBlobs = croppedBlobs.filter(b => b.variant === variantObj.cardDomId);
             targetBlobs.forEach((blobFile) => {
@@ -635,7 +665,6 @@
                 Swal.fire({ title: "Success", text: "Product entries added successfully!", icon: "success", timer: 1500 })
                     .then(() => window.location.href = "/admin/products");
             } else {
-                // FIXED HERE: Display exact database/validation messages from backend cleanly
                 Swal.fire({ title: "Validation Notice", text: responseData.message || "Please check that all fields are configured according to specifications.", icon: "error" });
             }
         } catch (err) {

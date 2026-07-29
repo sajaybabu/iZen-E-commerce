@@ -222,16 +222,21 @@ const cancelOrderItem = async (req, res) => {
         const itemIndex = order.items.findIndex(item => String(item.variantId) === String(variantId));
         if (itemIndex === -1) return res.status(404).json({ success: false, message: "Item not found in order." });
         
-        if (order.items[itemIndex].status === 'Cancelled') {
-            return res.status(400).json({ success: false, message: "Item is already cancelled." });
+        const currentStatus = order.items[itemIndex].status.toLowerCase();
+        if (currentStatus === 'cancelled') {
+            return res.status(400).json({ success: false, message: "Item has already been cancelled." });
+        }
+        
+        if (['shipped', 'out for delivery', 'delivered', 'returned', 'return request pending'].includes(currentStatus)) {
+            return res.status(400).json({ success: false, message: "This item has moved past warehouse distribution and cannot be cancelled." });
         }
 
         order.items[itemIndex].status = 'Cancelled';
-        order.items[itemIndex].cancellationReason = reason || "No reason provided";
+        order.items[itemIndex].cancellationReason = reason || "User requested cancellation.";
 
         const targetItem = order.items[itemIndex];
         
-        // Verified alignment with Product Schema
+        // Correct Stock Increment Logic
         await Product.findOneAndUpdate(
             { _id: targetItem.product, "variants._id": targetItem.variantId },
             { 
@@ -246,8 +251,12 @@ const cancelOrderItem = async (req, res) => {
         order.totalAmount = Math.max(0, order.totalAmount - itemCost);
         order.subtotal = Math.max(0, order.subtotal - itemCost);
 
+        if (order.paymentStatus === 'Paid') {
+            order.paymentStatus = 'Refunded';
+        }
+
         await order.save();
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, message: "Cancellation executed instantly." });
     } catch (error) {
         console.error("Cancel item error:", error);
         return res.status(500).json({ success: false, message: error.message });
@@ -264,28 +273,17 @@ const returnOrderItem = async (req, res) => {
         const itemIndex = order.items.findIndex(item => String(item.variantId) === String(variantId));
         if (itemIndex === -1) return res.status(404).json({ success: false, message: "Item not found in order." });
 
-        if (order.items[itemIndex].status === 'Returned') {
-            return res.status(400).json({ success: false, message: "Item has already been returned." });
+        const currentStatus = order.items[itemIndex].status.toLowerCase();
+        if (currentStatus !== 'delivered') {
+            return res.status(400).json({ success: false, message: "Returns can only be requested for delivered products." });
         }
 
-        order.items[itemIndex].status = 'Returned';
-        order.items[itemIndex].returnReason = reason || "No reason provided";
-
-        const targetItem = order.items[itemIndex];
-
-        // INVENTORY SYNC FOR USER RETURNS
-        await Product.findOneAndUpdate(
-            { _id: targetItem.product, "variants._id": targetItem.variantId },
-            { 
-                $inc: { 
-                    "variants.$.quantity": targetItem.quantity,
-                    "stock": targetItem.quantity 
-                } 
-            }
-        );
+        // Forward to intermediate state for admin authorization logic
+        order.items[itemIndex].status = 'Return Request Pending';
+        order.items[itemIndex].returnReason = reason || "User submitted return request.";
 
         await order.save();
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, message: "Return request forwarded successfully. Awaiting admin approval." });
     } catch (error) {
         console.error("Return item error:", error);
         return res.status(500).json({ success: false, message: error.message });
@@ -391,24 +389,20 @@ const cancelAllOrderItems = async (req, res) => {
         const { orderId } = req.body;
         const userId = req.session.user?.id || req.session.user?._id || req.session.user_id;
 
-        if (!userId) {
-            return res.status(401).json({ success: false, message: "Session unauthenticated." });
-        }
+        if (!userId) return res.status(401).json({ success: false, message: "Session unauthenticated." });
 
         const order = await Order.findOne({ _id: orderId, user: userId });
-        if (!order) {
-            return res.status(404).json({ success: false, message: "Order records not found." });
-        }
+        if (!order) return res.status(404).json({ success: false, message: "Order records not found." });
 
         const lowercaseStatus = order.status ? order.status.toLowerCase() : '';
-        if (lowercaseStatus === 'cancelled' || lowercaseStatus === 'delivered' || lowercaseStatus === 'returned') {
-            return res.status(400).json({ success: false, message: "Order state cannot be cancelled at this stage." });
+        if (['cancelled', 'shipped', 'out for delivery', 'delivered', 'returned'].includes(lowercaseStatus)) {
+            return res.status(400).json({ success: false, message: "Order state cannot process a cancellation request at this stage." });
         }
 
         let totalRefundAmount = 0;
 
         for (const item of order.items) {
-            if (item.status && item.status.toLowerCase() !== 'cancelled') {
+            if (item.status.toLowerCase() !== 'cancelled') {
                 await Product.findOneAndUpdate(
                     { _id: item.product, "variants._id": item.variantId },
                     { 
@@ -434,8 +428,7 @@ const cancelAllOrderItems = async (req, res) => {
         }
 
         await order.save();
-        return res.status(200).json({ success: true, message: "Entire order successfully cancelled." });
-
+        return res.status(200).json({ success: true, message: "Entire order structure successfully cancelled." });
     } catch (error) {
         console.error("Bulk cancellation processing crash:", error);
         return res.status(500).json({ success: false, message: "Internal server error processing bulk cancellation." });
@@ -447,47 +440,31 @@ const returnAllOrderItems = async (req, res) => {
         const { orderId, reason } = req.body;
         const userId = req.session.user?.id || req.session.user?._id || req.session.user_id;
 
-        if (!userId) {
-            return res.status(401).json({ success: false, message: "Session unauthenticated." });
-        }
+        if (!userId) return res.status(401).json({ success: false, message: "Session unauthenticated." });
 
         const order = await Order.findOne({ _id: orderId, user: userId });
-        if (!order) {
-            return res.status(404).json({ success: false, message: "Order not found." });
-        }
+        if (!order) return res.status(404).json({ success: false, message: "Order not found." });
 
         const eligibleForReturn = order.items.some(item => item.status.toLowerCase() === 'delivered');
         if (!eligibleForReturn) {
-            return res.status(400).json({ success: false, message: "Bulk returns are only restricted to orders with delivered content." });
+            return res.status(400).json({ success: false, message: "Bulk returns are only restricted to orders containing delivered contents." });
         }
 
         for (const item of order.items) {
-            if (item.status.toLowerCase() === 'delivered' || item.status === 'Pending') {
-                item.status = 'Returned'; 
+            if (item.status.toLowerCase() === 'delivered') {
+                item.status = 'Return Request Pending'; 
                 item.returnReason = reason || "Bulk order return request.";
-
-                await Product.findOneAndUpdate(
-                    { _id: item.product, "variants._id": item.variantId },
-                    { 
-                        $inc: { 
-                            "variants.$.quantity": item.quantity,
-                            "stock": item.quantity 
-                        } 
-                    }
-                );
             }
         }
 
-        order.status = 'Returned'; 
+        order.status = 'Return Request Pending'; 
         await order.save();
-        return res.status(200).json({ success: true, message: "Entire order has been successfully processed for return." });
-
+        return res.status(200).json({ success: true, message: "Bulk return request forwarded to administration queue." });
     } catch (error) {
         console.error("Bulk return processing crash:", error);
         return res.status(500).json({ success: false, message: "Internal server error logging bulk return tracking." });
     }
 };
-
 
 module.exports = {
     getCheckoutPage,

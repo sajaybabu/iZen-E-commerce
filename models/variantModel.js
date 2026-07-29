@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const variantSchema = new mongoose.Schema({
     productId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product', // Points to the main product (e.g., iPhone 15 Pro)
+        ref: 'Product', 
         required: true
     },
     ram: {
@@ -23,7 +23,7 @@ const variantSchema = new mongoose.Schema({
         required: true,
         min: 0
     },
-    quantity: { // This is your warehouse stock level
+    quantity: { 
         type: Number,
         required: true,
         min: 0
@@ -35,3 +35,4 @@ const variantSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('Variant', variantSchema);
+
