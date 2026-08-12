@@ -23,4 +23,8 @@ router.post('/orders/return-all', checkoutController.returnAllOrderItems);
 
 router.get('/orders/:id/invoice', checkoutController.downloadInvoice);
 
+router.post('/create-razorpay-order', checkoutController.createRazorpayOrder);
+router.post('/verify-razorpay-payment', checkoutController.verifyRazorpayPayment);
+router.get('/payment-failure', checkoutController.getPaymentFailurePage);
+
 module.exports = router;

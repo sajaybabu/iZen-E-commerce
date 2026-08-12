@@ -253,30 +253,22 @@
             <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 16px;">
                 <h5 class="fw-bold mb-3">Choose Payment Method</h5>
                 
-             <!--  <div class="form-check p-3 rounded mb-2 border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
-                    <div>
-                        <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="upi" value="UPI" checked>
-                        <label class="form-check-label fw-bold small text-dark" for="upi" style="cursor: pointer;">Pay via UPI</label>
+                <div class="d-flex flex-column gap-2">
+                    <div class="form-check p-3 rounded border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
+                        <div>
+                            <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="cod" value="COD">
+                            <label class="form-check-label fw-bold small text-dark" for="cod" style="cursor: pointer;">Cash on Delivery (COD)</label>
+                        </div>
                     </div>
-                    <div>
-                        <img src="https://img.icons8.com/color/48/google-pay.png" alt="Google Pay" class="payment-icon">
-                    </div>
-                </div>
-                
-                <div class="form-check p-3 rounded mb-2 border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
-                    <div>
-                        <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="wallet" value="Wallet">
-                        <label class="form-check-label fw-bold small text-dark" for="wallet" style="cursor: pointer;">
-                            iZen Wallet <span class="text-muted font-monospace small ms-1">(Balance: &#8377;<%= locals.wallet?.balance || 0 %>)</span>
-                        </label>
-                    </div>
-                </div>
-                -->
-                
-                <div class="form-check p-3 rounded border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
-                    <div>
-                        <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="cod" value="COD">
-                        <label class="form-check-label fw-bold small text-dark" for="cod" style="cursor: pointer;">Cash on Delivery (COD)</label>
+
+                    <!-- Razorpay Payment Option -->
+                    <div class="form-check p-3 rounded border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
+                        <div>
+                            <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="razorpay" value="Razorpay" checked>
+                            <label class="form-check-label fw-bold small text-dark" for="razorpay" style="cursor: pointer;">
+                                Online Payment (Razorpay / Cards / UPI / NetBanking)
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -335,11 +327,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Razorpay Checkout SDK -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
     window.addEventListener("unload", function () {});
 
-    // Capturing initial dynamic state variables from template engine context data
     let activeAddressId = "<%= (locals.address && Array.isArray(address) && address.find(a => a.isSelected)) ? address.find(a => a.isSelected)._id : '' %>";
     const cartId = "<%= (locals.cart && locals.cart[0]) ? locals.cart[0]._id : '' %>";
     const walletBalance = Number("<%= locals.wallet?.balance || 0 %>");
@@ -388,7 +381,7 @@
         const rawJson = document.getElementById(`address-data-${index}`).textContent;
         const addrData = JSON.parse(rawJson);
         
-        document.getElementById("addressIdField").value = addrData.id || addrData._id; // Accommodate native document reference formats safely
+        document.getElementById("addressIdField").value = addrData.id || addrData._id;
         document.getElementById("addressIndexField").value = index;
         
         document.getElementById("fullname").value = addrData.fullname;
@@ -510,6 +503,84 @@
             return;
         }
 
+        if (paymentMethod === "Razorpay") {
+            try {
+                // Step 1: Create Razorpay Order from server
+                const orderRes = await fetch('/checkout/create-razorpay-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ payablePrice })
+                });
+                const orderData = await orderRes.json();
+
+                if (!orderData.success) {
+                    Swal.fire({ icon: "error", title: "Payment Error", text: orderData.message || "Could not initialize payment gateway." });
+                    return;
+                }
+
+                // Step 2: Configure Razorpay Options
+                const options = {
+                    key: orderData.key,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: "iZen",
+                    description: "iOS Product Purchase",
+                    order_id: orderData.razorpayOrderId,
+                    handler: async function (response) {
+                        // Step 3: Verify Razorpay Payment and finalize order
+                        const verifyRes = await fetch('/checkout/verify-razorpay-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                orderPayload: {
+                                    addressId: activeAddressId,
+                                    cartId,
+                                    totalPriceBeforeDiscount,
+                                    payablePrice,
+                                    discountAmount,
+                                    paymentMethod,
+                                    couponId: couponId || undefined
+                                }
+                            })
+                        });
+                        const verifyData = await verifyRes.json();
+                        if (verifyRes.ok && verifyData.success) {
+                            window.location.href = "/checkout/order-success";
+                        } else {
+                            Swal.fire({ icon: "error", title: "Payment Verification Failed", text: verifyData.message || "Payment verification failed." });
+                        }
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            // User manually closed the popup
+                            window.location.href = '/checkout/payment-failure?reason=' + encodeURIComponent('Payment window was closed by the user.');
+                        }
+                    },
+                    theme: {
+                        color: "#ff6b00"
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+
+                // Step 4: Handle Payment Failure event
+                rzp.on('payment.failed', function (response) {
+                    const reason = encodeURIComponent(response.error.description || 'Transaction failed.');
+                    window.location.href = `/checkout/payment-failure?reason=${reason}`;
+                });
+
+                rzp.open();
+            } catch (err) {
+                console.error("Razorpay workflow failed:", err);
+                Swal.fire({ icon: "error", title: "Error", text: "Failed to initiate online payment processing." });
+            }
+            return;
+        }
+
+        // Standard COD handling
         try {
             const request = await fetch('/checkout/place-order', {
                 method: "POST",
@@ -577,29 +648,14 @@
             if (couponvalue) couponvalue.innerHTML = `&#8377;${discountAmount}`;  
         }
 
-        // Wallet Balance Control checks
-        const wallet = document.getElementById("wallet");
-        if (wallet) {
-            if (payableAmount > walletBalance) {
-                if(wallet.checked) {
-                    wallet.checked = false;    
-                    const upiElement = document.getElementById("upi");
-                    if (upiElement) upiElement.checked = true;      
-                }
-                wallet.disabled = true; 
-            } else { 
-                wallet.removeAttribute("disabled");                
-            }
-        }
-
         // COD Maximum Limit constraint checks
         const cod = document.getElementById("cod");
         if (cod) {
             if (payableAmount >= 100000) {
                 if (cod.checked) {
                     cod.checked = false;
-                    const upiElement = document.getElementById("upi");
-                    if (upiElement) upiElement.checked = true;
+                    const razorpayElement = document.getElementById("razorpay");
+                    if (razorpayElement) razorpayElement.checked = true;
                 }
                 cod.disabled = true;                        
             } else {
