@@ -2,7 +2,7 @@ const Product = require('../../models/Product');
 const Category = require('../../models/categoryModel');
 
 const createProduct = async (body, files) => {
-    const { name, description, category, discount, variantsDataJSON, isFeatured } = body;
+    const { name, description, category, discount, productOffer, variantsDataJSON, isFeatured } = body;
 
     const submittedVariants = JSON.parse(variantsDataJSON);
     const variantArray = [];
@@ -48,6 +48,7 @@ const createProduct = async (body, files) => {
         description,
         category,
         discount: parseFloat(discount) || 0,
+        productOffer: parseFloat(productOffer) || parseFloat(discount) || 0,
         variants: variantArray,
         images: globalImagesArray,
         price: lowestPrice,
@@ -63,7 +64,6 @@ const createProduct = async (body, files) => {
     return await newProduct.save();
 };
 
-
 const getAllProducts = async (options = {}) => {
     const { skip = 0, limit = 5 } = options;
     return await Product.find({
@@ -73,7 +73,6 @@ const getAllProducts = async (options = {}) => {
     .skip(skip)
     .limit(limit);
 };
-
 
 const countProducts = async (filter = {}) => {
     return await Product.countDocuments({
@@ -111,7 +110,6 @@ const searchProducts = async (options = {}) => {
     .limit(limit);
 };
 
-
 const countSearchProducts = async (name = '') => {
     return await Product.countDocuments({
         name: {
@@ -127,12 +125,12 @@ const getProductById = async (id) => {
 };
 
 const updateProduct = async (id, body, files) => {
-
     const {
         name,
         description,
         category,
         discount,
+        productOffer,
         variantsDataJSON,
         removedImagesJSON
     } = body;
@@ -159,7 +157,8 @@ const updateProduct = async (id, body, files) => {
     product.name = name;
     product.description = description;
     product.category = category;
-    product.discount = parseInt(discount, 10) || 0;
+    product.discount = parseFloat(discount) || 0;
+    product.productOffer = parseFloat(productOffer) !== undefined ? parseFloat(productOffer) : product.discount;
 
     const submittedVariants = JSON.parse(variantsDataJSON);
 
@@ -170,7 +169,6 @@ const updateProduct = async (id, body, files) => {
     let startingPrice = Infinity;
 
     for (let i = 0; i < submittedVariants.length; i++) {
-
         const incomingVariant = submittedVariants[i];
 
         let allocatedImages =
@@ -183,7 +181,6 @@ const updateProduct = async (id, body, files) => {
         );
 
         if (files && files.length > 0) {
-
             const targetKeyName = `variantImages_${i}`;
 
             const freshlyUploaded = files
@@ -194,11 +191,8 @@ const updateProduct = async (id, body, files) => {
                 allocatedImages.concat(freshlyUploaded);
         }
 
-        const vQty =
-            parseInt(incomingVariant.quantity, 10) || 0;
-
-        const vPrice =
-            parseFloat(incomingVariant.price) || 0;
+        const vQty = parseInt(incomingVariant.quantity, 10) || 0;
+        const vPrice = parseFloat(incomingVariant.price) || 0;
 
         totalQuantity += vQty;
 
@@ -206,8 +200,7 @@ const updateProduct = async (id, body, files) => {
             startingPrice = vPrice;
         }
 
-        globalImagesArray =
-            globalImagesArray.concat(allocatedImages);
+        globalImagesArray = globalImagesArray.concat(allocatedImages);
 
         finalVariants.push({
             attributes: incomingVariant.attributes || {},

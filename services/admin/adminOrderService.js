@@ -1,6 +1,36 @@
 const Order = require('../../models/orderModel');
 const User = require('../../models/userModel'); 
 const Product = require('../../models/Product'); 
+const Wallet = require('../../models/walletModel'); // 1. Imported Wallet Model
+
+// Helper to handle wallet refund transactions cleanly
+const processWalletRefund = async ({ userId, refundAmount, orderObjectId, itemTitle, purpose }) => {
+    let wallet = await Wallet.findOne({ userId });
+
+    // Initialize wallet if it doesn't exist for the user
+    if (!wallet) {
+        wallet = new Wallet({
+            userId,
+            balance: 0,
+            transactions: []
+        });
+    }
+
+    // Credit balance
+    wallet.balance += refundAmount;
+
+    // Push transaction matching walletTransactionSchema
+    wallet.transactions.push({
+        amount: refundAmount,
+        type: 'credit',
+        purpose: purpose, // 'Order Return' or 'Order Cancellation'
+        orderId: orderObjectId,
+        description: `Refund credited for product: ${itemTitle}`
+    });
+
+    await wallet.save();
+    return wallet;
+};
 
 const fetchAllOrdersWithUsers = async () => {
     return await Order.find()
@@ -20,13 +50,13 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
     const targetedItem = existingOrder.items.find(item => 
         item.variantId && item.variantId.toString() === variantId.toString()
     );
-    
+
     if (!targetedItem) {
         console.error(`Admin Sync Failure: Variant with ID ${variantId} not located in order document ${orderId}`);
         return null;
     }
 
-    const oldStatus = targetedItem.status;
+    const oldStatus = targetedItem.status || '';
     const oldStatusNormalized = oldStatus.trim().toLowerCase();
     const newStatusNormalized = newStatus.trim().toLowerCase();
 
@@ -59,7 +89,7 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
     if ((oldStatusNormalized === 'shipped' || oldStatusNormalized === 'out for delivery') && newStatusNormalized === 'pending') {
         throw new Error(`Cannot roll back status to pending once the item has been ${oldStatus.toLowerCase()}.`);
     }
-    
+
     // Array sub-document updates execution
     const updatedOrder = await Order.findOneAndUpdate(
         { 
@@ -74,12 +104,11 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
 
     if (!updatedOrder) return null;
 
-    // Fixed Restocking Stock Pipeline Controls
+    // Restocking / Stock Adjustments Pipeline Controls
     const isRestockingState = ['cancelled', 'returned'].includes(newStatusNormalized);
     const wasAlreadyRestocked = ['cancelled', 'returned'].includes(oldStatusNormalized);
 
     if (isRestockingState && !wasAlreadyRestocked) {
-        // Corrected mapping structure to prevent Casting crashes
         await Product.findOneAndUpdate(
             { 
                 _id: targetedItem.product, 
@@ -108,13 +137,38 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
         );
     }
 
-    // Settlement balance actions
+    // WALLET REFUND PIPELINE INTEGRATION
+    const refundAmount = targetedItem.price * targetedItem.quantity;
+
+    //  Admin confirms/accepts Return Request
+    if (newStatusNormalized === 'returned') {
+        await processWalletRefund({
+            userId: updatedOrder.user,
+            refundAmount,
+            orderObjectId: updatedOrder._id,
+            itemTitle: targetedItem.name,
+            purpose: 'Order Return'
+        });
+    }
+
+    //  Direct Cancellation refund for prepaid/wallet payments
+    if (newStatusNormalized === 'cancelled' && updatedOrder.paymentMethod !== 'COD') {
+        await processWalletRefund({
+            userId: updatedOrder.user,
+            refundAmount,
+            orderObjectId: updatedOrder._id,
+            itemTitle: targetedItem.name,
+            purpose: 'Order Cancellation'
+        });
+    }
+
+    // Settlement balance status actions
     let paymentUpdate = {};
 
-    if (updatedOrder.paymentMethod === 'COD' && newStatus === 'Delivered') {
+    if (updatedOrder.paymentMethod === 'COD' && newStatusNormalized === 'delivered') {
         paymentUpdate.paymentStatus = 'Paid';
     } 
-    else if (newStatus === 'Cancelled' && updatedOrder.paymentMethod !== 'COD') {
+    else if (newStatusNormalized === 'returned' || (newStatusNormalized === 'cancelled' && updatedOrder.paymentMethod !== 'COD')) {
         paymentUpdate.paymentStatus = 'Refunded';
     }
 
@@ -136,17 +190,17 @@ const fetchFilteredOrders = async ({ page, limit, search, status, sort }) => {
     if (status && status !== 'All') {
         query['items.status'] = status;
     }
-    
+
     if (search) {
         const searchRegex = new RegExp(search.trim(), 'i');
-        
+
         const matchingUsers = await User.find({
             $or: [
                 { username: searchRegex },
                 { email: searchRegex }
             ]
         }).select('_id');
-        
+
         const userIds = matchingUsers.map(user => user._id);
 
         query.$or = [

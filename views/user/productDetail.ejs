@@ -26,14 +26,12 @@
     .breadcrumb-item a:hover { color: #000; }
     @media (min-width: 992px) { .thumb-img { width: 65px !important; height: 65px !important; } }
 
-    /* Premium Amazon-Style Custom Zoom System Layout Elements */
+    /* Zoom Layout Elements */
     .img-zoom-container { position: relative; width: 100%; }
-    
-    /* The tracking selector mesh overlaying the native asset */
     .img-zoom-lens {
       position: absolute;
       border: 1px solid #d4d4d4;
-      background-color: rgba(239, 102, 39, 0.15); /* Tinted subtle brand overlay color */
+      background-color: rgba(239, 102, 39, 0.15);
       background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 0);
       background-size: 8px 8px;
       width: 140px;
@@ -42,12 +40,10 @@
       display: none;
       z-index: 10;
     }
-
-    /* The distinct isolated high-magnification split projection frame */
     .img-zoom-result {
       position: absolute;
       top: 0;
-      left: 102%; /* Pops out perfectly straight to the right side exactly like Amazon */
+      left: 102%;
       width: 100%;
       height: 100%;
       background-repeat: no-repeat;
@@ -119,36 +115,42 @@
             <%= product.description %>
           </p>
 
+          <!-- Dynamic Pricing Section -->
           <div class="mb-4">
             <div class="d-flex align-items-baseline gap-2">
               <h3 class="fs-1 fw-bold mb-0 text-dark">
-                ₹<%= (variant.price || 0).toLocaleString('en-IN') %>
+                ₹<%= (variant.finalPrice || variant.price || 0).toLocaleString('en-IN') %>
               </h3>
-              <% if (product.price > variant.price) { %>
-                <span class="price-old">MSRP: ₹<%= product.price.toLocaleString('en-IN') %></span>
+              <% if (variant.offerPercentage > 0 && variant.unitPrice > variant.finalPrice) { %>
+                <span class="price-old">MSRP: ₹<%= variant.unitPrice.toLocaleString('en-IN') %></span>
               <% } %>
             </div>
-            <% if (product.price > variant.price) { %>
-              <div class="mt-1">
-                <% let saving = product.price - variant.price; %>
+
+            <% if (variant.offerPercentage > 0 && variant.unitPrice > variant.finalPrice) { %>
+              <div class="mt-2 d-flex align-items-center gap-2">
+                <% let saving = variant.unitPrice - variant.finalPrice; %>
+                <span class="badge bg-danger text-white px-2.5 py-1.5 rounded-pill fw-bold">
+                  <%= variant.offerPercentage %>% OFF
+                </span>
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded">
-                  <i class="bi bi-tags-fill me-1"></i> Save ₹<%= saving.toLocaleString('en-IN') %> off original pricing launch parameters
+                  <i class="bi bi-tags-fill me-1"></i> Save ₹<%= saving.toLocaleString('en-IN') %> with applied offer
                 </span>
               </div>
             <% } %>
           </div>
 
+          <!-- Configuration Selector -->
           <div class="mb-4 w-75">
             <label class="form-label fw-bold text-uppercase small text-muted">Select Configuration:</label>
             <select class="form-select form-select-md rounded-3" onchange='variantOption()' id="variantOptions">
               <option value="<%= variant._id %>" selected>
-                <%= variant.attributes?.ram || 'Standard' %> / <%= variant.attributes?.storage || 'Base' %> — ₹<%= (variant.price || 0).toLocaleString('en-IN') %> (Active Selection)
+                <%= variant.attributes?.ram || 'Standard' %> / <%= variant.attributes?.storage || 'Base' %> — ₹<%= (variant.finalPrice || variant.price || 0).toLocaleString('en-IN') %> (Active Selection)
               </option>
               <% if (typeof variantOptions !== 'undefined' && variantOptions.length > 0) { %>
                 <% variantOptions.forEach(ele => { %>
                   <% if (String(ele._id) !== String(variant._id)) { %>
                     <option value="<%= ele._id %>">
-                      <%= ele.attributes?.ram || 'Standard' %> / <%= ele.attributes?.storage || 'Base' %> — ₹<%= (ele.price || 0).toLocaleString('en-IN') %>
+                      <%= ele.attributes?.ram || 'Standard' %> / <%= ele.attributes?.storage || 'Base' %> — ₹<%= (ele.finalPrice || ele.price || 0).toLocaleString('en-IN') %>
                     </option>
                   <% } %>
                 <% }) %>
@@ -156,6 +158,7 @@
             </select>
           </div>
 
+          <!-- Inventory Status -->
           <div class="mb-4">
             <% if (variant.quantity <= 0) { %>
               <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 fs-6 rounded-3 fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i> Out of Stock</span>
@@ -166,6 +169,7 @@
             <% } %>
           </div>
 
+          <!-- Cart & Wishlist Actions -->
           <div class="d-flex align-items-center gap-3 mt-4">
             <% if (variant.quantity > 0) { %>
               <button class="btn btn-dark btn-lg px-5 py-2.5 fs-6 rounded-pill shadow-sm fw-bold" onclick='addToCart("<%= variant._id %>", event)'>
@@ -197,9 +201,9 @@
     </div>
   </div>
 
+  <!-- Promotional Offers & Reviews -->
   <div class="container nav-detail-container my-5">
     <div class="row g-4">
-      
       <div class="col-md-5">
         <div class="card border-dashed p-4 h-100 bg-white shadow-sm" style="border: 2px dashed #EF6627; border-radius: 12px;">
           <h5 class="fw-bold text-dark mb-3"><i class="bi bi-percent text-success me-2"></i>Available iZen Offers</h5>
@@ -245,10 +249,10 @@
           </div>
         </div>
       </div>
-
     </div>
   </div>
 
+  <!-- Explore More Section -->
   <section id="trending" class="bg-white border-top py-5 mt-5">
     <div class="container nav-detail-container">
       <div class="d-flex justify-content-between align-items-center mb-4">
@@ -264,10 +268,17 @@
           <% exploreMore.forEach(ele => { %>
             <% 
               let targetVariantId = (ele.variants && ele.variants[0]) ? ele.variants[0]._id : ele._id; 
-              let displayPrice = (ele.variants && ele.variants[0]) ? ele.variants[0].price : (ele.price || 0);
+              let displayPrice = (ele.variants && ele.variants[0]) ? (ele.variants[0].finalPrice || ele.variants[0].price) : (ele.price || 0);
+              let oldPrice = (ele.variants && ele.variants[0]) ? ele.variants[0].unitPrice : 0;
+              let discountPct = (ele.variants && ele.variants[0]) ? ele.variants[0].offerPercentage : 0;
             %>
             <div class="col" style="cursor: pointer;" onclick='viewProduct("<%= targetVariantId %>")'>
               <div class="card h-100 product-card border border-light-subtle shadow-sm position-relative rounded-3 bg-light overflow-hidden">
+                <% if (discountPct > 0) { %>
+                  <span class="position-absolute top-0 start-0 bg-danger text-white px-2 py-1 small fw-bold rounded-bottom-end" style="z-index: 5;">
+                    <%= discountPct %>% OFF
+                  </span>
+                <% } %>
                 <img src="<%= (ele.images && ele.images[0]) ? '/' + ele.images[0].replace(/^\//, '') : '/uploads/default-apple.png' %>" class="card-img-top">
                 <div class="card-body text-center bg-white border-top p-3">
                   <h6 class="fw-bold text-truncate text-dark mb-1"><%= ele.name %></h6>
@@ -276,6 +287,9 @@
                     <span class="text-success fw-bold">
                       ₹<%= displayPrice.toLocaleString('en-IN') %>
                     </span>
+                    <% if (discountPct > 0 && oldPrice > displayPrice) { %>
+                      <span class="price-old small">₹<%= oldPrice.toLocaleString('en-IN') %></span>
+                    <% } %>
                   </div>
                   <button class="btn btn-dark btn-sm w-100 rounded-pill py-1.5 fw-semibold" onclick='addToCart("<%= targetVariantId %>", event)'>Add to Cart</button>
                 </div> 

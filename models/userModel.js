@@ -23,7 +23,6 @@ const userSchema = new mongoose.Schema({
     phone: { 
         type: String, 
         required: false,
-        // sparse allows multiple 'null' values if an index exists
         sparse: true,
         default: null
     },
@@ -51,6 +50,16 @@ const userSchema = new mongoose.Schema({
     profileImage: {
         type: String,
         default: "" 
+    },
+    referralCode: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null
     },
     addresses: [addressSchema] 
 }, { timestamps: true });

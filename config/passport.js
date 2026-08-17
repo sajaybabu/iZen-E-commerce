@@ -9,7 +9,7 @@ passport.use(new GoogleStrategy({
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
-        //  Check if user already exists by googleId or email
+        // Check if user already exists by googleId or email
         let user = await User.findOne({ 
             $or: [{ googleId: profile.id }, { email: profile.emails[0].value }] 
         });
@@ -23,19 +23,24 @@ passport.use(new GoogleStrategy({
             // Update googleId if they previously signed up with email
             if (!user.googleId) {
                 user.googleId = profile.id;
-                await user.save();
+                // Clean up any empty address objects before saving
+                if (user.addresses && user.addresses.length > 0) {
+                    user.addresses = user.addresses.filter(addr => addr.city && addr.address);
+                }
+                await user.save({ validateBeforeSave: false }); 
             }
             return done(null, user);
         } else {
-            //  Create new user 
+            // Create new user 
             user = new User({
-                username: profile.displayName, // Match 'username' field in model
+                username: profile.displayName,
                 email: profile.emails[0].value,
                 googleId: profile.id,
-                isBlocked: false
+                isBlocked: false,
+                isVerified: true
             });
             
-            await user.save();
+            await user.save({ validateBeforeSave: false }); // <-- Added options flag
             return done(null, user);
         }
     } catch (err) {

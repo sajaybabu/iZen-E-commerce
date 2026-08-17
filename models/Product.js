@@ -19,6 +19,18 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    discount: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100
+    },
+    productOffer: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100
+    },
     stock: {
         type: Number,
         default: 0
@@ -66,5 +78,12 @@ const productSchema = new mongoose.Schema({
         default: false
     }
 }, { timestamps: true });
+
+// Returns the effective percentage offer (largest between product offer & category offer)
+productSchema.methods.getEffectiveDiscount = function(categoryDiscount = 0) {
+    const prodOffer = this.productOffer || this.discount || 0;
+    const catOffer = categoryDiscount || 0;
+    return Math.max(prodOffer, catOffer);
+};
 
 module.exports = mongoose.model('Product', productSchema);

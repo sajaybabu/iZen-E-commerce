@@ -18,7 +18,7 @@ const addToCart = async (req, res) => {
 
     return res.status(200).json({ 
       success: true, 
-      message: "Item successfully mapped to your iZen cart.",
+      message: "Item successfully added to your iZen cart.",
       cart: processingCart 
     });
 
@@ -44,15 +44,16 @@ const addToCart = async (req, res) => {
 
 const updateQuantity = async (req, res) => {
   try {
-    const { variantId, action, change } = req.body;
+    const { variantId, productId, action, change } = req.body;
     const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
     
     if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized execution context." });
+      return res.status(401).json({ success: false, message: "Unauthorized user session." });
     }
 
-    if (!variantId) {
-      return res.status(400).json({ success: false, message: "Missing matching payload variables." });
+    const targetId = variantId || productId;
+    if (!targetId) {
+      return res.status(400).json({ success: false, message: "Missing item identifier." });
     }
 
     let resolvedAction = action;
@@ -61,14 +62,20 @@ const updateQuantity = async (req, res) => {
     }
 
     if (!resolvedAction) {
-      return res.status(400).json({ success: false, message: "Missing matching action execution directives." });
+      return res.status(400).json({ success: false, message: "Missing action directive." });
     }
 
-    const updatedCart = await cartService.changeQuantity(userId, variantId, resolvedAction);
+    const updatedCart = await cartService.changeQuantity(userId, targetId, resolvedAction);
+    
     return res.status(200).json({ success: true, cart: updatedCart });
   } catch (error) {
-    console.error("QUANTITY ERROR TRACE:", error.message);
-    return res.status(400).json({ success: false, message: error.message });
+    console.error("QUANTITY UPDATE ERROR TRACE:", error);
+    
+    let userMsg = error.message;
+    if (error.message === "MAX_LIMIT_REACHED") userMsg = "Maximum limit reached for this item.";
+    if (error.message === "INSUFFICIENT_STOCK") userMsg = "Insufficient stock available.";
+
+    return res.status(400).json({ success: false, message: userMsg || "Could not update item quantity." });
   }
 };
 
@@ -91,7 +98,7 @@ const removeProduct = async (req, res) => {
 
 const getCartPage = async (req, res) => {
   try {
-    const userId = req.session?.user?.id;
+    const userId = req.session?.user?.id || req.session?.user?._id || req.session?.user_id;
     if (!userId) return res.redirect('/login');
 
     let cartData = await cartService.getCartDetails(userId);
@@ -106,14 +113,12 @@ const getCartPage = async (req, res) => {
 
         if (!productDoc) return; 
 
-        // Check if item should be hidden
         const isProductHidden = 
           productDoc.isBlocked === true || 
           productDoc.isDeleted === true || 
           (categoryDoc && categoryDoc.isListed === false) ||
           (categoryDoc && categoryDoc.isDeleted === true);
 
-        // Completely omit blocked/deleted items from user display list
         if (isProductHidden) {
           return; 
         }
@@ -123,16 +128,49 @@ const getCartPage = async (req, res) => {
                              activeVariant.quantity <= 0 || 
                              rawItem.quantity > activeVariant.quantity;
 
+        //  Determine regular base price
+        const regularPrice = activeVariant?.price || activeVariant?.salePrice || productDoc.price || 0;
+
+        //  Resolve discount percentages (Product level & Category level)
+        const productOfferPercent = productDoc.productOffer || productDoc.discountPercentage || productDoc.offerPercentage || 0;
+        const categoryOfferPercent = categoryDoc ? (categoryDoc.categoryOffer || categoryDoc.discountPercentage || 0) : 0;
+        
+        // Highest percentage discount takes priority
+        const maxDiscountPercent = Math.max(productOfferPercent, categoryOfferPercent);
+
+        //  Resolve Effective Offer Price
+        let effectivePrice = regularPrice;
+
+        if (activeVariant?.offerPrice && activeVariant.offerPrice < regularPrice) {
+          effectivePrice = activeVariant.offerPrice;
+        } else if (productDoc.offerPrice && productDoc.offerPrice < regularPrice) {
+          effectivePrice = productDoc.offerPrice;
+        } else if (maxDiscountPercent > 0) {
+          effectivePrice = Math.round(regularPrice - (regularPrice * (maxDiscountPercent / 100)));
+        }
+
+        // Check if item has a valid active offer
+        const hasOffer = effectivePrice < regularPrice;
+
         filteredItems.push({
           ...rawItem,
           productDoc: productDoc,
-          variantDoc: activeVariant || { quantity: 0, price: productDoc.price || 0 },
+          variantDoc: activeVariant ? {
+            ...activeVariant,
+            price: regularPrice,
+            offerPrice: hasOffer ? effectivePrice : null
+          } : { quantity: 0, price: regularPrice, offerPrice: null },
+          regularPrice: regularPrice,
+          effectivePrice: effectivePrice,
+          hasOffer: hasOffer,
+          itemSubtotal: effectivePrice * rawItem.quantity,
           isBlockedItem: false,
           isOutOfStockItem: isOutOfStock
         });
       });
 
       cartData.cart.items = filteredItems;
+      cartData.cart.subtotal = filteredItems.reduce((acc, curr) => acc + curr.itemSubtotal, 0);
     }
     
     return res.render('user/cart', {

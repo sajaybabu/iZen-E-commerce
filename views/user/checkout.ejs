@@ -89,7 +89,6 @@
 
     <div class="row g-4">
         <div class="col-lg-8">
-            
             <div class="card border-0 shadow-sm p-4 mb-4" style="background-color: var(--apple-gray); border-radius: 16px;">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h5 class="fw-bold m-0">Shipping Address</h5>
@@ -154,52 +153,60 @@
             </div>
 
             <div id="productTable" class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 16px;">
-                <h5 class="fw-bold mb-3">Review Your Items</h5>
-                <div class="table-responsive">
-                    <table class="table align-middle m-0">
-                        <thead>
-                            <tr class="text-muted small border-bottom">
-                                <th class="pb-2">Product</th>
-                                <th class="text-center pb-2">Quantity</th>
-                                <th class="text-end pb-2">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% if (locals.cart && cart.length > 0) { 
-                                let items = cart[0].items || cart[0].products || [];
-                                items.forEach((item, index) => { 
-                                    let variant = item.variantId || {};
-                                    let product = item.productId || {};
-                                    let productName = product.name || "iOS Product";
-                                    let productPrice = variant.price || product.price || 0;
-                                    let productImage = (product.images && product.images.length > 0) ? product.images[0] : '/assets/images/default-device.png';
-                            %>
-                                <tr class="border-bottom">
-                                    <td class="py-3">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <img src="<%= productImage %>" alt="<%= productName %>" class="product-thumbnail">
-                                            <div>
-                                                <div class="fw-bold text-dark small"><%= productName %></div>
-                                                <div class="text-muted small">&#8377; <%= productPrice %></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="text-center py-3">
-                                        <span class="fw-bold text-secondary text-center small">x<%= item.quantity %></span>
-                                    </td>
-                                    <td class="text-end fw-bold text-dark subtotal-price py-3" id="subTotal-<%= index %>">
-                                        &#8377; <%= item.quantity * productPrice %>
-                                    </td>
-                                </tr>
-                            <% }) } else { %>
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-4">Your cart is currently empty.</td>
-                                </tr>
-                            <% } %>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <h5 class="fw-bold mb-3">Review Your Items</h5>
+    <div class="table-responsive">
+        <table class="table align-middle m-0">
+            <thead>
+                <tr class="text-muted small border-bottom">
+                    <th class="pb-2">Product</th>
+                    <th class="text-center pb-2">Quantity</th>
+                    <th class="text-end pb-2">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (locals.cart && cart.length > 0) { 
+                    let items = cart[0].items || cart[0].products || [];
+                    items.forEach((item, index) => { 
+                        let variant = item.variantId || {};
+                        let product = item.productId || {};
+                        let productName = product.name || "iOS Product";
+                        let productImage = (product.images && product.images.length > 0) ? product.images[0] : '/assets/images/default-device.png';
+
+                        // 1. Determine discounted price first, fallback to standard price
+                        let discountedPrice = item.price || variant.salePrice || variant.discountPrice || product.salePrice || product.discountPrice || variant.price || product.price || 0;
+                        let originalPrice = variant.price || product.price || 0;
+                %>
+                    <tr class="border-bottom">
+                        <td class="py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <img src="<%= productImage %>" alt="<%= productName %>" class="product-thumbnail">
+                                <div>
+                                    <div class="fw-bold text-dark small"><%= productName %></div>
+                                    <div class="text-muted small">
+                                        &#8377; <%= discountedPrice %>
+                                        <% if (originalPrice > discountedPrice) { %>
+                                            <span class="text-decoration-line-through text-muted ms-1" style="font-size: 0.75rem;">&#8377; <%= originalPrice %></span>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center py-3">
+                            <span class="fw-bold text-secondary text-center small">x<%= item.quantity %></span>
+                        </td>
+                        <td class="text-end fw-bold text-dark subtotal-price py-3" id="subTotal-<%= index %>">
+                            &#8377; <%= item.quantity * discountedPrice %>
+                        </td>
+                    </tr>
+                <% }) } else { %>
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">Your cart is currently empty.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>
 
             <div id="editAddress" class="card border-0 shadow-sm p-4 mb-4 d-none" style="border-radius: 16px; background: var(--apple-gray);">
                 <h5 class="fw-bold mb-3" id="formActionTitle">Address Information</h5>
@@ -261,7 +268,6 @@
                         </div>
                     </div>
 
-                    <!-- Razorpay Payment Option -->
                     <div class="form-check p-3 rounded border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
                         <div>
                             <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="razorpay" value="Razorpay" checked>
@@ -270,9 +276,17 @@
                             </label>
                         </div>
                     </div>
+
+                    <div class="form-check p-3 rounded border d-flex align-items-center justify-content-between" style="border-radius: 10px !important;">
+                        <div>
+                            <input class="form-check-input ms-0 me-2" type="radio" name="paymentMethod" id="wallet" value="Wallet">
+                            <label class="form-check-label fw-bold small text-dark" for="wallet" style="cursor: pointer;">
+                                iZen Wallet (Balance: &#8377;<%= locals.wallet ? wallet.balance : 0 %>)
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
-
         </div>
 
         <div class="col-lg-4">
@@ -280,39 +294,62 @@
                 <h6 class="fw-bold mb-2 text-dark uppercase tracking-wide" style="font-size: 0.85rem; letter-spacing: 0.5px;">ORDER SUMMARY</h6>
                 <hr class="my-2 text-muted opacity-20">
                 
+                <!-- Promo Coupon Section -->
                 <div class="mb-3">
                     <label class="form-label fw-bold text-muted mb-1" style="font-size: 0.75rem;">Promo Coupon</label>
-                    <select class="form-select border-0 p-2" id="coupon" onchange="couponSelect(this)" style="border-radius: 8px; font-size: 0.8rem; height: 36px; background-color: #ffffff;">
-                        <option value="0,0,undefined,0">No coupon selected</option>
-                        <% if(locals.coupons) { %>
-                            <% coupons.forEach(coupon => { %>
-                                <option value="<%= coupon.discountPercentage %>,<%= coupon.maxDiscount %>,<%= coupon._id %>,<%= coupon.minPurchase %>">
-                                    <%= coupon.code %> (Get <%= coupon.discountPercentage %>% Off)
-                                </option>
-                            <% }) %>
-                        <% } %>
-                    </select>
+                    <div class="input-group">
+                        <select class="form-select border-0 p-2" id="coupon" style="border-radius: 8px 0 0 8px; font-size: 0.8rem; height: 38px; background-color: #ffffff;">
+                            <option value="">Select a coupon</option>
+                            <% if (typeof coupons !== 'undefined' && coupons && coupons.length > 0) { %>
+                                <% coupons.forEach(coupon => { %>
+                                    <option 
+                                        value="<%= coupon._id %>"
+                                        data-code="<%= coupon.code || coupon.name || '' %>"
+                                        data-type="<%= coupon.discountType || 'percentage' %>"
+                                        data-value="<%= coupon.discountValue || coupon.discount || 0 %>"
+                                        data-max-discount="<%= coupon.maxDiscountAmount || coupon.maxOfferAmount || 0 %>"
+                                        data-min-order="<%= coupon.minOrderAmount || coupon.minimumPrice || 0 %>"
+                                    >
+                                        <%= coupon.code || coupon.name %> - 
+                                        <% if ((coupon.discountType || 'percentage') === 'percentage') { %>
+                                            <%= coupon.discountValue || coupon.discount %>% OFF
+                                        <% } else { %>
+                                            &#8377;<%= coupon.discountValue || coupon.discount %> OFF
+                                        <% } %>
+                                        <% if ((coupon.minOrderAmount || coupon.minimumPrice || 0) > 0) { %>
+                                            (Min: &#8377;<%= coupon.minOrderAmount || coupon.minimumPrice %>)
+                                        <% } %>
+                                    </option>
+                                <% }) %>
+                            <% } %>
+                        </select>
+                        <button class="btn btn-dark fw-bold px-3" id="couponBtn" onclick="toggleCoupon()" style="border-radius: 0 8px 8px 0; font-size: 0.8rem;">
+                            Apply
+                        </button>
+                    </div>
+                    <div id="couponStatusMsg" class="small mt-1 fw-medium"></div>
                 </div>
 
+                <!-- Price Breakdown -->
                 <div class="d-flex justify-content-between py-1.5 text-muted" style="font-size: 0.8rem;">
-                    <span>Subtotal</span>
+                    <span>Items Subtotal</span>
                     <span class="fw-semibold text-dark">&#8377;<span id="totalPrice"><%= locals.totalPriceBeforeDiscount || 0 %></span></span>
                 </div>
                 
                 <div class="d-flex justify-content-between py-1.5 text-muted" style="font-size: 0.8rem;">
-                    <span>Discount</span>
-                    <span class="text-success fw-semibold">-<span id="couponDiscount">&#8377;0</span></span>
+                    <span>Coupon Discount</span>
+                    <span class="text-success fw-semibold">-&#8377;<span id="couponDiscount">0</span></span>
                 </div>
                 
                 <div class="d-flex justify-content-between py-1.5 text-muted" style="font-size: 0.8rem;">
-                    <span>Shipping</span>
+                    <span>Delivery Fee</span>
                     <span class="fw-semibold text-dark">&#8377;50</span>
                 </div>
                 
                 <hr class="my-2 text-muted opacity-20">
 
                 <div class="d-flex justify-content-between align-items-center pt-1 mb-3">
-                    <span class="fw-bold text-dark" style="font-size: 0.9rem;">Total Due</span>
+                    <span class="fw-bold text-dark" style="font-size: 0.9rem;">Total Payable</span>
                     <span class="fw-bold h6 m-0" style="color: var(--izen-orange); font-size: 1.1rem;">&#8377;<span id="payablePrice"><%= (locals.totalPriceBeforeDiscount || 0) + 50 %></span></span>
                 </div>
                 
@@ -331,14 +368,27 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
-    window.addEventListener("unload", function () {});
+    // Handle bfcache page restoration
+    window.addEventListener("pageshow", function (event) {
+        if (event.persisted) {
+            window.location.reload();
+        }
+    });
 
     let activeAddressId = "<%= (locals.address && Array.isArray(address) && address.find(a => a.isSelected)) ? address.find(a => a.isSelected)._id : '' %>";
     const cartId = "<%= (locals.cart && locals.cart[0]) ? locals.cart[0]._id : '' %>";
     const walletBalance = Number("<%= locals.wallet?.balance || 0 %>");
     
     let discountAmount = 0;
-    let couponId;
+    let couponId = undefined;
+    let isCouponApplied = false;
+
+    function clearValidationMessages() {
+        ['fullnameMsg', 'phoneMsg', 'emailMsg', 'pincodeMsg', 'addressMsg'].forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) elem.textContent = "";
+        });
+    }
 
     async function selectAddressRoute(index, addressDocId) {
         try {
@@ -347,19 +397,20 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ index, addressId: addressDocId })
             });
-            if(response.ok) {
+            if (response.ok) {
                 window.location.reload();
             } else {
-                console.error("Failed to alter server address state selection context flag.");
+                console.error("Failed to select address.");
             }
-        } catch(err) {
+        } catch (err) {
             console.error("Error setting active address:", err);
         }
     }
 
     function addNewAddressToggle() {
-        document.getElementById("productTable").classList.add("d-none");
-        document.getElementById("editAddress").classList.remove("d-none");
+        clearValidationMessages();
+        document.getElementById("productTable")?.classList.add("d-none");
+        document.getElementById("editAddress")?.classList.remove("d-none");
         document.getElementById("formActionTitle").textContent = "Add New Shipping Address";
         
         document.getElementById("addressIdField").value = "";
@@ -370,25 +421,28 @@
         document.getElementById("email").value = "";
         document.getElementById("pincode").value = "";
         document.getElementById("address").value = "";
+        document.getElementById("typeHome").checked = true;
+
         window.location.href = "#editAddress";
     }
 
     function populateEditAddress(index) {
-        document.getElementById("productTable").classList.add("d-none");
-        document.getElementById("editAddress").classList.remove("d-none");
+        clearValidationMessages();
+        document.getElementById("productTable")?.classList.add("d-none");
+        document.getElementById("editAddress")?.classList.remove("d-none");
         document.getElementById("formActionTitle").textContent = "Edit Shipping Address";
         
-        const rawJson = document.getElementById(`address-data-${index}`).textContent;
+        const rawJson = document.getElementById(`address-data-${index}`)?.textContent || "{}";
         const addrData = JSON.parse(rawJson);
         
-        document.getElementById("addressIdField").value = addrData.id || addrData._id;
+        document.getElementById("addressIdField").value = addrData.id || addrData._id || "";
         document.getElementById("addressIndexField").value = index;
         
-        document.getElementById("fullname").value = addrData.fullname;
-        document.getElementById("phone").value = addrData.phone;
-        document.getElementById("email").value = addrData.email;
-        document.getElementById("pincode").value = addrData.pincode;
-        document.getElementById("address").value = addrData.address;
+        document.getElementById("fullname").value = addrData.fullname || "";
+        document.getElementById("phone").value = addrData.phone || "";
+        document.getElementById("email").value = addrData.email || "";
+        document.getElementById("pincode").value = addrData.pincode || "";
+        document.getElementById("address").value = addrData.address || "";
         
         if (addrData.addressType === "Work") {
             document.getElementById("typeWork").checked = true;
@@ -400,8 +454,9 @@
     }
 
     function cancelEdit() {
-        document.getElementById("productTable").classList.remove("d-none");
-        document.getElementById("editAddress").classList.add("d-none");
+        clearValidationMessages();
+        document.getElementById("productTable")?.classList.remove("d-none");
+        document.getElementById("editAddress")?.classList.add("d-none");
         window.location.href = "#productTable";
     }
 
@@ -428,31 +483,33 @@
         const targetAddressId = document.getElementById("addressIdField").value;
         const targetIndex = document.getElementById("addressIndexField").value;
 
-        fullnameMsg.textContent = ""; phoneMsg.textContent = ""; emailMsg.textContent = ""; pincodeMsg.textContent = ""; addressMsg.textContent = "";
+        clearValidationMessages();
 
         let isValid = true;
-        if (!fullnameRegex.test(fullname.value)) { fullnameMsg.textContent = "Please enter a valid full name."; isValid = false; }
-        if (!phoneRegex.test(phone.value)) { phoneMsg.textContent = "Please enter a valid mobile number (7 to 15 digits)."; isValid = false; }
-        if (!emailRegex.test(email.value)) { emailMsg.textContent = "Please enter a correct email address format."; isValid = false; }
-        if (!pincodeRegex.test(pincode.value)) { pincodeMsg.textContent = "Please enter a correct 6-digit postal pincode."; isValid = false; }
-        if (!addressRegex.test(address.value)) { addressMsg.textContent = "Please fill out address details fully."; isValid = false; }
+        if (!fullnameRegex.test(fullname.value.trim())) { if (fullnameMsg) fullnameMsg.textContent = "Please enter a valid full name."; isValid = false; }
+        if (!phoneRegex.test(phone.value.trim())) { if (phoneMsg) phoneMsg.textContent = "Please enter a valid mobile number (7 to 15 digits)."; isValid = false; }
+        if (!emailRegex.test(email.value.trim())) { if (emailMsg) emailMsg.textContent = "Please enter a correct email address format."; isValid = false; }
+        if (!pincodeRegex.test(pincode.value.trim())) { if (pincodeMsg) pincodeMsg.textContent = "Please enter a correct 6-digit postal pincode."; isValid = false; }
+        if (!addressRegex.test(address.value.trim())) { if (addressMsg) addressMsg.textContent = "Please fill out address details fully."; isValid = false; }
 
         if (!isValid) return;
 
-        const endpoint = '/checkout/edit-address';
-        const method = 'PATCH'; 
+        // Dynamic Endpoint Selection based on operation context
+        const isEditMode = Boolean(targetAddressId);
+        const endpoint = isEditMode ? '/checkout/edit-address' : '/checkout/add-address';
+        const method = isEditMode ? 'PATCH' : 'POST'; 
 
         try {
             const request = await fetch(endpoint, {
                 method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    fullname: fullname.value, 
-                    phone: phone.value, 
-                    email: email.value, 
-                    pincode: pincode.value,
-                    address: address.value, 
-                    addressType: addressType.value || "Home", 
+                    fullname: fullname.value.trim(), 
+                    phone: phone.value.trim(), 
+                    email: email.value.trim(), 
+                    pincode: pincode.value.trim(), 
+                    address: address.value.trim(), 
+                    addressType: addressType ? addressType.value : "Home", 
                     addressId: targetAddressId || undefined, 
                     index: targetIndex || undefined
                 })
@@ -467,35 +524,173 @@
             }
         } catch (err) {
             console.error("Error saving address record:", err);
+            Swal.fire({ icon: "error", title: "Error", text: "Server issue while saving address." });
+        }
+    }
+
+    function toggleCoupon() {
+        if (isCouponApplied) {
+            removeCoupon();
+        } else {
+            applyCoupon();
+        }
+    }
+
+    function getSubtotalAmount() {
+        const totalElements = document.querySelectorAll('.subtotal-price');
+        let subtotal = 0;
+        
+        if (totalElements && totalElements.length > 0) {
+            totalElements.forEach(ele => {
+                subtotal += Number(ele.textContent.replace(/[^\d.]/g, '')) || 0;
+            });
+        }
+        
+        if (subtotal <= 0) {
+            const totalPriceElem = document.getElementById("totalPrice");
+            if (totalPriceElem) {
+                subtotal = Number(totalPriceElem.textContent.replace(/[^\d.]/g, '')) || 0;
+            }
+        }
+        
+        return subtotal;
+    }
+
+    function applyCoupon() {
+        const couponSelect = document.getElementById("coupon");
+        const statusMsg = document.getElementById("couponStatusMsg");
+        const btn = document.getElementById("couponBtn");
+
+        if (!couponSelect || !couponSelect.value) {
+            Swal.fire({ icon: "warning", title: "Select Coupon", text: "Please select a valid promo coupon code first." });
+            return;
+        }
+
+        const selectedOption = couponSelect.options[couponSelect.selectedIndex];
+        const minOrder = Number(selectedOption.dataset.minOrder) || 0;
+        const code = selectedOption.dataset.code || "Coupon";
+        const subtotal = getSubtotalAmount();
+
+        if (subtotal < minOrder) {
+            Swal.fire({
+                icon: "warning",
+                title: "Minimum Purchase Required",
+                text: `You need a subtotal of at least ₹${minOrder} to apply ${code}.`
+            });
+            return;
+        }
+
+        isCouponApplied = true;
+        couponId = couponSelect.value;
+        
+        couponSelect.disabled = true;
+        if (btn) {
+            btn.textContent = "Remove";
+            btn.classList.replace("btn-dark", "btn-outline-danger");
+        }
+        if (statusMsg) {
+            statusMsg.className = "small mt-1 text-success fw-bold";
+            statusMsg.textContent = `Coupon '${code}' applied successfully!`;
+        }
+
+        recalculateSummary();
+    }
+
+    function removeCoupon() {
+        const couponSelect = document.getElementById("coupon");
+        const statusMsg = document.getElementById("couponStatusMsg");
+        const btn = document.getElementById("couponBtn");
+
+        isCouponApplied = false;
+        couponId = undefined;
+        discountAmount = 0;
+        
+        if (couponSelect) {
+            couponSelect.disabled = false;
+            couponSelect.value = "";
+        }
+        if (btn) {
+            btn.textContent = "Apply";
+            btn.classList.replace("btn-outline-danger", "btn-dark");
+        }
+        if (statusMsg) {
+            statusMsg.className = "small mt-1 text-muted";
+            statusMsg.textContent = "Coupon removed.";
+        }
+
+        recalculateSummary();
+    }
+
+    function recalculateSummary() {
+        const totalPrice = getSubtotalAmount();
+        const couponSelect = document.getElementById("coupon");
+        
+        let calculatedDiscount = 0;
+
+        if (isCouponApplied && couponSelect && couponSelect.selectedIndex >= 0) {
+            const selectedOption = couponSelect.options[couponSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset) {
+                const type = selectedOption.dataset.type || 'percentage';
+                const val = Number(selectedOption.dataset.value) || 0;
+                const maxDiscount = Number(selectedOption.dataset.maxDiscount) || 0;
+
+                if (type === 'percentage') {
+                    calculatedDiscount = (totalPrice * val) / 100;
+                    if (maxDiscount > 0 && calculatedDiscount > maxDiscount) {
+                        calculatedDiscount = maxDiscount;
+                    }
+                } else {
+                    calculatedDiscount = val;
+                }
+            }
+        }
+
+        discountAmount = Math.max(0, Math.round(calculatedDiscount));
+
+        const deliveryFee = 50;
+        const discountedSubtotal = Math.max(0, totalPrice - discountAmount);
+        const payableAmount = discountedSubtotal + deliveryFee;
+
+        const couponDiscountElem = document.getElementById("couponDiscount");
+        if (couponDiscountElem) {
+            couponDiscountElem.textContent = discountAmount;
+        }
+
+        if (document.getElementById("totalPrice")) {
+            document.getElementById("totalPrice").textContent = totalPrice;
+        }
+        
+        if (document.getElementById("payablePrice")) {
+            document.getElementById("payablePrice").textContent = payableAmount;
+        }
+
+        if (document.getElementById("finalPrice")) {
+            document.getElementById("finalPrice").textContent = discountedSubtotal;
+        }
+
+        const cod = document.getElementById("cod");
+        if (cod) {
+            if (payableAmount >= 100000) {
+                if (cod.checked) {
+                    cod.checked = false;
+                    const razorpayElement = document.getElementById("razorpay");
+                    if (razorpayElement) razorpayElement.checked = true;
+                }
+                cod.disabled = true;
+            } else {
+                cod.removeAttribute("disabled");
+            }
         }
     }
 
     async function placeOrder() {
-        const totalPriceBeforeDiscount = Number(document.getElementById("totalPrice").textContent);
-        const payablePrice = Number(document.getElementById("payablePrice").textContent);
+        const totalPriceBeforeDiscount = getSubtotalAmount();
+        const deliveryFee = 50;
+        const payablePrice = Math.max(0, totalPriceBeforeDiscount - discountAmount) + deliveryFee;
         const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value;
 
-        const coupon = document.getElementById("coupon");
-        let minPurchasePrice = 0;
-        
-        if (coupon && coupon.value) {
-            const splitVals = coupon.value.split(",");
-            if(splitVals.length >= 4) {
-                minPurchasePrice = Number(splitVals[3] || 0);
-            }
-        }
-
-        if (totalPriceBeforeDiscount < minPurchasePrice) {
-            Swal.fire({
-                icon: "warning",
-                title: "Minimum Amount Required",
-                text: `You need a subtotal of at least ₹${minPurchasePrice} to apply this promo coupon.`
-            });
-            return;
-        }
-        
-        if (activeAddressId === "") {
-            Swal.fire({ icon: "error", title: "Address Required", text: "Please pick or click to highlight a delivery address to continue." });
+        if (!activeAddressId) {
+            Swal.fire({ icon: "error", title: "Address Required", text: "Please pick or select a delivery address to continue." });
             return;
         }
         if (!paymentMethod) {
@@ -503,9 +698,17 @@
             return;
         }
 
+        if (paymentMethod === "Wallet" && walletBalance < payablePrice) {
+            Swal.fire({ 
+                icon: "error", 
+                title: "Insufficient Wallet Balance", 
+                text: `Your wallet balance (₹${walletBalance}) is insufficient for this order (₹${payablePrice}).` 
+            });
+            return;
+        }
+
         if (paymentMethod === "Razorpay") {
             try {
-                // Step 1: Create Razorpay Order from server
                 const orderRes = await fetch('/checkout/create-razorpay-order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -513,12 +716,11 @@
                 });
                 const orderData = await orderRes.json();
 
-                if (!orderData.success) {
+                if (!orderRes.ok || !orderData.success) {
                     Swal.fire({ icon: "error", title: "Payment Error", text: orderData.message || "Could not initialize payment gateway." });
                     return;
                 }
 
-                // Step 2: Configure Razorpay Options
                 const options = {
                     key: orderData.key,
                     amount: orderData.amount,
@@ -527,46 +729,45 @@
                     description: "iOS Product Purchase",
                     order_id: orderData.razorpayOrderId,
                     handler: async function (response) {
-                        // Step 3: Verify Razorpay Payment and finalize order
-                        const verifyRes = await fetch('/checkout/verify-razorpay-payment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                orderPayload: {
-                                    addressId: activeAddressId,
-                                    cartId,
-                                    totalPriceBeforeDiscount,
-                                    payablePrice,
-                                    discountAmount,
-                                    paymentMethod,
-                                    couponId: couponId || undefined
-                                }
-                            })
-                        });
-                        const verifyData = await verifyRes.json();
-                        if (verifyRes.ok && verifyData.success) {
-                            window.location.href = "/checkout/order-success";
-                        } else {
-                            Swal.fire({ icon: "error", title: "Payment Verification Failed", text: verifyData.message || "Payment verification failed." });
+                        try {
+                            const verifyRes = await fetch('/checkout/verify-razorpay-payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    orderPayload: {
+                                        addressId: activeAddressId,
+                                        cartId,
+                                        totalPriceBeforeDiscount,
+                                        payablePrice,
+                                        discountAmount,
+                                        paymentMethod,
+                                        couponId: couponId || undefined
+                                    }
+                                })
+                            });
+                            const verifyData = await verifyRes.json();
+                            if (verifyRes.ok && verifyData.success) {
+                                window.location.href = "/checkout/order-success";
+                            } else {
+                                Swal.fire({ icon: "error", title: "Payment Verification Failed", text: verifyData.message || "Payment verification failed." });
+                            }
+                        } catch (err) {
+                            console.error("Verification error:", err);
+                            Swal.fire({ icon: "error", title: "Error", text: "Failed to verify transaction status." });
                         }
                     },
                     modal: {
                         ondismiss: function () {
-                            // User manually closed the popup
                             window.location.href = '/checkout/payment-failure?reason=' + encodeURIComponent('Payment window was closed by the user.');
                         }
                     },
-                    theme: {
-                        color: "#ff6b00"
-                    }
+                    theme: { color: "#ff6b00" }
                 };
 
                 const rzp = new Razorpay(options);
-
-                // Step 4: Handle Payment Failure event
                 rzp.on('payment.failed', function (response) {
                     const reason = encodeURIComponent(response.error.description || 'Transaction failed.');
                     window.location.href = `/checkout/payment-failure?reason=${reason}`;
@@ -580,7 +781,6 @@
             return;
         }
 
-        // Standard COD handling
         try {
             const request = await fetch('/checkout/place-order', {
                 method: "POST",
@@ -608,65 +808,5 @@
             Swal.fire({ icon: "error", title: "Error", text: "Something went wrong handling your checkout transaction." });
         }
     }
-
-    function couponSelect(element) {
-        recalculateSummary();
-    }
-
-    function recalculateSummary() {
-        const totalElements = document.querySelectorAll('.subtotal-price');
-        let totalPrice = 0;
-        totalElements.forEach(ele => {
-            totalPrice += Number(ele.innerHTML.replace(/[^\d]/g, ''));
-        });
-        
-        const coupon = document.getElementById("coupon");
-        let discountPercentage = 0;
-        let maxDiscountPrice = 0;
-        let selectedCouponId = undefined;
-
-        if (coupon && coupon.value) {
-            const splitVals = coupon.value.split(",");
-            discountPercentage = Number(splitVals[0] || 0);
-            maxDiscountPrice = Number(splitVals[1] || 0);
-            selectedCouponId = splitVals[2] || undefined;
-        }
-
-        couponId = selectedCouponId;
-        const couponDiscount = Number(discountPercentage);
-        const discountableAmount = totalPrice * (couponDiscount / 100);
-        const couponvalue = document.getElementById("couponDiscount");
-       
-        let payableAmount;
-        if (discountableAmount > maxDiscountPrice && maxDiscountPrice > 0) {
-            discountAmount = Number(maxDiscountPrice);
-            payableAmount = Math.floor(totalPrice - maxDiscountPrice);
-            if (couponvalue) couponvalue.innerHTML = `&#8377;${maxDiscountPrice}`;  
-        } else { 
-            discountAmount = Math.round(discountableAmount);
-            payableAmount = Math.floor(totalPrice - discountableAmount);
-            if (couponvalue) couponvalue.innerHTML = `&#8377;${discountAmount}`;  
-        }
-
-        // COD Maximum Limit constraint checks
-        const cod = document.getElementById("cod");
-        if (cod) {
-            if (payableAmount >= 100000) {
-                if (cod.checked) {
-                    cod.checked = false;
-                    const razorpayElement = document.getElementById("razorpay");
-                    if (razorpayElement) razorpayElement.checked = true;
-                }
-                cod.disabled = true;                        
-            } else {
-                cod.removeAttribute("disabled");    
-            }
-        }
-        
-        if (document.getElementById("totalPrice")) document.getElementById("totalPrice").innerHTML = `${totalPrice}`;
-        if (document.getElementById("finalPrice")) document.getElementById("finalPrice").textContent = payableAmount;
-        if (document.getElementById("payablePrice")) document.getElementById("payablePrice").textContent = payableAmount + 50;
-    }
 </script>
-
 <%- include('../partials/User/userFooter') %>

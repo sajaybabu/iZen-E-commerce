@@ -1,55 +1,60 @@
 const express = require("express");
 const router = express.Router();
 const passport = require("passport");
+
+// Controllers
 const userController = require("../../controllers/user/userController");
 const userProductController = require("../../controllers/user/userProductController");
 const wishlistController = require('../../controllers/user/wishlistController');
+const walletController = require('../../controllers/user/walletController');
+
+// Middlewares & Config
 const upload = require('../../config/multer'); 
 const { isLogin, isLogout } = require("../../middlewares/auth");
 
-// --- HOME ---
+//  PUBLIC ROUTES (HOME & STORE)
 router.get("/", userController.loadHome); 
-
-// --- SHOP / PRODUCTS ---
 router.get("/allProducts", userProductController.getAllProductsPage);
 
-// --- GOOGLE AUTH ---
+//  GOOGLE AUTHENTICATION
 router.get("/auth/google", isLogout, passport.authenticate("google", { scope: ["profile", "email"], prompt: "select_account" }));
 router.get("/auth/google/callback", passport.authenticate("google", { failureRedirect: "/login" }), userController.handleGoogleCallback);
 
-// --- SIGNUP ---
+//  AUTHENTICATION (SIGNUP, LOGIN, LOGOUT)
 router.get("/signup", isLogout, userController.getSignupPage);
 router.post("/signup", isLogout, userController.handleSignup);
-router.get("/verify-otp", isLogout, userController.getSignupOtpPage);
-router.post("/verify-otp", isLogout, userController.verifyOTP);
-router.post("/resend-otp", isLogout, userController.resendOTP);
 
-// --- LOGIN & LOGOUT ---
+// OTP Verification (Keep lightweight auth check so temp session isn't killed)
+router.get("/verify-otp", userController.getSignupOtpPage);
+router.post("/verify-otp", userController.verifyOTP);
+router.post("/resend-otp", userController.resendOTP);
+
 router.get("/login", isLogout, userController.getLoginPage);
 router.post("/login", isLogout, userController.handleLogin);
 router.get("/logout", userController.handleLogout);
 
-// --- FORGOT PASSWORD ---
+//  FORGOT & RESET PASSWORD
 router.get("/forgot-password", isLogout, userController.getForgotEmailPage); 
 router.post("/forgot-password", isLogout, userController.handleForgotPassword);
-router.get("/forgot-password-otp", isLogout, userController.getForgotOtpPage);
-router.post("/forgot-password-otp", isLogout, userController.verifyOTP); 
-router.post("/resend-forgot-otp", isLogout, userController.resendOTP);
-router.get("/changePassword", isLogout, userController.getResetPasswordPage);
-router.post("/changePassword", isLogout, userController.handleResetPassword); 
+router.get("/forgot-password-otp", userController.getForgotOtpPage);
+router.post("/forgot-password-otp", userController.verifyOTP); 
+router.post("/resend-forgot-otp", userController.resendOTP);
+router.get("/changePassword", userController.getResetPasswordPage);
+router.post("/changePassword", userController.handleResetPassword); 
+
+// Authenticated Password Change (From Profile)
 router.post('/change-password', isLogin, userController.changePassword);
 
-// --- PROFILE & AVATAR ---
+//  USER PROFILE & AVATAR MANAGEMENT
 router.get('/profile', isLogin, userController.loadProfile);
 router.post('/user/update-avatar', isLogin, upload.single('profileImage'), userController.updateAvatar);
 router.post('/remove-avatar', isLogin, userController.removeAvatar);
 
-// --- EDIT PROFILE ---
 router.get('/edit-profile', isLogin, userController.getEditProfile);
 router.post('/edit-profile', isLogin, userController.updateProfile);
 router.post('/verify-email-otp', isLogin, userController.verifyEmailUpdateOTP);
 
-// --- ADDRESS MANAGEMENT ---
+//  ADDRESS MANAGEMENT
 router.get('/address', isLogin, userController.loadAddressPage);
 router.post('/add-address', isLogin, userController.addAddress);
 router.get('/edit-address/:id', isLogin, userController.getEditAddress);
@@ -58,10 +63,13 @@ router.post('/set-default-address', isLogin, userController.handleSetDefaultAddr
 router.delete('/delete-address/:id', isLogin, userController.deleteAddress);
 router.get('/delete-address/:id', isLogin, userController.deleteAddress); 
 
-// Wishlist Routing Interface
-router.get('/wishlist', wishlistController.getWishlistPage);
-router.post('/wishlist/add', wishlistController.addToWishlist);
-router.post('/wishlist/moveAllToCart', wishlistController.moveAllToCart);
-router.delete('/wishlist/remove/:productId', wishlistController.removeFromWishlist);
+//  WISHLIST ROUTES 
+router.get('/wishlist', isLogin, wishlistController.getWishlistPage);
+router.post('/wishlist/add', isLogin, wishlistController.addToWishlist);
+router.post('/wishlist/moveAllToCart', isLogin, wishlistController.moveAllToCart);
+router.delete('/wishlist/remove/:productId', isLogin, wishlistController.removeFromWishlist);
+
+//  WALLET ROUTES 
+router.get('/wallet', isLogin, walletController.getWalletPage);
 
 module.exports = router;

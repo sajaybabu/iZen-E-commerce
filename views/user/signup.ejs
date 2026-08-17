@@ -249,6 +249,11 @@
                     Must have 8+ characters, one uppercase letter, and one special character.
                   </small>
                 </div>
+
+                <div class="mb-custom">
+                  <input type="text" class="form-control text-uppercase" name="referralCode" id="referralCode" placeholder="Referral Code (Optional)">
+                  <small id="referralCodeError" class="error-msg"></small>
+                </div>
                 
                 <button type="submit" class="btn btn-create-account">Create Account</button>
               </form>
@@ -271,6 +276,14 @@
       const passwordInput = document.getElementById('password');
       const togglePassword = document.getElementById('togglePassword');
       const passHint = document.getElementById('passHint');
+      const referralInput = document.getElementById('referralCode');
+
+      // Auto-fill referral code from query params (e.g., /signup?ref=IZ8A3K9)
+      const urlParams = new URLSearchParams(window.location.search);
+      const refParam = urlParams.get('ref');
+      if (refParam) {
+        referralInput.value = refParam.toUpperCase();
+      }
 
       // Password Toggle
       togglePassword.addEventListener('click', function () {

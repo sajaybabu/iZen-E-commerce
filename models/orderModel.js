@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// function to generate a unique, clean order ID 
+// Function to generate a unique order ID 
 const generateOrderId = () => {
     const prefix = 'iZEN';
     const timestamp = Date.now().toString().slice(-4);
@@ -27,11 +27,10 @@ const orderSchema = new mongoose.Schema({
             required: true
         },
         name: { type: String, required: true },
-        variantId: { type: String, required: true }, // Embedded variant array ID reference
+        variantId: { type: String, required: true },
         variantColor: { type: String },
         quantity: { type: Number, required: true, min: 1 },
         price: { type: Number, required: true },
-        // Item level status tracking allows specific products to be cancelled/returned
         status: {
             type: String,
             enum: ['Pending', 'Shipped', 'Delivered', 'Cancelled', 'Returned', 'Cancel Requested', 'Return Request Pending'],
@@ -58,12 +57,23 @@ const orderSchema = new mongoose.Schema({
         enum: ['Pending', 'Paid', 'Failed', 'Refunded'],
         default: 'Pending'
     },
+    status: {
+        type: String,
+        enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Return Requested', 'Return Request Pending', 'Returned'],
+        default: 'Pending'
+    },
     subtotal: { type: Number, required: true },
     discountAmount: { type: Number, default: 0 },
-    totalAmount: { type: Number, required: true }
+    totalAmount: { type: Number, required: true },
+    couponApplied: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Coupon',
+        default: null
+    },
+    razorpayOrderId: { type: String, default: null },
+    razorpayPaymentId: { type: String, default: null }
 }, { timestamps: true });
 
-// Indexing for rapid order searching
 orderSchema.index({ orderId: 1, user: 1 });
 
 module.exports = mongoose.model('Order', orderSchema);

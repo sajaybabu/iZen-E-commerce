@@ -2,7 +2,6 @@ const checkoutService = require('../../services/user/checkoutService');
 const PDFDocument = require('pdfkit');
 const User = require('../../models/userModel');
 const Order = require('../../models/orderModel'); 
-const Product = require('../../models/Product');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 
@@ -18,13 +17,26 @@ const getCheckoutPage = async (req, res) => {
         if (!userId) return res.redirect('/login');
 
         const checkoutData = await checkoutService.getCheckoutData(userId) || {};
+        const appliedCoupon = req.session.appliedCoupon || null;
+
+        // Ensure cart items carry the offer price evaluated from cartService
+        const cartList = (checkoutData.cart || []).map(cart => {
+            if (cart.items) {
+                cart.items = cart.items.map(item => ({
+                    ...item,
+                    price: item.price ?? item.variantDoc?.salePrice ?? item.variantDoc?.offerPrice ?? item.variantDoc?.price ?? item.productDoc?.salePrice ?? item.productDoc?.offerPrice ?? item.productDoc?.price ?? 0
+                }));
+            }
+            return cart;
+        });
 
         return res.render('user/checkout', {
-            cart: checkoutData.cart || [],
+            cart: cartList,
             address: checkoutData.addressList || [], 
             coupons: checkoutData.coupons || [],
             wallet: checkoutData.wallet || { balance: 0 },
             totalPriceBeforeDiscount: checkoutData.totalPriceBeforeDiscount || 0,
+            appliedCoupon: appliedCoupon,
             addressSelected: checkoutData.addressSelected || false,
             razorpayKeyId: process.env.RAZORPAY_KEY_ID
         });
@@ -114,15 +126,27 @@ const placeOrder = async (req, res) => {
 
         const { addressId, cartId, totalPriceBeforeDiscount, payablePrice, discountAmount, paymentMethod, couponId } = req.body;
 
+        const sessionCoupon = req.session.appliedCoupon;
+        const finalDiscount = discountAmount ?? sessionCoupon?.discountAmount ?? 0;
+        const finalCouponId = couponId ?? sessionCoupon?.id ?? null;
+
         if (paymentMethod === 'COD' && payablePrice >= 100000) {
             return res.status(400).json({ success: false, message: "Cash on Delivery is not allowed for transactions of ₹1,00,000 or above." });
         }
 
         const orderResult = await checkoutService.createOrder({
-            userId, addressId, cartId, totalPriceBeforeDiscount, payablePrice, discountAmount, paymentMethod, couponId
+            userId, 
+            addressId, 
+            cartId, 
+            totalPriceBeforeDiscount, 
+            payablePrice, 
+            discountAmount: finalDiscount, 
+            paymentMethod, 
+            couponId: finalCouponId
         });
 
         if (orderResult.success) {
+            delete req.session.appliedCoupon;
             req.session.lastOrderId = orderResult.orderId;
             return res.status(200).json({ success: true, orderId: orderResult.orderId });
         } else {
@@ -130,7 +154,7 @@ const placeOrder = async (req, res) => {
         }
     } catch (error) {
         console.error("Place order processing crash:", error);
-        return res.status(500).json({ success: false, message: "Internal server error." });
+        return res.status(500).json({ success: false, message: error.message || "Internal server error." });
     }
 };
 
@@ -145,7 +169,7 @@ const createRazorpayOrder = async (req, res) => {
         }
 
         const options = {
-            amount: Math.round(payablePrice * 100), // Convert INR to paise
+            amount: Math.round(payablePrice * 100),
             currency: 'INR',
             receipt: `izen_rcpt_${Date.now()}`
         };
@@ -167,7 +191,6 @@ const createRazorpayOrder = async (req, res) => {
 
 const verifyRazorpayPayment = async (req, res) => {
     try {
-        // Resolve user ID across all possible session structures
         const userId = req.session.user?.id || 
                        req.session.user?._id || 
                        req.session.user_id || 
@@ -185,7 +208,6 @@ const verifyRazorpayPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: "Missing required payment verification details." });
         }
 
-        // Verify Razorpay HMAC Signature
         const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
         hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
         const generatedSignature = hmac.digest('hex');
@@ -194,22 +216,26 @@ const verifyRazorpayPayment = async (req, res) => {
             return res.status(400).json({ success: false, message: "Payment verification failed. Invalid signature." });
         }
 
-        // Signature is valid -> Create order in DB using checkoutService
+        const sessionCoupon = req.session.appliedCoupon;
+        const finalDiscount = orderPayload.discountAmount ?? sessionCoupon?.discountAmount ?? 0;
+        const finalCouponId = orderPayload.couponId ?? sessionCoupon?.id ?? null;
+
         const orderResult = await checkoutService.createOrder({
             userId,
             addressId: orderPayload.addressId,
             cartId: orderPayload.cartId,
             totalPriceBeforeDiscount: orderPayload.totalPriceBeforeDiscount,
             payablePrice: orderPayload.payablePrice,
-            discountAmount: orderPayload.discountAmount,
+            discountAmount: finalDiscount,
             paymentMethod: orderPayload.paymentMethod || 'Razorpay',
-            couponId: orderPayload.couponId,
+            couponId: finalCouponId,
             paymentStatus: 'Paid',
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id
         });
 
         if (orderResult.success) {
+            delete req.session.appliedCoupon;
             req.session.lastOrderId = orderResult.orderId;
             return res.status(200).json({ success: true, orderId: orderResult.orderId });
         } else {
@@ -221,7 +247,7 @@ const verifyRazorpayPayment = async (req, res) => {
     }
 };
 
-// --- END RAZORPAY---
+// --- END RAZORPAY ---
 
 const getOrderSuccessPage = async (req, res) => {
     const orderId = req.session.lastOrderId || "IZN-" + Math.floor(100000 + Math.random() * 900000);
@@ -253,6 +279,11 @@ const getOrderDetailsPage = async (req, res) => {
         if (!orderDoc) {
             return res.status(404).send("Order data record not found.");
         }
+
+        const calculatedSubtotal = orderDoc.subtotal || orderDoc.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+        const discountVal = orderDoc.discountAmount || 0;
+        const shippingVal = 50;
+        const calculatedTotal = orderDoc.totalAmount || (calculatedSubtotal - discountVal + shippingVal);
 
         const formattedOrderForView = {
             _id: orderDoc._id.toString(), 
@@ -296,10 +327,10 @@ const getOrderDetailsPage = async (req, res) => {
                 };
             }),
             summary: {
-                subtotal: orderDoc.subtotal,
-                shipping: 50,
-                discount: orderDoc.discountAmount || 0,
-                total: orderDoc.totalAmount
+                subtotal: calculatedSubtotal,
+                shipping: shippingVal,
+                discount: discountVal,
+                total: calculatedTotal
             }
         };
 
@@ -313,48 +344,13 @@ const getOrderDetailsPage = async (req, res) => {
 const cancelOrderItem = async (req, res) => {
     try {
         const { orderId, variantId, reason } = req.body;
-        
-        const order = await Order.findById(orderId);
-        if (!order) return res.status(404).json({ success: false, message: "Order not found." });
+        const result = await checkoutService.cancelOrderItem(orderId, variantId, reason);
 
-        const itemIndex = order.items.findIndex(item => String(item.variantId) === String(variantId));
-        if (itemIndex === -1) return res.status(404).json({ success: false, message: "Item not found in order." });
-        
-        const currentStatus = order.items[itemIndex].status.toLowerCase();
-        if (currentStatus === 'cancelled') {
-            return res.status(400).json({ success: false, message: "Item has already been cancelled." });
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json(result);
         }
-        
-        if (['shipped', 'out for delivery', 'delivered', 'returned', 'return request pending'].includes(currentStatus)) {
-            return res.status(400).json({ success: false, message: "This item has moved past warehouse distribution and cannot be cancelled." });
-        }
-
-        order.items[itemIndex].status = 'Cancelled';
-        order.items[itemIndex].cancellationReason = reason || "User requested cancellation.";
-
-        const targetItem = order.items[itemIndex];
-        
-        // Stock Increment Logic
-        await Product.findOneAndUpdate(
-            { _id: targetItem.product, "variants._id": targetItem.variantId },
-            { 
-                $inc: { 
-                    "variants.$.quantity": targetItem.quantity,
-                    "stock": targetItem.quantity 
-                } 
-            }
-        );
-
-        const itemCost = targetItem.price * targetItem.quantity;
-        order.totalAmount = Math.max(0, order.totalAmount - itemCost);
-        order.subtotal = Math.max(0, order.subtotal - itemCost);
-
-        if (order.paymentStatus === 'Paid') {
-            order.paymentStatus = 'Refunded';
-        }
-
-        await order.save();
-        return res.status(200).json({ success: true, message: "Cancellation executed instantly." });
     } catch (error) {
         console.error("Cancel item error:", error);
         return res.status(500).json({ success: false, message: error.message });
@@ -449,17 +445,21 @@ const downloadInvoice = async (req, res) => {
             yPosition += 25;
         });
 
+        const calculatedSubtotal = order.subtotal || order.items.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+        const discountValue = order.discountAmount || 0;
+        const finalTotal = order.totalAmount || (calculatedSubtotal - discountValue + 50);
+
         yPosition += 15;
         doc.moveTo(300, yPosition).lineTo(545, yPosition).strokeColor('#e5e5ea').stroke();
         yPosition += 10;
 
         doc.fontSize(10).fillColor('#6e6e73');
         doc.text('Subtotal:', 300, yPosition);
-        doc.fillColor('#1d1d1f').text(`Rs. ${order.subtotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
+        doc.fillColor('#1d1d1f').text(`Rs. ${calculatedSubtotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
 
         yPosition += 18;
         doc.fillColor('#6e6e73').text('Discount:', 300, yPosition);
-        doc.fillColor('#1d1d1f').text(`-Rs. ${(order.discountAmount || 0).toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
+        doc.fillColor('#1d1d1f').text(`-Rs. ${discountValue.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
 
         yPosition += 18;
         doc.fillColor('#6e6e73').text('Shipping Charges:', 300, yPosition);
@@ -470,7 +470,7 @@ const downloadInvoice = async (req, res) => {
         yPosition += 10;
 
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#1d1d1f').text('Grand Total:', 300, yPosition);
-        doc.text(`Rs. ${order.totalAmount.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
+        doc.text(`Rs. ${finalTotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
 
         doc.fontSize(9).font('Helvetica').fillColor('#86868b').text('Thank you for shopping with iZen! For support, reach out to help@izen.com', 50, 720, { align: 'center', width: 495 });
 
@@ -488,44 +488,13 @@ const cancelAllOrderItems = async (req, res) => {
 
         if (!userId) return res.status(401).json({ success: false, message: "Session unauthenticated." });
 
-        const order = await Order.findOne({ _id: orderId, user: userId });
-        if (!order) return res.status(404).json({ success: false, message: "Order records not found." });
+        const result = await checkoutService.cancelAllOrderItems(orderId, userId);
 
-        const lowercaseStatus = order.status ? order.status.toLowerCase() : '';
-        if (['cancelled', 'shipped', 'out for delivery', 'delivered', 'returned'].includes(lowercaseStatus)) {
-            return res.status(400).json({ success: false, message: "Order state cannot process a cancellation request at this stage." });
+        if (result.success) {
+            return res.status(200).json(result);
+        } else {
+            return res.status(400).json(result);
         }
-
-        let totalRefundAmount = 0;
-
-        for (const item of order.items) {
-            if (item.status.toLowerCase() !== 'cancelled') {
-                await Product.findOneAndUpdate(
-                    { _id: item.product, "variants._id": item.variantId },
-                    { 
-                        $inc: { 
-                            "variants.$.quantity": item.quantity,
-                            "stock": item.quantity 
-                        } 
-                    }
-                );
-                
-                totalRefundAmount += (item.price * item.quantity);
-                item.status = 'Cancelled';
-                item.cancellationReason = "Bulk cancellation requested by customer.";
-            }
-        }
-
-        order.status = 'Cancelled';
-        order.totalAmount = Math.max(0, order.totalAmount - totalRefundAmount);
-        order.subtotal = Math.max(0, order.subtotal - totalRefundAmount);
-
-        if (order.paymentStatus === 'Paid') {
-            order.paymentStatus = 'Refunded';
-        }
-
-        await order.save();
-        return res.status(200).json({ success: true, message: "Entire order structure successfully cancelled." });
     } catch (error) {
         console.error("Bulk cancellation processing crash:", error);
         return res.status(500).json({ success: false, message: "Internal server error processing bulk cancellation." });
@@ -568,65 +537,29 @@ const getPaymentFailurePage = async (req, res) => {
     return res.render('user/paymentFailure', { errorReason });
 };
 
-// Apply Coupon
 const applyCoupon = async (req, res) => {
     try {
+        const userId = req.session.user?.id || req.session.user?._id || req.session.user_id;
         const { couponCode, subtotal } = req.body;
-        
-        // Find matching coupon from Coupon Model
-        const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
 
-        if (!coupon) {
-            return res.status(400).json({ success: false, message: "Invalid or expired coupon code." });
-        }
+        const result = await checkoutService.validateAndApplyCoupon(couponCode, subtotal, userId);
 
-        // Check Expiry Date
-        if (new Date() > new Date(coupon.expiryDate)) {
-            return res.status(400).json({ success: false, message: "This coupon has expired." });
-        }
-
-        // Check Minimum Order Amount requirement
-        if (subtotal < coupon.minOrderAmount) {
-            return res.status(400).json({ 
-                success: false, 
-                message: `Minimum order amount to apply this coupon is ₹${coupon.minOrderAmount}` 
-            });
-        }
-
-        // Calculate Discount
-        let discountAmount = 0;
-        if (coupon.discountType === 'percentage') {
-            discountAmount = (subtotal * coupon.discountValue) / 100;
-            if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
-                discountAmount = coupon.maxDiscountAmount;
-            }
+        if (result.success) {
+            req.session.appliedCoupon = {
+                id: result.couponId,
+                code: result.code,
+                discountAmount: result.discountAmount
+            };
+            return res.status(200).json(result);
         } else {
-            discountAmount = coupon.discountValue;
+            return res.status(400).json(result);
         }
-
-        const updatedTotal = Math.max(0, subtotal - discountAmount);
-
-        // Store active coupon in session to enforce single coupon rule
-        req.session.appliedCoupon = {
-            id: coupon._id,
-            code: coupon.code,
-            discountAmount
-        };
-
-        return res.status(200).json({
-            success: true,
-            message: "Coupon applied successfully!",
-            couponId: coupon._id,
-            discountAmount,
-            updatedTotal
-        });
     } catch (error) {
         console.error("Apply coupon error:", error);
         return res.status(500).json({ success: false, message: "Error applying coupon." });
     }
 };
 
-// Remove Coupon
 const removeCoupon = async (req, res) => {
     try {
         delete req.session.appliedCoupon;
@@ -651,5 +584,7 @@ module.exports = {
     downloadInvoice,
     cancelAllOrderItems,
     returnAllOrderItems,
-    getPaymentFailurePage
+    getPaymentFailurePage,
+    applyCoupon,
+    removeCoupon
 };

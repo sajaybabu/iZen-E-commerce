@@ -1,5 +1,11 @@
 const User = require('../../models/userModel');
 const bcrypt = require('bcrypt');
+const walletService = require('./walletService');
+
+// Helper to generate a unique random referral code (e.g., IZ8A3K9)
+const generateReferralCode = () => {
+    return 'IZ' + Math.random().toString(36).substring(2, 8).toUpperCase();
+};
 
 // Finds a user by their email address
 const findUserByEmail = async (email) => {
@@ -24,20 +30,60 @@ const updateUserEmail = async (userId, newEmail) => {
     );
 };
 
-// Hashes password and creates a new user in the database
+// Hashes password and creates a new user in the database with referral processing
 const registerUser = async (userData) => {
-    const { username, email, phone, password } = userData;
+    const { username, email, phone, password, referralCode } = userData;
+
+    // Check if referral code is valid
+    let referrer = null;
+    if (referralCode) {
+        referrer = await User.findOne({ referralCode: referralCode.trim().toUpperCase() });
+        if (!referrer) {
+            throw new Error('Invalid referral code provided.');
+        }
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Generate unique referral code for the new user
+    let newReferralCode = generateReferralCode();
+    while (await User.findOne({ referralCode: newReferralCode })) {
+        newReferralCode = generateReferralCode();
+    }
 
     const newUser = new User({
         username,
         email,
         phone,
-        password: hashedPassword
+        password: hashedPassword,
+        referralCode: newReferralCode,
+        referredBy: referrer ? referrer._id : null
     });
 
-    return await newUser.save();
+    const savedUser = await newUser.save();
+
+    // Process referral rewards if a valid referrer was provided ($20 credit each)
+    if (referrer) {
+        const REFERRAL_REWARD = 20;
+
+        // Credit Referrer
+        await walletService.creditWallet({
+            userId: referrer._id,
+            amount: REFERRAL_REWARD,
+            purpose: 'referral_bonus',
+            description: `Referral bonus credited for inviting ${savedUser.username}.`
+        });
+
+        // Credit New User (Sign-up Bonus)
+        await walletService.creditWallet({
+            userId: savedUser._id,
+            amount: REFERRAL_REWARD,
+            purpose: 'signup_referral_bonus',
+            description: `Welcome bonus credited using referral code ${referralCode.toUpperCase()}.`
+        });
+    }
+
+    return savedUser;
 };
 
 // Fetches a single user by their ID
@@ -94,7 +140,6 @@ const removeAddress = async (userId, addressId) => {
 
 // Set default address
 const setDefaultAddress = async (userId, addressId) => {
-
     await User.updateOne(
         { _id: userId },
         {
@@ -121,9 +166,7 @@ const setDefaultAddress = async (userId, addressId) => {
 
 // Update password by email
 const updatePassword = async (email, password) => {
-
     const salt = await bcrypt.genSalt(10);
-
     const hashedPassword = await bcrypt.hash(
         password,
         salt
@@ -144,7 +187,6 @@ const changeUserPassword = async (
     userId,
     hashedPassword
 ) => {
-
     return await User.updateOne(
         { _id: userId },
         {
@@ -161,7 +203,6 @@ const updateAddress = async (
     addressId,
     addressData
 ) => {
-
     return await User.updateOne(
         {
             _id: userId,
@@ -176,10 +217,7 @@ const updateAddress = async (
 };
 
 // Remove profile image
-const removeProfileImage = async (
-    userId
-) => {
-
+const removeProfileImage = async (userId) => {
     return await User.updateOne(
         { _id: userId },
         {

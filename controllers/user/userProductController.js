@@ -1,4 +1,6 @@
 const userProductService = require('../../services/user/userProductService');
+const cartService = require('../../services/user/cartService'); // Imported Cart Service
+const mongoose = require('mongoose');
 
 const getAllProductsPage = async (req, res) => {
   try {
@@ -18,6 +20,18 @@ const getAllProductsPage = async (req, res) => {
       sort: selectedSort
     });
 
+    // Fetch live user cart data to persist counter UI state across page refreshes
+    let userCart = { items: [] };
+    const userId = req.session?.user?._id || req.session?.user?.id;
+    if (userId) {
+      try {
+        const cartDetails = await cartService.getCartDetails(userId);
+        userCart = cartDetails.cart || { items: [] };
+      } catch (cartErr) {
+        console.error("Error fetching cart details for products page:", cartErr);
+      }
+    }
+
     res.render('user/allProducts', {
       products: shopData.products,
       categories: shopData.categories,
@@ -28,6 +42,7 @@ const getAllProductsPage = async (req, res) => {
       minPrice,
       maxPrice,
       selectedSort,
+      userCart, // Passed userCart to template
       wishlist: req.session.wishlist || { items: [] }, 
       user: req.session.user || null
     });
