@@ -17,7 +17,7 @@ exports.createProduct = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("createProduct error:", error);
         return res.status(500).json({
             success: false,
             message: "Server Error: Unable to complete product entry."
@@ -27,11 +27,10 @@ exports.createProduct = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = 5; //  how many products 
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = 5; 
         const skip = (page - 1) * limit;
 
-        // Fetch paginated data slice from service layer
         const products = await productService.getAllProducts({ skip, limit });
         const totalProducts = await productService.countProducts({}); 
 
@@ -50,7 +49,7 @@ exports.getAllProducts = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("getAllProducts error:", error);
         res.status(500).send("Internal Server Error");
     }
 };
@@ -60,7 +59,7 @@ exports.getAddProductPage = async (req, res) => {
         const categories = await productService.getCategoriesForAddPage();
         res.render('admin/addproduct', { categories });
     } catch (error) {
-        console.error(error);
+        console.error("getAddProductPage error:", error);
         res.status(500).redirect('/admin/products');
     }
 };
@@ -82,7 +81,7 @@ exports.deleteProduct = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("deleteProduct error:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server anomaly encountered."
@@ -92,7 +91,6 @@ exports.deleteProduct = async (req, res) => {
 
 exports.searchProducts = async (req, res) => {
     try {
-        // parameter parsing to keep terms active during page transitions
         const name = req.query.name || req.body.name;
 
         if (!name || name.trim() === "") {
@@ -101,11 +99,10 @@ exports.searchProducts = async (req, res) => {
 
         const searchQueryText = name.trim();
 
-        const page = parseInt(req.query.page) || 1;
+        const page = parseInt(req.query.page, 10) || 1;
         const limit = 5; 
         const skip = (page - 1) * limit;
 
-        // Pass skip parameters to service query
         const products = await productService.searchProducts({ 
             name: searchQueryText, 
             skip, 
@@ -128,7 +125,7 @@ exports.searchProducts = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("searchProducts error:", error);
         res.status(500).send("Internal Server Error");
     }
 };
@@ -143,13 +140,20 @@ exports.getEditProductPage = async (req, res) => {
         
         res.render('admin/editproduct', { product });
     } catch (error) {
-        console.error(error);
+        console.error("getEditProductPage error:", error);
         res.status(500).send("Internal Server Error");
     }
 };
 
 exports.updateProduct = async (req, res) => {
     try {
+        if (!req.body.variantsDataJSON) {
+            return res.status(400).json({
+                success: false,
+                message: "Variant information is missing."
+            });
+        }
+
         await productService.updateProduct(
             req.params.id,
             req.body,
@@ -162,10 +166,10 @@ exports.updateProduct = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("updateProduct error:", error);
         return res.status(500).json({
             success: false,
-            message: "Internal Server Error updating database fields."
+            message: error.message || "Internal Server Error updating database fields."
         });
     }
 };

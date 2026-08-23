@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>iZen Admin - Edit Product</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 
@@ -84,23 +82,18 @@
     </style>
 </head>
 <body>
-
     <%- include("../partials/admin/navbar.ejs") %>
-
     <div class="container my-5" style="max-width: 900px;">
         <div class="d-flex align-items-center gap-3 mb-4">
             <a href="/admin/products" class="btn btn-outline-dark btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
             <h1 class="h3 mb-0">Edit Apple Device</h1>
         </div>
-
-        <form id="editProductForm" action="/admin/updateProduct/<%= product._id %>" method="POST" enctype="multipart/form-data">
-            
+        <form id="editProductForm" action="/admin/updateProduct/<%= product._id %>" method="POST" enctype="multipart/form-data">            
             <div class="card p-4 shadow-sm mb-4">
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted">Device Name</label>
                     <input type="text" name="name" id="productNameInput" class="form-control" value="<%= product.name %>" required>
-                </div>
-                
+                </div>                
                 <div class="mb-3">
                     <label class="form-label fw-bold small text-muted">Description</label>
                     <textarea name="description" id="productDescInput" class="form-control" rows="4" required><%= product.description %></textarea>
@@ -116,10 +109,6 @@
     <option value="AirPods" <%= product.category === 'AirPods' ? 'selected' : '' %>>AirPods</option>
     <option value="Apple Watch" <%= product.category === 'Apple Watch' ? 'selected' : '' %>>Apple Watch</option>
 </select>
-                    </div>
-                    <div>
-                        <label class="form-label fw-bold small text-muted">Discount (%)</label>
-                        <input type="number" name="discount" id="productDiscountInput" class="form-control" value="<%= product.discount || 0 %>" min="0" max="99">
                     </div>
                 </div>
             </div>
@@ -156,15 +145,13 @@
                                             </div>
                                         </div>
                                     <% }) %>
-                                </div>
-                                
+                                </div>                                
                                 <div class="mt-2">
                                     <button type="button" class="btn btn-sm btn-dark rounded-0 px-3" onclick="addAttributeRow(<%= index + 1 %>)">
                                         <i class="bi bi-plus-circle me-1"></i> Add Custom Attribute
                                     </button>
                                 </div>
                             </div>
-
                             <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
                                 <div class="mb-3">
                                     <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
@@ -246,10 +233,8 @@
     </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
     let dynamicCroppedFilesMap = {}; 
-    
     let activeFilesQueue = [];
     let activeQueueIndex = 0;
     let targetCardNumberRef = null;
@@ -269,7 +254,6 @@
         globalVariantCount++;
         const currentTrackingIndex = globalVariantCount - 1; 
         const wrapper = document.getElementById("variants-wrapper");
-        
         const variantCardHTML = `
             <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-${globalVariantCount}" data-variant-id="new_variant">
                 <button type="button" class="btn-close position-absolute top-0 end-0 m-2 small" onclick="removeVariantCard(${globalVariantCount})"></button>
@@ -280,7 +264,6 @@
                             <div class="col-5"><span class="small fw-semibold text-muted">Attribute value</span></div>
                             <div class="col-2"></div>
                         </div>
-
                         <div id="attributes-container-${globalVariantCount}">
                             <div class="row g-2 my-1 attribute-row align-items-center">
                                 <div class="col-5">
@@ -296,14 +279,12 @@
                                 </div>
                             </div>
                         </div>
-                        
                         <div class="mt-2">
                             <button type="button" class="btn btn-sm btn-dark rounded-0 px-3" onclick="addAttributeRow(${globalVariantCount})">
                                 <i class="bi bi-plus-circle me-1"></i> Add Custom Attribute
                             </button>
                         </div>
                     </div>
-
                     <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
                         <div class="mb-3">
                             <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
@@ -313,20 +294,17 @@
                                 <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${globalVariantCount}, 1)">▶</button>
                             </div>
                         </div>
-
                         <div class="mb-3">
                             <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
                             <input type="number" id="price-${globalVariantCount}" class="form-control rounded-0 border-secondary target-price-val" placeholder="Type price here" min="1" step="any" required>
                         </div>
                     </div>
                 </div>
-
                 <div class="mt-4 pt-3 border-top">
                     <p class="fw-semibold small text-muted mb-2">Display Images (Minimum 3 Required)</p>
                     <div class="d-flex flex-wrap gap-3 mb-3 image-row-container" id="imageRow-${globalVariantCount}">
                         <span class="text-muted small no-assets-flag"><i class="bi bi-exclamation-circle text-warning"></i> At least 3 images are mandatory.</span>
                     </div>
-
                     <div class="d-flex justify-content-start">
                         <label for="image-${globalVariantCount}" class="image-label bg-light p-3 text-center small fw-semibold">
                             <i class="bi bi-upload fs-5 d-block text-primary mb-1"></i> Upload New Images
@@ -334,18 +312,15 @@
                         <input id="image-${globalVariantCount}" type="file" accept="image/*" multiple class="d-none" onchange="initiateCroppingProcess(this, ${globalVariantCount}, ${currentTrackingIndex})">
                     </div>
                 </div>
-            </div>`;
-            
+            </div>`;       
         wrapper.insertAdjacentHTML('beforeend', variantCardHTML);
     }
-
     function removeVariantCard(id) {
         const remainingCards = document.querySelectorAll('.variant-card');
         if (remainingCards.length <= 1) {
             Swal.fire({ icon: 'warning', title: 'Action Denied', text: 'A product setup must retain at least one configured active variant.', confirmButtonColor: '#000' });
             return;
         }
-
         Swal.fire({
             title: 'Remove Variant Block?',
             text: "This specific product configuration block details will be permanently detached.",
@@ -361,7 +336,6 @@
             }
         });
     }
-
     function addAttributeRow(cardNumber) {
         const targetContainer = document.getElementById(`attributes-container-${cardNumber}`);
         const markup = `
@@ -381,11 +355,9 @@
         `;
         targetContainer.insertAdjacentHTML('beforeend', markup);
     }
-
     function removeAttributeRow(buttonRef, cardNumber) {
         const container = document.getElementById(`attributes-container-${cardNumber}`);
         const currentRowsCount = container.querySelectorAll('.attribute-row').length;
-
         if (currentRowsCount <= 1) {
             Swal.fire({
                 icon: 'error',
@@ -397,7 +369,6 @@
         }
         buttonRef.closest('.attribute-row').remove();
     }
-
     function stepQuantity(cardNumber, change) {
         const inputField = document.getElementById(`quantity-${cardNumber}`);
         if (inputField) {
@@ -406,14 +377,11 @@
             if (newValue >= 0) inputField.value = newValue;
         }
     }
-
    function initiateCroppingProcess(inputRef, cardNumber, variantIndex) {
         if (!inputRef.files || inputRef.files.length === 0) return;
-        
         // Match the strict image criteria from multer validation rules
         const allowedImageMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         const inputFilesArray = Array.from(inputRef.files);
-
         // Scan array indices to capture documents/PDFs files
        for (let idx = 0; idx < inputFilesArray.length; idx++) {
             if (!allowedImageMimeTypes.includes(inputFilesArray[idx].type)) {
@@ -428,37 +396,29 @@
                 return; 
             }
         }
-
         activeFilesQueue = inputFilesArray;
         activeQueueIndex = 0;
         targetCardNumberRef = cardNumber;
         targetVariantIndexRef = variantIndex;
-
         if (!dynamicCroppedFilesMap[variantIndex]) {
             dynamicCroppedFilesMap[variantIndex] = [];
         }
-
         launchCropperModalInstance();
         inputRef.value = ""; 
     }
-
     function launchCropperModalInstance() {
         if (activeQueueIndex >= activeFilesQueue.length) {
             cropModalBootstrap.hide();
             return;
         }
-
         document.getElementById('croppingProgressText').innerText = `Image ${activeQueueIndex + 1} of ${activeFilesQueue.length}`;
         const file = activeFilesQueue[activeQueueIndex];
         const reader = new FileReader();
-
         reader.onload = function(e) {
             const imageDOMElement = document.getElementById('imageToCrop');
             imageDOMElement.src = e.target.result;
             cropModalBootstrap.show();
-
             if (cropperInstance) cropperInstance.destroy();
-
             cropperInstance = new Cropper(imageDOMElement, {
                 aspectRatio: 1,
                 viewMode: 1,
@@ -468,16 +428,12 @@
         };
         reader.readAsDataURL(file);
     }
-
     function commitCroppedCanvas() {
         if (!cropperInstance) return;
-
         cropperInstance.getCroppedCanvas({ width: 800, height: 800 }).toBlob((blob) => {
             const originalFile = activeFilesQueue[activeQueueIndex];
             const croppedFile = new File([blob], `cropped_${Date.now()}_${originalFile.name}`, { type: 'image/jpeg' });
-
             dynamicCroppedFilesMap[targetVariantIndexRef].push(croppedFile);
-
             const rowWrapper = document.getElementById(`imageRow-${targetCardNumberRef}`);
             const alternativeFlag = rowWrapper.querySelector('.no-assets-flag');
             if (alternativeFlag) alternativeFlag.remove();
@@ -504,14 +460,12 @@
             }
         }, 'image/jpeg', 0.9);
     }
-
     function removePendingCroppedAsset(previewId, variantIdx, storageIdx) {
         document.getElementById(`staged-preview-${previewId}`).remove();
         if (dynamicCroppedFilesMap[variantIdx]) {
             dynamicCroppedFilesMap[variantIdx][storageIdx] = null; 
         }
     }
-
     function removeExistingSavedAsset(buttonRef) {
         const wrapperNode = buttonRef.closest('.img-wrapper-node');
         const parentContainer = wrapperNode.closest('.image-row-container');
@@ -521,41 +475,31 @@
             parentContainer.innerHTML = `<span class="text-muted small no-assets-flag"><i class="bi bi-exclamation-circle text-warning"></i> No files uploaded. At least 3 images required.</span>`;
         }
     }
-
     function abortCroppingCycle() {
         cropModalBootstrap.hide();
         if (cropperInstance) cropperInstance.destroy();
         activeFilesQueue = [];
     }
-
     document.getElementById('editProductForm').addEventListener('submit', async function(e) {
         e.preventDefault(); 
-
         const nameVal = document.getElementById('productNameInput').value.trim();
         const descVal = document.getElementById('productDescInput').value.trim();
-        const discountVal = parseInt(document.getElementById('productDiscountInput').value, 10) || 0;
-
         if (!nameVal || !descVal) {
             Swal.fire({ icon: 'error', title: 'Validation Fault', text: 'Device Name and Description are required.' });
             return;
         }
-
         const variantCards = document.querySelectorAll('.variant-card');
         const variantsData = [];
         let validationFailure = false;
         let errorMessage = "";
-
         variantCards.forEach((card, index) => {
             if (validationFailure) return;
-
             const cardNumber = index + 1;
             const variantId = card.getAttribute('data-variant-id');
             const qtyInput = card.querySelector('.target-qty-val');
-            const priceInput = card.querySelector('.target-price-val');
-            
+            const priceInput = card.querySelector('.target-price-val');            
             const quantity = parseInt(qtyInput.value, 10);
             const price = parseFloat(priceInput.value);
-
             if (isNaN(quantity) || quantity < 0) {
                 validationFailure = true;
                 errorMessage = `Variant #${cardNumber} needs a valid stock quantity entry.`;
@@ -566,7 +510,6 @@
                 errorMessage = `Variant #${cardNumber} requires a valid price greater than 0.`;
                 return;
             }
-
             const attrRows = card.querySelectorAll('.attribute-row');
             const attributes = {};
             attrRows.forEach(row => {
@@ -574,26 +517,22 @@
                 const valInput = row.querySelector('.attr-val').value.trim();
                 if (typeInput && valInput) attributes[typeInput] = valInput;
             });
-
             const structuralSavedCount = card.querySelectorAll('.existing-asset-instance').length;
             let stagedNewFilesCount = 0;
             if (dynamicCroppedFilesMap[index]) {
                 stagedNewFilesCount = dynamicCroppedFilesMap[index].filter(f => f !== null).length;
             }
             const totalAggregatedImages = structuralSavedCount + stagedNewFilesCount;
-
             if (totalAggregatedImages < 3) {
                 validationFailure = true;
                 errorMessage = `Variant #${cardNumber} configuration holds only ${totalAggregatedImages} assets. Keep or add at least 3 images.`;
                 return;
             }
-
             const survivingExistingImages = [];
             card.querySelectorAll('.existing-asset-instance').forEach(node => {
                 survivingExistingImages.push(node.getAttribute('data-image-url'));
             });
-
-            variantsData.push({
+       variantsData.push({
                 id: variantId,
                 attributes: attributes,
                 quantity: quantity,
@@ -601,21 +540,16 @@
                 existingImages: survivingExistingImages
             });
         });
-
         if (validationFailure) {
             Swal.fire({ icon: 'error', title: 'Data Hold', text: errorMessage, confirmButtonColor: '#000' });
             return;
         }
-
         const formData = new FormData();
         formData.append('name', nameVal);
         formData.append('description', descVal);
         formData.append('category', this.category.value);
-        formData.append('discount', discountVal);
-        formData.append('brand', 'Apple'); 
-        
+        formData.append('brand', 'Apple');   
         formData.append('variantsDataJSON', JSON.stringify(variantsData));
-
         variantCards.forEach((card, index) => {
             if (dynamicCroppedFilesMap[index]) {
                 dynamicCroppedFilesMap[index].forEach((file) => {

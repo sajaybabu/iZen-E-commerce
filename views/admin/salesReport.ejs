@@ -50,7 +50,7 @@
 
                 <!-- Filter Form -->
                 <div class="card p-4 mb-4">
-                    <form action="/admin/sales-report" method="GET" class="row g-3 align-items-end">
+                    <form action="/admin/salesReport" method="GET" class="row g-3 align-items-end">
                         <div class="col-md-3">
                             <label class="form-label fw-semibold text-secondary">Quick Filter</label>
                             <select name="filterType" id="filterType" class="form-select" onchange="toggleCustomDates()">
@@ -68,10 +68,22 @@
                             <label class="form-label fw-semibold text-secondary">End Date</label>
                             <input type="date" name="endDate" class="form-control" value="<%= endDate %>">
                         </div>
+
+                        <% 
+                            const isFiltered = (filterType && filterType !== '') || startDate || endDate; 
+                        %>
+
                         <div class="col-md-3">
-                            <button type="submit" class="btn btn-izen w-100 rounded-pill py-2">
-                                <i class="bi bi-filter me-1"></i> Apply Filter
-                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-izen w-100 rounded-pill py-2">
+                                    <i class="bi bi-filter me-1"></i> Apply
+                                </button>
+                                <% if (isFiltered) { %>
+                                    <a href="/admin/salesReport" class="btn btn-outline-secondary w-100 rounded-pill py-2 text-center text-decoration-none">
+                                        <i class="bi bi-x-circle me-1"></i> Clear
+                                    </a>
+                                <% } %>
+                            </div>
                         </div>
                     </form>
                 </div>

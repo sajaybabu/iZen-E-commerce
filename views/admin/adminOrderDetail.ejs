@@ -14,6 +14,7 @@
             --apple-border: #e5e5ea; 
             --apple-bg: #fbfbfd;
             --apple-blue: #0071e3;
+            --apple-gray: #f5f5f7;
         }
         body { 
             background-color: var(--apple-bg); 
@@ -76,6 +77,26 @@
         .data-string { font-size: 1.05rem; font-weight: 500; color: var(--apple-black); }
         .data-sub { font-size: 0.9rem; color: #6e6e73; }
 
+        .product-img-box {
+            width: 50px;
+            height: 50px;
+            background-color: var(--apple-gray);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid var(--apple-border);
+            flex-shrink: 0;
+        }
+
+        .product-img-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 4px;
+        }
+
         .premium-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
         .premium-table th {
             padding: 12px 10px;
@@ -92,7 +113,22 @@
             font-size: 0.95rem;
             vertical-align: middle;
         }
-        .total-display { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; color: var(--apple-black); }
+        
+        .summary-box {
+            max-width: 360px;
+            margin-left: auto;
+            padding-top: 1.5rem;
+        }
+
+        .summary-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            margin-bottom: 0.6rem;
+            color: var(--apple-black);
+        }
+
+        .total-display { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; color: var(--apple-black); }
 
         @media (max-width: 767.98px) {
             .sidebar {
@@ -120,26 +156,48 @@
                 </div>
 
                 <div class="glass-panel">
-                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom pb-4 mb-5">
+                    <!-- Order Header -->
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center border-bottom pb-4 mb-4">
                         <div>
                             <h1 class="order-title">Order #<%= order.orderId %></h1>
-                            <div class="meta-timestamp mt-1">Transaction Logged: <%= new Date(order.createdAt).toLocaleString('en-IN') %></div>
+                            <div class="meta-timestamp mt-1">Transaction Logged: <%= new Date(order.createdAt || order.date).toLocaleString('en-IN') %></div>
+                        </div>
+                        <div class="mt-3 mt-md-0 text-md-end">
+                            <span class="badge bg-dark px-3 py-2 text-capitalize"><%= order.status || 'Processing' %></span>
                         </div>
                     </div>
 
-                    <div class="row mb-5">
-                        <div class="col-md-6 mb-4 mb-md-0">
+                    <!-- Customer, Address & Payment Info Grid -->
+                    <div class="row mb-4 pb-4 border-bottom">
+                        <div class="col-md-4 mb-3 mb-md-0">
                             <div class="section-label">Customer Profile</div>
-                            <div class="data-string"><%= order.user?.username || 'Guest User' %></div>
+                            <div class="data-string"><%= order.user?.username || order.user?.name || 'Guest User' %></div>
                             <div class="data-sub mt-1"><%= order.user?.email || 'No email registered' %></div>
                         </div>
-                        <div class="col-md-6 text-md-end">
+
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="section-label">Shipping Address</div>
+                            <% if (order.shippingAddress) { %>
+                                <div class="data-string"><%= order.shippingAddress.fullname || order.shippingAddress.name || 'N/A' %></div>
+                                <div class="data-sub mt-1" style="line-height: 1.4;">
+                                    <%= order.shippingAddress.address || order.shippingAddress.street || '' %><br>
+                                    <% if (order.shippingAddress.city) { %><%= order.shippingAddress.city %>, <% } %>
+                                    <%= order.shippingAddress.state || '' %> <%= order.shippingAddress.pincode || order.shippingAddress.zip || '' %><br>
+                                    Phone: <%= order.shippingAddress.phone || 'N/A' %>
+                                </div>
+                            <% } else { %>
+                                <div class="data-sub">No address data available</div>
+                            <% } %>
+                        </div>
+
+                        <div class="col-md-4 text-md-end">
                             <div class="section-label">Settlement Logistics</div>
                             <div class="data-string"><%= order.paymentMethod || 'Cash On Delivery' %></div>
-                            <div class="data-sub mt-1">Payment Status: <%= order.paymentStatus || 'Pending' %></div>
+                            <div class="data-sub mt-1">Payment Status: <span class="fw-bold text-success"><%= order.paymentStatus || 'Verified' %></span></div>
                         </div>
                     </div>
 
+                    <!-- Product Manifest Table -->
                     <div class="mt-2">
                         <div class="section-label">Manifest Allocation</div>
                         <table class="premium-table">
@@ -147,7 +205,7 @@
                                 <tr>
                                     <th style="width: 45%">Product Allocation</th>
                                     <th style="width: 15%" class="text-center">Quantity</th>
-                                    <th style="width: 20%" class="text-end">Unit Valuation</th>
+                                    <th style="width: 20%" class="text-end">Unit Price</th>
                                     <th style="width: 20%" class="text-end">Item Status</th>
                                 </tr>
                             </thead>
@@ -155,14 +213,30 @@
                                 <% order.items.forEach(item => { %>
                                     <tr>
                                         <td>
-                                            <div class="fw-semibold text-dark"><%= item.name %></div>
-                                            <% if (item.variantColor && item.variantColor.trim() !== '') { %>
-                                                <div class="data-sub text-muted mt-1" style="font-size: 0.8rem;">
-                                                    <span class="text-muted text-capitalize">
-                                                        <%= item.variantColor %>
-                                                    </span>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <% if (item.image) { %>
+                                                    <div class="product-img-box">
+                                                        <img src="<%= item.image.startsWith('/') ? item.image : '/' + item.image %>" alt="<%= item.name %>" onerror="this.onerror=null; this.src='/images/login.png';">
+                                                    </div>
+                                                <% } %>
+                                                <div>
+                                                    <div class="fw-semibold text-dark"><%= item.name %></div>
+                                                    <% 
+                                                        let displayColor = item.variantColor || item.variant;
+                                                        let isGenericConfig = !displayColor || 
+                                                                             displayColor === 'Standard Config' || 
+                                                                             displayColor === 'Default Config' || 
+                                                                             displayColor === 'Base Specification' || 
+                                                                             displayColor === 'Standard Edition' ||
+                                                                             displayColor.trim() === '';
+                                                    %>
+                                                    <% if (!isGenericConfig) { %>
+                                                        <div class="data-sub text-muted mt-1" style="font-size: 0.8rem;">
+                                                            <span class="text-muted text-capitalize"><%= displayColor %></span>
+                                                        </div>
+                                                    <% } %>
                                                 </div>
-                                            <% } %>
+                                            </div>
                                         </td>
                                         <td class="text-center text-secondary fw-medium"><%= item.quantity %></td>
                                         <td class="text-end fw-semibold text-dark">Rs. <%= item.price.toLocaleString('en-IN') %></td>
@@ -180,8 +254,9 @@
                                                         data-current-status="<%= item.status %>"
                                                         onchange="updateItemStatus('<%= order._id %>', '<%= item.variantId %>', this)">
                                                     
-                                                    <!-- Standard Delivery Flow Options -->
+                                                    <!-- Delivery Options -->
                                                     <option value="Pending" <%= item.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                                                    <option value="Processing" <%= item.status === 'Processing' ? 'selected' : '' %>>Processing</option>
                                                     <option value="Shipped" <%= item.status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
                                                     <option value="Out for Delivery" <%= item.status === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
                                                     <option value="Delivered" <%= item.status === 'Delivered' ? 'selected' : '' %>>Delivered</option>
@@ -191,7 +266,7 @@
                                                         <option value="Cancelled">Cancelled</option>
                                                     <% } %>
 
-                                                    <!-- Dynamic Selection Intercept for User Return Request Pipelines -->
+                                                    <!-- Return Request Intercept -->
                                                     <% if (itemStatusNormalized === 'return request pending' || itemStatusNormalized === 'return review') { %>
                                                         <option value="<%= item.status %>" selected hidden>Return Pending</option>
                                                         <option value="Returned">Approve Return Request</option>
@@ -201,13 +276,31 @@
                                         </td>
                                     </tr>
                                 <% }) %>
-                                <tr>
-                                    <td></td>
-                                    <td class="text-center pt-4 fw-bold text-secondary">Gross Aggregate</td>
-                                    <td class="text-end pt-4 total-display text-primary" colspan="2">Rs. <%= order.totalAmount.toLocaleString('en-IN') %></td>
-                                </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Comprehensive Financial Summary Breakdown -->
+                    <div class="summary-box">
+                        <% if (order.summary) { %>
+                            <div class="summary-line">
+                                <span class="text-muted">Subtotal</span>
+                                <span>Rs. <%= order.summary.subtotal ? order.summary.subtotal.toLocaleString('en-IN') : (order.totalAmount || 0).toLocaleString('en-IN') %></span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="text-muted">Shipping Charges</span>
+                                <span>Rs. <%= order.summary.shipping || 0 %></span>
+                            </div>
+                            <div class="summary-line">
+                                <span class="text-muted">Discount Applied</span>
+                                <span class="text-success">-Rs. <%= order.summary.discount ? order.summary.discount.toLocaleString('en-IN') : 0 %></span>
+                            </div>
+                            <hr style="border-top: 1px dashed var(--apple-border); margin: 0.8rem 0;">
+                        <% } %>
+                        <div class="summary-line total-display">
+                            <span>Total Amount</span>
+                            <span class="text-primary">Rs. <%= (order.summary ? order.summary.total : order.totalAmount).toLocaleString('en-IN') %></span>
+                        </div>
                     </div>
 
                 </div>

@@ -12,6 +12,7 @@ router.get('/orders/my-orders', checkoutController.getMyOrdersPage);
 router.get('/orders/:id', checkoutController.getOrderDetailsPage);
 
 // Form mutation endpoints
+router.post('/add-address', checkoutController.editAddress);
 router.patch('/select-address', checkoutController.selectAddress);
 router.patch('/edit-address', checkoutController.editAddress);
 router.post('/place-order', checkoutController.placeOrder); 

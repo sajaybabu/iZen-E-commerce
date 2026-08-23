@@ -39,11 +39,17 @@ const createCoupon = async (couponData) => {
         throw new Error('Coupon code already exists.');
     }
 
-    if (discountType === 'percentage' && (discountValue <= 0 || discountValue > 100)) {
-        throw new Error('Percentage discount must be between 1 and 100.');
+    if (discountType === 'percentage') {
+        const value = Number(discountValue);
+        if (value <= 0 || value > 100) {
+            throw new Error('Percentage discount must be between 1 and 100.');
+        }
+        if (!maxDiscountAmount || Number(maxDiscountAmount) <= 0) {
+            throw new Error('Please specify a valid maximum discount limit for percentage coupons.');
+        }
     }
 
-    if (discountType === 'fixed' && discountValue <= 0) {
+    if (discountType === 'fixed' && Number(discountValue) <= 0) {
         throw new Error('Fixed discount value must be greater than zero.');
     }
 
@@ -56,7 +62,7 @@ const createCoupon = async (couponData) => {
         discountType,
         discountValue: Number(discountValue),
         minOrderAmount: Number(minOrderAmount) || 0,
-        maxDiscountAmount: discountType === 'percentage' && maxDiscountAmount ? Number(maxDiscountAmount) : null,
+        maxDiscountAmount: discountType === 'percentage' ? Number(maxDiscountAmount) : null,
         expiryDate: new Date(expiryDate),
         isNewUserOnly: isNewUserOnly === 'true' || isNewUserOnly === true
     });

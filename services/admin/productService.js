@@ -43,12 +43,15 @@ const createProduct = async (body, files) => {
 
     if (lowestPrice === Infinity) lowestPrice = 0;
 
+    const parsedDiscount = !isNaN(parseFloat(discount)) ? parseFloat(discount) : 0;
+    const parsedOffer = !isNaN(parseFloat(productOffer)) ? parseFloat(productOffer) : parsedDiscount;
+
     const newProduct = new Product({
         name,
         description,
         category,
-        discount: parseFloat(discount) || 0,
-        productOffer: parseFloat(productOffer) || parseFloat(discount) || 0,
+        discount: parsedDiscount,
+        productOffer: parsedOffer,
         variants: variantArray,
         images: globalImagesArray,
         price: lowestPrice,
@@ -150,15 +153,24 @@ const updateProduct = async (id, body, files) => {
         try {
             imageRemovalList = JSON.parse(removedImagesJSON);
         } catch (err) {
-            console.error(err);
+            console.error("Failed to parse removedImagesJSON:", err);
         }
     }
 
     product.name = name;
     product.description = description;
     product.category = category;
-    product.discount = parseFloat(discount) || 0;
-    product.productOffer = parseFloat(productOffer) !== undefined ? parseFloat(productOffer) : product.discount;
+
+    // Preserve existing database values if discount or offer are not provided in request body
+    if (discount !== undefined && !isNaN(parseFloat(discount))) {
+        product.discount = parseFloat(discount);
+    }
+
+    if (productOffer !== undefined && !isNaN(parseFloat(productOffer))) {
+        product.productOffer = parseFloat(productOffer);
+    } else if (product.productOffer === undefined || isNaN(product.productOffer)) {
+        product.productOffer = product.discount || 0;
+    }
 
     const submittedVariants = JSON.parse(variantsDataJSON);
 
@@ -187,8 +199,7 @@ const updateProduct = async (id, body, files) => {
                 .filter(file => file.fieldname === targetKeyName)
                 .map(file => `/uploads/products/${file.filename}`);
 
-            allocatedImages =
-                allocatedImages.concat(freshlyUploaded);
+            allocatedImages = allocatedImages.concat(freshlyUploaded);
         }
 
         const vQty = parseInt(incomingVariant.quantity, 10) || 0;

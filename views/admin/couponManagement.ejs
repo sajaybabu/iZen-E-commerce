@@ -7,6 +7,8 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
         body { background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         .card { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
@@ -52,7 +54,8 @@
                                 <tr>
                                     <th class="ps-4">Code</th>
                                     <th>Discount Type</th>
-                                    <th>Discount Value</th>
+                                    <th>Value</th>
+                                    <th>Max Limit</th>
                                     <th>Min Order</th>
                                     <th>Expiry Date</th>
                                     <th class="text-end pe-4">Action</th>
@@ -67,6 +70,9 @@
                                             <td class="fw-semibold">
                                                 <%= coupon.discountType === 'percentage' ? coupon.discountValue + '%' : '₹' + coupon.discountValue %>
                                             </td>
+                                            <td>
+                                                <%= coupon.discountType === 'percentage' && coupon.maxDiscountAmount ? '₹' + coupon.maxDiscountAmount : 'N/A' %>
+                                            </td>
                                             <td>₹<%= coupon.minOrderAmount %></td>
                                             <td><%= new Date(coupon.expiryDate).toLocaleDateString() %></td>
                                             <td class="text-end pe-4">
@@ -76,7 +82,7 @@
                                     <% }) %>
                                 <% } else { %>
                                     <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">No coupons available.</td>
+                                        <td colspan="7" class="text-center py-4 text-muted">No coupons available.</td>
                                     </tr>
                                 <% } %>
                             </tbody>
@@ -117,7 +123,7 @@
                         <div class="row">
                             <div class="col-6 mb-3">
                                 <label class="form-label">Discount Type</label>
-                                <select id="discountType" class="form-select">
+                                <select id="discountType" class="form-select" onchange="toggleMaxDiscountField()">
                                     <option value="percentage">Percentage (%)</option>
                                     <option value="fixed">Fixed Amount (₹)</option>
                                 </select>
@@ -126,6 +132,10 @@
                                 <label class="form-label">Value</label>
                                 <input type="number" id="discountValue" class="form-control" required>
                             </div>
+                        </div>
+                        <div class="mb-3" id="maxDiscountContainer">
+                            <label class="form-label">Maximum Discount Amount (₹)</label>
+                            <input type="number" id="maxDiscountAmount" class="form-control" placeholder="e.g. 1500">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Minimum Order Amount (₹)</label>
@@ -143,32 +153,102 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function toggleMaxDiscountField() {
+            const discountType = document.getElementById('discountType').value;
+            const maxDiscountContainer = document.getElementById('maxDiscountContainer');
+            if (discountType === 'percentage') {
+                maxDiscountContainer.style.display = 'block';
+            } else {
+                maxDiscountContainer.style.display = 'none';
+                document.getElementById('maxDiscountAmount').value = '';
+            }
+        }
+
         document.getElementById('couponForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const body = {
                 code: document.getElementById('code').value,
                 discountType: document.getElementById('discountType').value,
                 discountValue: document.getElementById('discountValue').value,
+                maxDiscountAmount: document.getElementById('maxDiscountAmount').value,
                 minOrderAmount: document.getElementById('minOrderAmount').value,
                 expiryDate: document.getElementById('expiryDate').value
             };
-            const res = await fetch('/admin/coupons/add', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            const data = await res.json();
-            alert(data.message);
-            if (data.success) location.reload();
+
+            try {
+                const res = await fetch('/admin/coupons/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message,
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => location.reload());
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error',
+                    text: 'Failed to create coupon.'
+                });
+            }
         });
 
         async function deleteCoupon(id) {
-            if (!confirm('Delete this coupon?')) return;
-            const res = await fetch(`/admin/coupons/delete/${id}`, { method: 'DELETE' });
-            const data = await res.json();
-            alert(data.message);
-            if (data.success) location.reload();
+            const result = await Swal.fire({
+                title: 'Are you sure?',
+                text: 'This action cannot be undone!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it!'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`/admin/coupons/delete/${id}`, { method: 'DELETE' });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Deleted!',
+                            text: data.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => location.reload());
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message
+                        });
+                    }
+                } catch (err) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'Failed to delete coupon.'
+                    });
+                }
+            }
         }
     </script>
 </body>

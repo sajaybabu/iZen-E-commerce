@@ -1,4 +1,5 @@
 const checkoutService = require('../../services/user/checkoutService');
+const userService = require('../../services/user/userService'); // Adjust path to your userService if needed
 const PDFDocument = require('pdfkit');
 const User = require('../../models/userModel');
 const Order = require('../../models/orderModel'); 
@@ -75,47 +76,65 @@ const editAddress = async (req, res) => {
         const userId = req.session.user?.id || req.session.user?._id || req.session.user_id;
         if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
 
-        const { fullname, phone, email, pincode, address, addressType, addressId } = req.body;
+        const { fullname, phone, pincode, address, city, addressType, addressId } = req.body;
 
-        if (addressId) {
-            await User.updateOne(
-                { _id: userId, "addresses._id": addressId },
-                { 
-                    $set: { 
-                        "addresses.$.fullname": fullname,
-                        "addresses.$.phone": phone,
-                        "addresses.$.email": email,
-                        "addresses.$.pincode": pincode,
-                        "addresses.$.address": address,
-                        "addresses.$.addressType": addressType
-                    } 
-                }
-            );
-        } else {
-            await User.updateOne(
-                { _id: userId, "addresses.isSelected": true },
-                { $set: { "addresses.$.isSelected": false } }
-            );
-
-            const newAddressObject = {
-                fullname,
-                phone,
-                email,
-                pincode,
-                address,
-                addressType,
-                isSelected: true
-            };
-
-            await User.findByIdAndUpdate(userId, {
-                $push: { addresses: newAddressObject }
-            });
+        if (!address || !pincode) {
+            return res.status(400).json({ success: false, message: "Street Address and Pincode are required." });
         }
 
-        return res.status(200).json({ success: true }); 
+        const userDoc = await User.findById(userId);
+        if (!userDoc) {
+            return res.status(404).json({ success: false, message: "User record not found." });
+        }
+
+        const computedCity = (city || (address.includes(',') ? address.split(',')[0] : "Bengaluru")).trim();
+        const computedName = (fullname || userDoc.username || "Valued Customer").trim();
+        const computedPhone = (phone || userDoc.phone || "0000000000").trim();
+
+        // Check if updating an existing address ID
+        if (addressId && addressId.trim() !== "" && addressId !== "undefined") {
+            const addressSubDoc = userDoc.addresses.id(addressId);
+            if (addressSubDoc) {
+                addressSubDoc.fullname = computedName;
+                addressSubDoc.phone = computedPhone;
+                addressSubDoc.address = address.trim();
+                addressSubDoc.city = computedCity;
+                addressSubDoc.pincode = pincode.trim();
+                addressSubDoc.addressType = addressType || 'Home';
+                addressSubDoc.isSelected = true;
+
+                // Unselect all other addresses
+                userDoc.addresses.forEach(addr => {
+                    if (String(addr._id) !== String(addressId)) {
+                        addr.isSelected = false;
+                    }
+                });
+
+                await userDoc.save();
+                return res.status(200).json({ success: true, message: "Address updated successfully." });
+            }
+        }
+
+        // Add New Address flow
+        userDoc.addresses.forEach(addr => {
+            addr.isSelected = false;
+        });
+
+        userDoc.addresses.push({
+            fullname: computedName,
+            phone: computedPhone,
+            address: address.trim(),
+            city: computedCity,
+            pincode: pincode.trim(),
+            addressType: addressType || 'Home',
+            isSelected: true
+        });
+
+        await userDoc.save();
+        return res.status(200).json({ success: true, message: "Address saved successfully." }); 
     } catch (error) { 
-        console.error("Save address error:", error);
-        return res.status(500).json({ success: false, message: error.message }); 
+        console.error("Save address crash detail:", error);
+        return res.status(500).json({ success: false, message: error.message || "Server issue while saving address." }); 
     }
 };
 
