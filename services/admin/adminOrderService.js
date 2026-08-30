@@ -1,13 +1,11 @@
 const Order = require('../../models/orderModel');
 const User = require('../../models/userModel'); 
 const Product = require('../../models/Product'); 
-const Wallet = require('../../models/walletModel'); // 1. Imported Wallet Model
+const Wallet = require('../../models/walletModel'); 
 
-// Helper to handle wallet refund transactions cleanly
 const processWalletRefund = async ({ userId, refundAmount, orderObjectId, itemTitle, purpose }) => {
     let wallet = await Wallet.findOne({ userId });
 
-    // Initialize wallet if it doesn't exist for the user
     if (!wallet) {
         wallet = new Wallet({
             userId,
@@ -16,14 +14,12 @@ const processWalletRefund = async ({ userId, refundAmount, orderObjectId, itemTi
         });
     }
 
-    // Credit balance
     wallet.balance += refundAmount;
 
-    // Push transaction matching walletTransactionSchema
     wallet.transactions.push({
         amount: refundAmount,
         type: 'credit',
-        purpose: purpose, // 'Order Return' or 'Order Cancellation'
+        purpose: purpose, 
         orderId: orderObjectId,
         description: `Refund credited for product: ${itemTitle}`
     });
@@ -60,26 +56,22 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
     const oldStatusNormalized = oldStatus.trim().toLowerCase();
     const newStatusNormalized = newStatus.trim().toLowerCase();
 
-    // End state lock validation
     if (oldStatusNormalized === 'cancelled' || oldStatusNormalized === 'returned') {
         throw new Error(`Cannot change status. This item has already been ${oldStatus.toLowerCase()} and is locked.`);
     }
 
-    // Protection rule for "Returned" approval authorization
     if (newStatusNormalized === 'returned') {
         if (oldStatusNormalized !== 'return request pending' && oldStatusNormalized !== 'return review') {
             throw new Error("Action Denied: Admin cannot mark this item as 'Returned' until the user submits a return request.");
         }
     }
 
-    // Protection rule for manual "Cancelled" choices by admin
     if (newStatusNormalized === 'cancelled') {
         if (oldStatusNormalized !== 'pending' && oldStatusNormalized !== 'processing') {
             throw new Error("Action Denied: Admin cannot cancel this item once it has progressed to distribution.");
         }
     }
 
-    // Standard Forward Tracking Architecture Rules
     if (oldStatusNormalized === 'delivered') {
         if (newStatusNormalized !== 'delivered' && newStatusNormalized !== 'returned') {
             throw new Error("Cannot revert a delivered item back to a previous logistics state.");
@@ -90,21 +82,31 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
         throw new Error(`Cannot roll back status to pending once the item has been ${oldStatus.toLowerCase()}.`);
     }
 
-    // Array sub-document updates execution
-    const updatedOrder = await Order.findOneAndUpdate(
-        { 
-            _id: orderId, 
-            "items.variantId": variantId 
-        },
-        { 
-            $set: { "items.$.status": newStatus } 
-        }, 
-        { new: true }
-    );
+    // Execute item status update
+    targetedItem.status = newStatus;
 
-    if (!updatedOrder) return null;
+    // Proportional Refund Math for Item Level Actions
+    let grossItemAmount = targetedItem.price * targetedItem.quantity;
+    let netRefundAmount = grossItemAmount;
 
-    // Restocking / Stock Adjustments Pipeline Controls
+    if (existingOrder.subtotal > 0 && existingOrder.discountAmount > 0) {
+        const itemProportion = grossItemAmount / existingOrder.subtotal;
+        netRefundAmount = Math.round(grossItemAmount - (existingOrder.discountAmount * itemProportion));
+    }
+
+    // Recalculate whole order status and total amount if cancelled or returned
+    if (['cancelled', 'returned'].includes(newStatusNormalized)) {
+        const hasActiveItems = existingOrder.items.some(i => !['cancelled', 'returned'].includes(i.status.toLowerCase()));
+        
+        if (!hasActiveItems) {
+            existingOrder.status = newStatusNormalized === 'returned' ? 'Returned' : 'Cancelled';
+            existingOrder.totalAmount = 0;
+        } else {
+            existingOrder.totalAmount = Math.max(0, existingOrder.totalAmount - netRefundAmount);
+        }
+    }
+
+    // Restocking Pipeline
     const isRestockingState = ['cancelled', 'returned'].includes(newStatusNormalized);
     const wasAlreadyRestocked = ['cancelled', 'returned'].includes(oldStatusNormalized);
 
@@ -121,66 +123,40 @@ const updateIndividualItemStatus = async (orderId, variantId, newStatus) => {
                 } 
             }
         );
-    } 
-    else if (!isRestockingState && wasAlreadyRestocked) {
-        await Product.findOneAndUpdate(
-            { 
-                _id: targetedItem.product, 
-                "variants._id": variantId 
-            },
-            { 
-                $inc: { 
-                    "variants.$.quantity": -targetedItem.quantity,
-                    "stock": -targetedItem.quantity 
-                } 
-            }
-        );
     }
 
-    // WALLET REFUND PIPELINE INTEGRATION
-    const refundAmount = targetedItem.price * targetedItem.quantity;
-
-    //  Admin confirms/accepts Return Request
+    // Wallet Refunds
     if (newStatusNormalized === 'returned') {
         await processWalletRefund({
-            userId: updatedOrder.user,
-            refundAmount,
-            orderObjectId: updatedOrder._id,
+            userId: existingOrder.user,
+            refundAmount: netRefundAmount,
+            orderObjectId: existingOrder._id,
             itemTitle: targetedItem.name,
             purpose: 'Order Return'
         });
     }
 
-    //  Direct Cancellation refund for prepaid/wallet payments
-    if (newStatusNormalized === 'cancelled' && updatedOrder.paymentMethod !== 'COD') {
+    if (newStatusNormalized === 'cancelled' && existingOrder.paymentMethod !== 'COD') {
         await processWalletRefund({
-            userId: updatedOrder.user,
-            refundAmount,
-            orderObjectId: updatedOrder._id,
+            userId: existingOrder.user,
+            refundAmount: netRefundAmount,
+            orderObjectId: existingOrder._id,
             itemTitle: targetedItem.name,
             purpose: 'Order Cancellation'
         });
     }
 
-    // Settlement balance status actions
-    let paymentUpdate = {};
-
-    if (updatedOrder.paymentMethod === 'COD' && newStatusNormalized === 'delivered') {
-        paymentUpdate.paymentStatus = 'Paid';
-    } 
-    else if (newStatusNormalized === 'returned' || (newStatusNormalized === 'cancelled' && updatedOrder.paymentMethod !== 'COD')) {
-        paymentUpdate.paymentStatus = 'Refunded';
+    // Payment Status Updates
+    if (existingOrder.paymentMethod === 'COD' && newStatusNormalized === 'delivered') {
+        existingOrder.paymentStatus = 'Paid';
+    } else if (newStatusNormalized === 'returned' || (newStatusNormalized === 'cancelled' && existingOrder.paymentMethod !== 'COD')) {
+        const hasActiveItems = existingOrder.items.some(i => !['cancelled', 'returned'].includes(i.status.toLowerCase()));
+        if (!hasActiveItems) {
+            existingOrder.paymentStatus = 'Refunded';
+        }
     }
 
-    if (Object.keys(paymentUpdate).length > 0) {
-        return await Order.findByIdAndUpdate(
-            orderId,
-            { $set: paymentUpdate },
-            { new: true }
-        );
-    }
-
-    return updatedOrder;
+    return await existingOrder.save();
 };
 
 const fetchFilteredOrders = async ({ page, limit, search, status, sort }) => {

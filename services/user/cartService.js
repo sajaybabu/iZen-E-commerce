@@ -269,6 +269,19 @@ class CartService {
       fallbackItemsFound
     };
   }
+
+  async clearCart(userId) {
+  const objUserId = new mongoose.Types.ObjectId(String(userId));
+  
+  // Resets the items array back to empty
+  const cart = await Cart.findOneAndUpdate(
+    { $or: [{ userId: String(userId) }, { userId: objUserId }] },
+    { $set: { items: [] } },
+    { returnDocument: 'after' }
+  );
+
+  return cart;
+}
 }
 
 module.exports = new CartService();

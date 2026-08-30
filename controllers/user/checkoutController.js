@@ -1,16 +1,17 @@
 const checkoutService = require('../../services/user/checkoutService');
-const userService = require('../../services/user/userService'); // Adjust path to your userService if needed
+const userService = require('../../services/user/userService');
 const PDFDocument = require('pdfkit');
 const User = require('../../models/userModel');
 const Order = require('../../models/orderModel'); 
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 
-// Initialize Razorpay
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET
 });
+
+const SHIPPING_CHARGE = 50;
 
 const getCheckoutPage = async (req, res) => {
     try {
@@ -20,7 +21,6 @@ const getCheckoutPage = async (req, res) => {
         const checkoutData = await checkoutService.getCheckoutData(userId) || {};
         const appliedCoupon = req.session.appliedCoupon || null;
 
-        // Ensure cart items carry the offer price evaluated from cartService
         const cartList = (checkoutData.cart || []).map(cart => {
             if (cart.items) {
                 cart.items = cart.items.map(item => ({
@@ -91,7 +91,6 @@ const editAddress = async (req, res) => {
         const computedName = (fullname || userDoc.username || "Valued Customer").trim();
         const computedPhone = (phone || userDoc.phone || "0000000000").trim();
 
-        // Check if updating an existing address ID
         if (addressId && addressId.trim() !== "" && addressId !== "undefined") {
             const addressSubDoc = userDoc.addresses.id(addressId);
             if (addressSubDoc) {
@@ -103,7 +102,6 @@ const editAddress = async (req, res) => {
                 addressSubDoc.addressType = addressType || 'Home';
                 addressSubDoc.isSelected = true;
 
-                // Unselect all other addresses
                 userDoc.addresses.forEach(addr => {
                     if (String(addr._id) !== String(addressId)) {
                         addr.isSelected = false;
@@ -115,7 +113,6 @@ const editAddress = async (req, res) => {
             }
         }
 
-        // Add New Address flow
         userDoc.addresses.forEach(addr => {
             addr.isSelected = false;
         });
@@ -176,8 +173,6 @@ const placeOrder = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message || "Internal server error." });
     }
 };
-
-// --- RAZORPAY ---
 
 const createRazorpayOrder = async (req, res) => {
     try {
@@ -266,8 +261,6 @@ const verifyRazorpayPayment = async (req, res) => {
     }
 };
 
-// --- END RAZORPAY ---
-
 const getOrderSuccessPage = async (req, res) => {
     const orderId = req.session.lastOrderId || "IZN-" + Math.floor(100000 + Math.random() * 900000);
     return res.render('user/orderSuccess', { orderId });
@@ -301,14 +294,14 @@ const getOrderDetailsPage = async (req, res) => {
 
         const calculatedSubtotal = orderDoc.subtotal || orderDoc.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
         const discountVal = orderDoc.discountAmount || 0;
-        const shippingVal = 50;
-        const calculatedTotal = orderDoc.totalAmount || (calculatedSubtotal - discountVal + shippingVal);
+        const shippingVal = SHIPPING_CHARGE;
+        const calculatedTotal = orderDoc.totalAmount;
 
         const formattedOrderForView = {
             _id: orderDoc._id.toString(), 
             orderId: orderDoc.orderId,
             date: new Date(orderDoc.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' }),
-            status: orderDoc.items[0]?.status || 'Pending Delivery',
+            status: orderDoc.status || orderDoc.items[0]?.status || 'Pending',
             paymentMethod: orderDoc.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : orderDoc.paymentMethod,
             shippingAddress: {
                 fullname: orderDoc.shippingAddress.name,
@@ -411,87 +404,97 @@ const downloadInvoice = async (req, res) => {
             return res.status(404).send("Invoice error: Order not found.");
         }
 
-        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const doc = new PDFDocument({ size: 'A4', margin: 40 });
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=Invoice-${order.orderId}.pdf`);
         doc.pipe(res);
 
-        doc.fillColor('#1d1d1f').fontSize(24).font('Helvetica-Bold').text('iZen', 50, 50);
-        doc.fontSize(10).font('Helvetica').fillColor('#86868b').text('Premium Tech Ecosystem', 50, 80);
+        // Header section
+        doc.fillColor('#1d1d1f').fontSize(22).font('Helvetica-Bold').text('iZen', 40, 40);
+        doc.fontSize(9).font('Helvetica').fillColor('#86868b').text('Apple Ecosystem Hub', 40, 66);
 
-        doc.fontSize(16).font('Helvetica-Bold').fillColor('#1d1d1f').text('INVOICE', 350, 50, { width: 195, align: 'right' });
-        doc.fontSize(9).font('Helvetica').fillColor('#6e6e73')
-           .text(`Invoice ID: #INV-${order.orderId}`, 350, 72, { width: 195, align: 'right' })
-           .text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, 350, 88, { width: 195, align: 'right' });
+        doc.fontSize(16).font('Helvetica-Bold').fillColor('#1d1d1f').text('TAX INVOICE', 350, 40, { width: 205, align: 'right' });
+        doc.fontSize(8.5).font('Helvetica').fillColor('#6e6e73')
+           .text(`Invoice Ref: #INV-${order.orderId}`, 350, 60, { width: 205, align: 'right' })
+           .text(`Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}`, 350, 74, { width: 205, align: 'right' });
 
-        doc.moveTo(50, 115).lineTo(545, 115).strokeColor('#e5e5ea').lineWidth(1).stroke();
+        doc.moveTo(40, 95).lineTo(555, 95).strokeColor('#e5e5ea').lineWidth(1).stroke();
 
-        doc.fontSize(11).font('Helvetica-Bold').fillColor('#1d1d1f').text('Shipping Details', 50, 135);
-        doc.fontSize(10).font('Helvetica').fillColor('#333333')
-           .text(order.shippingAddress.name, 50, 155)
-           .text(order.shippingAddress.addressLine, 50, 170)
-           .text(`Pincode: ${order.shippingAddress.pincode}`, 50, 185)
-           .text(`Phone: ${order.shippingAddress.phone}`, 50, 200);
+        // Customer & Order Info
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1d1d1f').text('Billed & Shipped To:', 40, 110);
+        doc.fontSize(9).font('Helvetica').fillColor('#333333')
+           .text(order.shippingAddress.name, 40, 126)
+           .text(order.shippingAddress.addressLine, 40, 140)
+           .text(`Pincode: ${order.shippingAddress.pincode}`, 40, 154)
+           .text(`Phone: ${order.shippingAddress.phone}`, 40, 168);
 
-        doc.fontSize(11).font('Helvetica-Bold').fillColor('#1d1d1f').text('Payment Method', 350, 135);
-        doc.fontSize(10).font('Helvetica').fillColor('#333333')
-           .text(order.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : order.paymentMethod, 350, 155)
-           .text(`Payment Status: Verified`, 350, 170);
+        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1d1d1f').text('Payment Details:', 350, 110);
+        doc.fontSize(9).font('Helvetica').fillColor('#333333')
+           .text(`Method: ${order.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : order.paymentMethod}`, 350, 126)
+           .text(`Status: ${order.paymentStatus}`, 350, 140);
 
-        doc.moveTo(50, 230).lineTo(545, 230).strokeColor('#e5e5ea').stroke();
+        doc.moveTo(40, 192).lineTo(555, 192).strokeColor('#e5e5ea').stroke();
 
-        let yPosition = 255;
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1d1d1f');
-        doc.text('Item Description', 50, yPosition);
-        doc.text('Price', 300, yPosition, { width: 80, align: 'right' });
-        doc.text('Qty', 395, yPosition, { width: 40, align: 'center' });
-        doc.text('Total', 455, yPosition, { width: 90, align: 'right' });
+        // Items Table Header
+        let yPosition = 205;
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1d1d1f');
+        doc.text('Item Description', 40, yPosition);
+        doc.text('Unit Price', 300, yPosition, { width: 75, align: 'right' });
+        doc.text('Qty', 385, yPosition, { width: 35, align: 'center' });
+        doc.text('Amount', 430, yPosition, { width: 125, align: 'right' });
 
-        doc.moveTo(50, yPosition + 15).lineTo(545, yPosition + 15).strokeColor('#e5e5ea').stroke();
-        yPosition += 25;
+        doc.moveTo(40, yPosition + 14).lineTo(555, yPosition + 14).strokeColor('#e5e5ea').stroke();
+        yPosition += 22;
 
-        doc.font('Helvetica').fillColor('#333333');
-        order.items.forEach(item => {
-            const itemTotal = item.price * item.quantity;
+        // Active Items (Excluding cancelled items from invoice)
+        const validItems = order.items.filter(item => item.status.toLowerCase() !== 'cancelled');
+        let activeSubtotal = 0;
+
+        doc.font('Helvetica').fontSize(9).fillColor('#333333');
+        validItems.forEach(item => {
+            const lineTotal = item.price * item.quantity;
+            activeSubtotal += lineTotal;
             const displayName = item.name + (item.variantColor ? ` (${item.variantColor})` : '');
 
-            doc.text(displayName, 50, yPosition, { width: 240 });
-            doc.text(`Rs. ${item.price.toLocaleString('en-IN')}`, 300, yPosition, { width: 80, align: 'right' }); 
-            doc.text(item.quantity.toString(), 395, yPosition, { width: 40, align: 'center' });
-            doc.text(`Rs. ${itemTotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });   
+            doc.text(displayName, 40, yPosition, { width: 250 });
+            doc.text(`Rs. ${item.price.toLocaleString('en-IN')}`, 300, yPosition, { width: 75, align: 'right' }); 
+            doc.text(item.quantity.toString(), 385, yPosition, { width: 35, align: 'center' });
+            doc.text(`Rs. ${lineTotal.toLocaleString('en-IN')}`, 430, yPosition, { width: 125, align: 'right' });   
 
-            yPosition += 25;
+            yPosition += 20;
         });
 
-        const calculatedSubtotal = order.subtotal || order.items.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-        const discountValue = order.discountAmount || 0;
-        const finalTotal = order.totalAmount || (calculatedSubtotal - discountValue + 50);
+        // Summary Calculations
+        const discountVal = order.discountAmount || 0;
+        const shippingVal = validItems.length > 0 ? SHIPPING_CHARGE : 0;
+        const calculatedGrandTotal = Math.max(0, activeSubtotal - discountVal + shippingVal);
 
-        yPosition += 15;
-        doc.moveTo(300, yPosition).lineTo(545, yPosition).strokeColor('#e5e5ea').stroke();
+        yPosition += 10;
+        doc.moveTo(300, yPosition).lineTo(555, yPosition).strokeColor('#e5e5ea').stroke();
         yPosition += 10;
 
-        doc.fontSize(10).fillColor('#6e6e73');
+        doc.fontSize(9).fillColor('#6e6e73');
         doc.text('Subtotal:', 300, yPosition);
-        doc.fillColor('#1d1d1f').text(`Rs. ${calculatedSubtotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
+        doc.fillColor('#1d1d1f').text(`Rs. ${activeSubtotal.toLocaleString('en-IN')}`, 430, yPosition, { width: 125, align: 'right' });
 
-        yPosition += 18;
+        yPosition += 16;
         doc.fillColor('#6e6e73').text('Discount:', 300, yPosition);
-        doc.fillColor('#1d1d1f').text(`-Rs. ${discountValue.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
+        doc.fillColor('#1d1d1f').text(`-Rs. ${discountVal.toLocaleString('en-IN')}`, 430, yPosition, { width: 125, align: 'right' });
 
-        yPosition += 18;
+        yPosition += 16;
         doc.fillColor('#6e6e73').text('Shipping Charges:', 300, yPosition);
-        doc.fillColor('#1d1d1f').text('Rs. 50', 455, yPosition, { width: 90, align: 'right' });
+        doc.fillColor('#1d1d1f').text(`Rs. ${shippingVal}`, 430, yPosition, { width: 125, align: 'right' });
 
-        yPosition += 22;
-        doc.moveTo(300, yPosition).lineTo(545, yPosition).strokeColor('#e5e5ea').stroke();
+        yPosition += 20;
+        doc.moveTo(300, yPosition).lineTo(555, yPosition).strokeColor('#e5e5ea').stroke();
         yPosition += 10;
 
-        doc.fontSize(12).font('Helvetica-Bold').fillColor('#1d1d1f').text('Grand Total:', 300, yPosition);
-        doc.text(`Rs. ${finalTotal.toLocaleString('en-IN')}`, 455, yPosition, { width: 90, align: 'right' });
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#1d1d1f').text('Grand Total:', 300, yPosition);
+        doc.text(`Rs. ${calculatedGrandTotal.toLocaleString('en-IN')}`, 430, yPosition, { width: 125, align: 'right' });
 
-        doc.fontSize(9).font('Helvetica').fillColor('#86868b').text('Thank you for shopping with iZen! For support, reach out to help@izen.com', 50, 720, { align: 'center', width: 495 });
+        // Single-page pinned footer
+        doc.fontSize(8.5).font('Helvetica').fillColor('#86868b').text('Thank you for shopping with iZen! For assistance, email support@izen.com', 40, 750, { align: 'center', width: 515 });
 
         doc.end();
     } catch (error) {

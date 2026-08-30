@@ -6,6 +6,8 @@ const cartService = require('./cartService');
 const Order = require('../../models/orderModel'); 
 const walletService = require('./walletService');
 
+const SHIPPING_CHARGE = 50;
+
 class CheckoutService {
 
   async getCheckoutData(userId) {
@@ -107,7 +109,7 @@ class CheckoutService {
     }
 
     discountAmount = Math.round(discountAmount);
-    const updatedTotal = Math.max(0, subtotal - discountAmount);
+    const updatedTotal = Math.max(0, subtotal - discountAmount + SHIPPING_CHARGE);
 
     return {
       success: true,
@@ -178,7 +180,8 @@ class CheckoutService {
         appliedCouponId = coupon._id;
       }
 
-      const finalCalculatedPayable = Math.max(0, calculatedSubtotal - validatedDiscountAmount);
+      // Include standard shipping in calculations
+      const finalCalculatedPayable = Math.max(0, calculatedSubtotal - validatedDiscountAmount + SHIPPING_CHARGE);
 
       if (orderData.paymentMethod === 'Wallet') {
         try {
@@ -347,25 +350,30 @@ class CheckoutService {
         }
       );
 
-      let refundForThisItem = targetItem.price * targetItem.quantity;
+      // Proportional discount allocation for partial cancellation
+      let itemGrossTotal = targetItem.price * targetItem.quantity;
+      let netRefundForThisItem = itemGrossTotal;
+
       if (order.subtotal > 0 && order.discountAmount > 0) {
-        const itemProportion = refundForThisItem / order.subtotal;
-        refundForThisItem = Math.round(refundForThisItem - (order.discountAmount * itemProportion));
+        const itemProportion = itemGrossTotal / order.subtotal;
+        netRefundForThisItem = Math.round(itemGrossTotal - (order.discountAmount * itemProportion));
       }
 
-      order.totalAmount = Math.max(0, order.totalAmount - refundForThisItem);
-
       const hasActiveItems = order.items.some(i => i.status.toLowerCase() !== 'cancelled');
+      
       if (!hasActiveItems) {
         order.status = 'Cancelled';
+        order.totalAmount = 0;
+      } else {
+        order.totalAmount = Math.max(0, order.totalAmount - netRefundForThisItem);
       }
 
       const isPrepaid = order.paymentStatus === 'Paid' || ['Wallet', 'Razorpay', 'Online'].includes(order.paymentMethod);
 
-      if (isPrepaid && refundForThisItem > 0) {
+      if (isPrepaid && netRefundForThisItem > 0) {
         await walletService.creditWallet({
           userId: order.user,
-          amount: refundForThisItem,
+          amount: netRefundForThisItem,
           purpose: 'Order Cancellation',
           orderId: order._id,
           description: `Refund for cancelled item (${targetItem.name}) in Order #${order.orderId || order._id}`

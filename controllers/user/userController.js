@@ -3,8 +3,6 @@ const sendOTP = require("../../utils/sendEmail");
 const bcrypt = require("bcrypt");
 const User = require("../../models/userModel");
 
-// --- PAGE RENDERS ---
-
 const getSignupPage = (req, res) => {
     try {
         res.render("user/signup");
@@ -15,11 +13,8 @@ const getSignupPage = (req, res) => {
 };
 
 const getLoginPage = (req, res) => res.render("user/login");
-
 const getForgotEmailPage = (req, res) => res.render("user/forgotEmail");
-
 const getForgotOtpPage = (req, res) => res.render("user/forgotPassOtp");
-
 const getResetPasswordPage = (req, res) => res.render("user/changePassword");
 
 const getSignupOtpPage = (req, res) => {
@@ -29,11 +24,16 @@ const getSignupOtpPage = (req, res) => {
     res.render("user/otp");
 };
 
-// --- AUTHENTICATION & GOOGLE FLOW ---
-
 const handleSignup = async (req, res) => {
     try {
-        const { username, email, phone, password } = req.body;
+        const { username, email, phone, password, confirmPassword, referralCode } = req.body;
+
+        if (!password || !confirmPassword || password !== confirmPassword) {
+            return res.render("user/signup", {
+                error: "Passwords do not match. Please re-enter your password.",
+            });
+        }
+
         const userExists = await userService.findUserByEmail(email);
 
         if (userExists) {
@@ -43,7 +43,7 @@ const handleSignup = async (req, res) => {
         }
 
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
-        req.session.tempUserData = { username, email, phone, password };
+        req.session.tempUserData = { username, email, phone, password, referralCode };
         req.session.otp = otp;
 
         const emailSent = await sendOTP(email, 'Verify your iZen Account', {
@@ -134,8 +134,6 @@ const handleLogout = (req, res) => {
     });
 };
 
-// --- OTP & PASSWORD FLOWS ---
-
 const verifyOTP = async (req, res) => {
     try {
         const { otp } = req.body;
@@ -175,7 +173,7 @@ const verifyOTP = async (req, res) => {
 const resendOTP = async (req, res) => {
     try {
         const email = req.session.tempUserData ? req.session.tempUserData.email : 
-                     (req.session.pendingEmailUpdate ? req.session.pendingEmailUpdate.newEmail : req.session.forgotPasswordEmail);
+                      (req.session.pendingEmailUpdate ? req.session.pendingEmailUpdate.newEmail : req.session.forgotPasswordEmail);
         
         if (!email) {
             return res.status(400).json({ success: false, message: "Session expired. Please try again." });
@@ -262,15 +260,13 @@ const changePassword = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        await userService.changeUserPassword(userId,hashedPassword);
+        await userService.changeUserPassword(userId, hashedPassword);
         res.json({ success: true, message: "Password updated successfully!" });
     } catch (error) {
         console.error("Change Password Error:", error);
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 };
-
-// --- PROFILE & HOME ---
 
 const loadHome = async (req, res) => {
     try {
@@ -279,8 +275,8 @@ const loadHome = async (req, res) => {
             const dbUser = await userService.getUserById(user.id || user._id);
             if (!dbUser || dbUser.isBlocked) {
                 req.session.destroy();
-               return res.redirect("/login");
-           }
+                return res.redirect("/login");
+            }
         }
         res.render("user/home", { user, newArrivals: [], inOffer: [], wishlist: null });
     } catch (err) {
@@ -421,8 +417,6 @@ const removeAvatar = async (req, res) => {
     }
 };
 
-// --- ADDRESS MANAGEMENT ---
-
 const loadAddressPage = async (req, res) => {
     try {
         const userId = req.session.user.id || req.session.user._id;
@@ -465,19 +459,18 @@ const postEditAddress = async (req, res) => {
         const addressId = req.params.id;
         const userId = req.session.user.id || req.session.user._id;
         const { fullname, phone, address, city, pincode, addressType } = req.body;
-        const result =
-         await userService.updateAddress(
-        userId,
-        addressId,
-        {
-            fullname,
-            phone,
-            address,
-            city,
-            pincode,
-            addressType
-        }
-    );
+        const result = await userService.updateAddress(
+            userId,
+            addressId,
+            {
+                fullname,
+                phone,
+                address,
+                city,
+                pincode,
+                addressType
+            }
+        );
         if (result.modifiedCount > 0) {
             res.json({ success: true, message: "Address updated successfully" });
         } else {

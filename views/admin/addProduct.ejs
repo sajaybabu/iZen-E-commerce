@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
     <style>
+        body {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
         .no-spinners::-webkit-outer-spin-button,
         .no-spinners::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -16,64 +21,89 @@
         .no-spinners {
             -moz-appearance: textfield;
         }
-        .test:hover {
-            background-color: rgb(238, 238, 238);
-        }
-        .add-user-btn {
-            background-color: #EF6627;
-        }
-        .active::after {
-            content: '';
-            display: block;
-            position: absolute;
-            width: 100%;
-            height: 3px;
-            background: black;
-            bottom: -7px;
-        }
-        .actions {
-            color: #151414;
-        }
-        .image-label {
-            border: black dashed 2px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
         .sidebar {
             transition: transform 0.3s ease;
         }
+        .form-control, .form-select {
+            border-color: #d2d2d7;
+            border-radius: 8px !important;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #0071e3;
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
+        }
         .variant-card {
-            border: 1px solid #7a7a7a;
+            border: 1px solid #e5e5ea !important;
             background-color: #ffffff;
-            padding: 20px;
-            margin-bottom: 20px;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: box-shadow 0.2s ease;
+        }
+        .variant-card:hover {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        }
+        .image-label {
+            border: 2px dashed #0071e3;
+            border-radius: 10px;
+            cursor: pointer;
+            background-color: rgba(0, 113, 227, 0.02);
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .image-label:hover {
+            background-color: rgba(0, 113, 227, 0.06);
+            border-color: #0077ed;
         }
         .add-attribute-link {
-            color: #EF6627;
-            text-decoration: underline;
+            color: #0071e3;
             font-size: 0.85rem;
+            font-weight: 500;
             cursor: pointer;
             display: inline-block;
+            text-decoration: none;
         }
-        .confirm-btn {
-            background-color: #000000;
+        .add-attribute-link:hover {
+            text-decoration: underline;
+        }
+        .btn-black {
+            background-color: #1d1d1f;
             color: #ffffff;
             border: none;
-            border-radius: 4px;
-            padding: 6px 20px;
+            border-radius: 8px;
+            padding: 8px 24px;
             font-weight: 500;
+            transition: background-color 0.2s ease;
         }
-        .confirm-btn:hover {
-            background-color: #222222;
+        .btn-black:hover {
+            background-color: #333336;
+            color: #ffffff;
+        }
+        .btn-publish {
+            background-color: #0071e3;
+            color: #ffffff;
+            border-radius: 10px;
+            border: none;
+            font-weight: 600;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        .btn-publish:hover {
+            background-color: #0077ed;
+            color: #ffffff;
+        }
+        .btn-publish:active {
+            transform: scale(0.98);
         }
         @media (max-width: 767.98px) {
             .sidebar {
                 position: fixed;
                 top: 56px;
                 left: 0;
-                width: 200px;
+                width: 220px;
                 height: 100vh;
-                background-color: #000;
+                background-color: #1d1d1f;
                 color: white;
                 z-index: 1050;
                 transform: translateX(-100%);
@@ -86,127 +116,130 @@
 </head>
 <body>
     <%- include("../partials/admin/navbar.ejs") %>
-        <div class="container px-0 mt-5">
+        <div class="container px-3 px-md-0 mt-4 mb-5">
             <div class="row row-cols-1 justify-content-between mx-0">
-                <div class="col col-md-2 col-lg-2 border border-secondary rounded text-secondary sidebar align-self-start p-0">
+                <div class="col col-md-2 col-lg-2 sidebar align-self-start p-0">
                     <%- include("../partials/admin/sidebarLinks.ejs") %>
                 </div>
                 <div class="card col col-md-9 px-0 mx-md-3 border-0 bg-transparent">
-                    <div class="card-body p-4" style="background-color: #ffffff;" id="card">
+                    <div class="card-body p-4 p-md-5 rounded-4 shadow-sm" style="background-color: #ffffff;" id="card">
                         <form id="productForm">
-                            <div class="border border-dark text-center py-2 mb-5">
-                                <h2 class="m-0 fs-4 fw-bold">Add Product</h2>
+                            <div class="d-flex align-items-center justify-content-between pb-3 mb-4 border-bottom">
+                                <h2 class="m-0 fs-4 fw-bold text-dark" style="letter-spacing: -0.5px;">Add New Product</h2>
+                                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill small">iZen Catalog</span>
                             </div>
+
                             <div class="container px-0" id="form-container">
-                                <div class="row my-4">
-                                    <div class="col col-md-6">
-                                        <label class="d-block mb-2 fw-semibold" for="name">Name of the product</label>
-                                        <input class="form-control border-secondary rounded-0 p-2" name="name" type="text" id="name" placeholder="Type here">
-                                        <p class="text-danger" id="productNameMsg" style="font-size: small;"></p>
+                                <div class="row g-4 my-2">
+                                    <div class="col-md-6">
+                                        <label class="d-block mb-2 fw-semibold small text-uppercase text-secondary" style="letter-spacing: 0.5px;" for="name">Product Name</label>
+                                        <input class="form-control" name="name" type="text" id="name" placeholder="e.g. iPhone 15 Pro Max">
+                                        <p class="text-danger mt-1 mb-0" id="productNameMsg" style="font-size: 0.8rem;"></p>
                                     </div>
-                                    <div class="col col-md-6">
-                                        <label class="d-block mb-2 fw-semibold" for="discount">Discount (%)</label>
-                                        <input class="form-control border-secondary rounded-0 p-2" name="discount" type="number" id="discount" min="0" max="100" placeholder="Type here">
-                                        <p class="text-danger" id="discountMsg" style="font-size: small;"></p>
-                                    </div>
-                                </div>
-                                <div class="row my-4">
-                                    <div class="col-12">
-                                        <label class="d-block mb-2 fw-semibold" for="description">Description</label>
-                                        <textarea class="form-control border-secondary rounded-0 p-2" name="description" id="description" rows="4" placeholder="Type here"></textarea>
-                                        <p class="text-danger" id="descriptionMsg" style="font-size: small;"></p>
-                                    </div>
-                                </div>
-                                <div class="row my-4">
-                                    <div class="col col-md-6 d-none"> 
-                                        <label class="d-block mb-2 fw-semibold" for="brand">Brand name</label>
-                                        <select class="form-select border-secondary rounded-0 p-2" id="brand" name="brand">
-                                            <option value="Apple" selected>Apple</option>
-                                        </select>
-                                    </div>
-                                    <div class="col col-md-6">
-                                        <label class="d-block mb-2 fw-semibold" for="category">Category</label>
-                                        <select class="form-select border-secondary rounded-0 p-2" id="category" name="category">
+                                    <div class="col-md-6">
+                                        <label class="d-block mb-2 fw-semibold small text-uppercase text-secondary" style="letter-spacing: 0.5px;" for="category">Category</label>
+                                        <select class="form-select" id="category" name="category">
                                             <option value="" hidden selected>Select Category</option>
                                             <% categories.forEach(function(cat) { %>
                                                 <option value="<%= cat.name %>"><%= cat.name %></option>
                                             <% }); %>
                                         </select>
-                                        <p class="text-danger" id="categoryMsg" style="font-size: small;"></p>
+                                        <p class="text-danger mt-1 mb-0" id="categoryMsg" style="font-size: 0.8rem;"></p>
                                     </div>
                                 </div>
-                                <div id="variants-wrapper">
-                                    <p class="text-secondary mb-2 fs-5">Add variants</p>
-                                    <div class="variant-card position-relative shadow-sm p-4 mb-4" id="variant-session-1">
-                                        <div class="row">
+
+                                <div class="row g-4 my-2">
+                                    <div class="col-12">
+                                        <label class="d-block mb-2 fw-semibold small text-uppercase text-secondary" style="letter-spacing: 0.5px;" for="description">Description</label>
+                                        <textarea class="form-control" name="description" id="description" rows="4" placeholder="Provide product specifications and overview..."></textarea>
+                                        <p class="text-danger mt-1 mb-0" id="descriptionMsg" style="font-size: 0.8rem;"></p>
+                                    </div>
+                                </div>
+
+                                <div class="col col-md-6 d-none"> 
+                                    <select id="brand" name="brand">
+                                        <option value="Apple" selected>Apple</option>
+                                    </select>
+                                </div>
+
+                                <div id="variants-wrapper" class="mt-4 pt-2">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <h5 class="fw-bold m-0 text-dark fs-5">Product Variants</h5>
+                                        <span class="text-muted small">Minimum 1 variant required</span>
+                                    </div>
+
+                                    <div class="variant-card position-relative shadow-sm" id="variant-session-1">
+                                        <div class="row g-3">
                                             <div class="col-md-7">
-                                                <div class="row g-2">
-                                                    <div class="col-5"><span class="small fw-semibold text-muted">Attribute type</span></div>
-                                                    <div class="col-5"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-5"><span class="small fw-semibold text-secondary text-uppercase" style="font-size: 0.75rem;">Attribute Type</span></div>
+                                                    <div class="col-5"><span class="small fw-semibold text-secondary text-uppercase" style="font-size: 0.75rem;">Attribute Value</span></div>
                                                     <div class="col-2"></div>
                                                 </div>
                                                 <div id="attributes-container-1">
                                                     <div class="row g-2 my-1 attribute-row align-items-center">
                                                         <div class="col-5">
-                                                            <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="e.g., Color">
+                                                            <input type="text" class="form-control attr-type" placeholder="e.g. Color">
                                                         </div>
                                                         <div class="col-5">
-                                                            <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="e.g., Space Grey">
+                                                            <input type="text" class="form-control attr-val" placeholder="e.g. Titanium">
                                                         </div>
                                                         <div class="col-2 text-center">
-                                                            <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removeAttributeRow(this, 1)"><i class="bi bi-trash3"></i></button>
+                                                            <button type="button" class="btn btn-outline-danger btn-sm border-0 rounded-circle" onclick="removeAttributeRow(this, 1)"><i class="bi bi-trash3"></i></button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <span class="add-attribute-link mt-2 d-inline-block" onclick="addNewAttributeRow(1)">+ add another attribute</span>
-                                                <p class="text-danger small targetAttrMsg" id="attrError-1"></p>
+                                                <span class="add-attribute-link mt-2" onclick="addNewAttributeRow(1)"><i class="bi bi-plus-circle me-1"></i> Add another attribute</span>
+                                                <p class="text-danger small targetAttrMsg mt-1" id="attrError-1"></p>
                                             </div>
-                                            <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
+
+                                            <div class="col-md-5 border-start border-light-subtle ps-md-4 mt-3 mt-md-0">
                                                 <div class="mb-3">
-                                                    <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
-                                                    <div class="input-group" style="width: 160px;">
-                                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(1, -1)">◀</button>
-                                                        <input type="number" id="quantity-1" class="form-control text-center rounded-0 border-secondary no-spinners" value="1" min="0">
-                                                        <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(1, 1)">▶</button>
+                                                    <label class="small fw-semibold text-secondary text-uppercase d-block mb-1" style="font-size: 0.75rem;">Quantity</label>
+                                                    <div class="input-group" style="width: 150px;">
+                                                        <button class="btn btn-outline-secondary" type="button" onclick="stepQuantity(1, -1)">-</button>
+                                                        <input type="number" id="quantity-1" class="form-control text-center no-spinners" value="1" min="0">
+                                                        <button class="btn btn-outline-secondary" type="button" onclick="stepQuantity(1, 1)">+</button>
                                                     </div>
-                                                    <p class="text-danger dynamic-msg" id="quantityMsg-1" style="font-size: small;"></p>
+                                                    <p class="text-danger dynamic-msg mt-1 mb-0" id="quantityMsg-1" style="font-size: 0.8rem;"></p>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
-                                                    <input type="text" id="price-1" class="form-control rounded-0 border-secondary" placeholder="Type price here">
-                                                    <p class="text-danger dynamic-msg" id="priceMsg-1" style="font-size: small;"></p>
+                                                    <label class="small fw-semibold text-secondary text-uppercase d-block mb-1" style="font-size: 0.75rem;">Price (₹)</label>
+                                                    <input type="text" id="price-1" class="form-control" placeholder="0.00">
+                                                    <p class="text-danger dynamic-msg mt-1 mb-0" id="priceMsg-1" style="font-size: 0.8rem;"></p>
                                                 </div>
                                             </div>
                                         </div>
+
                                         <div class="mt-4 pt-3 border-top">
-                                            <p class="fw-semibold small text-muted mb-2">Variant Images (Minimum 3 Required)</p>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <p class="fw-semibold small text-secondary text-uppercase m-0" style="font-size: 0.75rem;">Variant Images (Minimum 3 Required)</p>
+                                            </div>
                                             <div class="row row-cols-2 row-cols-md-4 g-3 mb-3" id="imageRow-1"></div>
                                             <div class="d-flex justify-content-start" id="image-input-1">
-                                                <label for="image-1" class="image-label border-secondary bg-light p-3 text-center small fw-semibold">
-                                                    <i class="bi bi-image fs-5 d-block text-danger mb-1"></i> Add Image
+                                                <label for="image-1" class="image-label p-3 text-center small fw-semibold w-100">
+                                                    <i class="bi bi-cloud-arrow-up fs-4 d-block text-primary mb-1"></i> Add Variant Image
                                                 </label>
                                                 <input id="image-1" type="file" accept="image/*" multiple onchange="newFile(1)" class="d-none">
                                             </div>
-                                            <p class="text-danger small mt-1" id="imageMsg-1"></p>
+                                            <p class="text-danger small mt-1 mb-0" id="imageMsg-1"></p>
                                         </div>
+
                                         <div class="text-end mt-3 pt-2">
-                                            <button type="button" class="confirm-btn" onclick="saveVariantState(1)">confirm</button>
+                                            <button type="button" class="btn-black" onclick="saveVariantState(1)">Confirm Variant</button>
                                         </div>
                                     </div>
                                 </div>
+
                                 <div class="mb-5">
-                                    <div class="dropdown">
-                                        <button class="btn btn-white border border-dark rounded-0 dropdown-toggle px-3 py-2" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                                            Add more variants
-                                        </button>
-                                        <ul class="dropdown-menu rounded-0 border-dark" aria-labelledby="dropdownMenuButton">
-                                            <li><a class="dropdown-menu-item dropdown-item" href="#" onclick="appendVariantCard(event)">+ Add New Variant Card</a></li>
-                                        </ul>
-                                    </div>
+                                    <button class="btn btn-outline-dark rounded-3 px-4 py-2 small fw-semibold" type="button" onclick="appendVariantCard(event)">
+                                        <i class="bi bi-plus-lg me-1"></i> Add More Variant Card
+                                    </button>
                                 </div>
-                                <div class="row justify-content-center mt-5" id="publishBtn">
+
+                                <div class="row justify-content-end mt-4 pt-3 border-top" id="publishBtn">
                                     <div class="col-md-4">
-                                        <button type="button" class="btn w-100 text-white fw-bold py-2 fs-5" id="publish" style="background-color: #EF6627; border-radius: 4px;">Publish Product</button>
+                                        <button type="button" class="btn btn-publish w-100 py-3 fs-6" id="publish">Publish Product</button>
                                     </div>
                                 </div>
                             </div>
@@ -259,13 +292,13 @@
         const htmlRow = `
         <div class="row g-2 my-1 attribute-row align-items-center">
             <div class="col-5">
-                <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="Type here">
+                <input type="text" class="form-control attr-type" placeholder="Type here">
             </div>
             <div class="col-5">
-                <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="Type here">
+                <input type="text" class="form-control attr-val" placeholder="Type here">
             </div>
             <div class="col-2 text-center">
-                <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removeAttributeRow(this, ${variantId})"><i class="bi bi-trash3"></i></button>
+                <button type="button" class="btn btn-outline-danger btn-sm border-0 rounded-circle" onclick="removeAttributeRow(this, ${variantId})"><i class="bi bi-trash3"></i></button>
             </div>
         </div>`;
         container.insertAdjacentHTML('beforeend', htmlRow);
@@ -288,61 +321,63 @@
         variantCount++;
         const wrapper = document.getElementById("variants-wrapper");
         const variantCardHTML = `
-        <div class="variant-card position-relative shadow-sm my-4 p-4 border bg-white" id="variant-session-${variantCount}">
-            <button type="button" class="btn-close position-absolute top-0 end-0 m-2 small" onclick="removeVariantCard(${variantCount})"></button>
-            <div class="row">
+        <div class="variant-card position-relative shadow-sm border" id="variant-session-${variantCount}">
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-3 small" onclick="removeVariantCard(${variantCount})"></button>
+            <div class="row g-3">
                 <div class="col-md-7">
-                    <div class="row g-2">
-                        <div class="col-5"><span class="small fw-semibold text-muted">Attribute type</span></div>
-                        <div class="col-5"><span class="small fw-semibold text-muted">Attribute value</span></div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-5"><span class="small fw-semibold text-secondary text-uppercase" style="font-size: 0.75rem;">Attribute Type</span></div>
+                        <div class="col-5"><span class="small fw-semibold text-secondary text-uppercase" style="font-size: 0.75rem;">Attribute Value</span></div>
                         <div class="col-2"></div>
                     </div>
                     <div id="attributes-container-${variantCount}">
                         <div class="row g-2 my-1 attribute-row align-items-center">
                             <div class="col-5">
-                                <input type="text" class="form-control rounded-0 border-secondary attr-type" placeholder="Type here">
+                                <input type="text" class="form-control attr-type" placeholder="Type here">
                             </div>
                             <div class="col-5">
-                                <input type="text" class="form-control rounded-0 border-secondary attr-val" placeholder="Type here">
+                                <input type="text" class="form-control attr-val" placeholder="Type here">
                             </div>
                             <div class="col-2 text-center">
-                                <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removeAttributeRow(this, ${variantCount})"><i class="bi bi-trash3"></i></button>
+                                <button type="button" class="btn btn-outline-danger btn-sm border-0 rounded-circle" onclick="removeAttributeRow(this, ${variantCount})"><i class="bi bi-trash3"></i></button>
                             </div>
                         </div>
                     </div>
-                    <span class="add-attribute-link mt-2 d-inline-block" onclick="addNewAttributeRow(${variantCount})">+ add another attribute</span>
+                    <span class="add-attribute-link mt-2" onclick="addNewAttributeRow(${variantCount})"><i class="bi bi-plus-circle me-1"></i> Add another attribute</span>
                     <p class="text-danger small targetAttrMsg mt-1" id="attrError-${variantCount}"></p>
                 </div>
-                <div class="col-md-5 border-start border-light ps-md-4 mt-3 mt-md-0">
+                <div class="col-md-5 border-start border-light-subtle ps-md-4 mt-3 mt-md-0">
                     <div class="mb-3">
-                        <label class="small fw-semibold text-muted d-block mb-1">Quantity</label>
-                        <div class="input-group" style="width: 160px;">
-                            <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${variantCount}, -1)">◀</button>
-                            <input type="number" id="quantity-${variantCount}" class="form-control text-center rounded-0 border-secondary no-spinners" value="1" min="0">
-                            <button class="btn btn-outline-secondary rounded-0" type="button" onclick="stepQuantity(${variantCount}, 1)">▶</button>
+                        <label class="small fw-semibold text-secondary text-uppercase d-block mb-1" style="font-size: 0.75rem;">Quantity</label>
+                        <div class="input-group" style="width: 150px;">
+                            <button class="btn btn-outline-secondary" type="button" onclick="stepQuantity(${variantCount}, -1)">-</button>
+                            <input type="number" id="quantity-${variantCount}" class="form-control text-center no-spinners" value="1" min="0">
+                            <button class="btn btn-outline-secondary" type="button" onclick="stepQuantity(${variantCount}, 1)">+</button>
                         </div>
-                        <p class="text-danger dynamic-msg" id="quantityMsg-${variantCount}" style="font-size: small;"></p>
+                        <p class="text-danger dynamic-msg mt-1 mb-0" id="quantityMsg-${variantCount}" style="font-size: 0.8rem;"></p>
                     </div>
                     <div class="mb-3">
-                        <label class="small fw-semibold text-muted d-block mb-1">Price (₹)</label>
-                        <input type="text" id="price-${variantCount}" class="form-control rounded-0 border-secondary" placeholder="Type price here">
-                        <p class="text-danger dynamic-msg" id="priceMsg-${variantCount}" style="font-size: small;"></p>
+                        <label class="small fw-semibold text-secondary text-uppercase d-block mb-1" style="font-size: 0.75rem;">Price (₹)</label>
+                        <input type="text" id="price-${variantCount}" class="form-control" placeholder="0.00">
+                        <p class="text-danger dynamic-msg mt-1 mb-0" id="priceMsg-${variantCount}" style="font-size: 0.8rem;"></p>
                     </div>
                 </div>
             </div>
             <div class="mt-4 pt-3 border-top">
-                <p class="fw-semibold small text-muted mb-2">Variant Images (Minimum 3 Required)</p>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <p class="fw-semibold small text-secondary text-uppercase m-0" style="font-size: 0.75rem;">Variant Images (Minimum 3 Required)</p>
+                </div>
                 <div class="row row-cols-2 row-cols-md-4 g-3 mb-3" id="imageRow-${variantCount}"></div>
                 <div class="d-flex justify-content-start" id="image-input-${variantCount}">
-                    <label for="image-${variantCount}" class="image-label border-secondary bg-light p-3 text-center small fw-semibold">
-                        <i class="bi bi-image fs-5 d-block text-danger mb-1"></i> Add Image
+                    <label for="image-${variantCount}" class="image-label p-3 text-center small fw-semibold w-100">
+                        <i class="bi bi-cloud-arrow-up fs-4 d-block text-primary mb-1"></i> Add Variant Image
                     </label>
                     <input id="image-${variantCount}" type="file" accept="image/*" multiple onchange="newFile(${variantCount})" class="d-none">
                 </div>
-                <p class="text-danger small mt-1" id="imageMsg-${variantCount}"></p>
+                <p class="text-danger small mt-1 mb-0" id="imageMsg-${variantCount}"></p>
             </div>
             <div class="text-end mt-3 pt-2">
-                <button type="button" class="confirm-btn" onclick="saveVariantState(${variantCount})">confirm</button>
+                <button type="button" class="btn-black" onclick="saveVariantState(${variantCount})">Confirm Variant</button>
             </div>
         </div>`;
         wrapper.insertAdjacentHTML('beforeend', variantCardHTML);
@@ -449,10 +484,10 @@
             const targetContainerId = `imgContainer${count}`;
             const internalCount = count;
             imageRow.insertAdjacentHTML('beforeend', `
-            <div class="position-relative pb-5 col-6 col-md-3 text-center border py-2 bg-white image-track-node" id="${targetContainerId}" data-index="${internalCount}">
-                <div class="d-flex gap-1 position-absolute bottom-0 start-50 translate-middle-x mb-1" style="z-index:100; width: 90%;">
-                    <button type="button" class="btn btn-dark btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="cropperBtn${internalCount}" onclick="cropImg(this, ${id}, ${internalCount})">Crop</button>
-                    <button type="button" class="btn btn-danger btn-sm text-light py-0 px-2 w-50" style="font-size:11px;" id="deleteBtn${internalCount}" onclick="deleteImg(this, ${id}, ${internalCount})">Del</button>
+            <div class="position-relative pb-5 col-6 col-md-3 text-center border rounded-3 py-2 bg-white image-track-node" id="${targetContainerId}" data-index="${internalCount}">
+                <div class="d-flex gap-1 position-absolute bottom-0 start-50 translate-middle-x mb-2" style="z-index:100; width: 90%;">
+                    <button type="button" class="btn btn-dark btn-sm py-1 px-2 w-50" style="font-size:11px;" id="cropperBtn${internalCount}" onclick="cropImg(this, ${id}, ${internalCount})">Crop</button>
+                    <button type="button" class="btn btn-danger btn-sm py-1 px-2 w-50" style="font-size:11px;" id="deleteBtn${internalCount}" onclick="deleteImg(this, ${id}, ${internalCount})">Del</button>
                 </div> 
             </div>`);
             
@@ -461,8 +496,8 @@
             reader.onload = (e) => {
                 const img = document.createElement('img');
                 img.src = e.target.result;
-                img.className = 'img-fluid imageContainer';
-                img.style.maxHeight = '150px';
+                img.className = 'img-fluid imageContainer rounded-2';
+                img.style.maxHeight = '140px';
                 img.onload = function () {
                     imgContainer.prepend(img);
                     img.cropperInstance = new Cropper(img, {
@@ -528,12 +563,10 @@
         event.preventDefault();
         
         const name = document.getElementById("name");
-        const discount = document.getElementById("discount");
         const description = document.getElementById("description");
         const category = document.getElementById("category");
         
         const productNameMsg = document.getElementById("productNameMsg");
-        const discountMsg = document.getElementById("discountMsg");
         const descriptionMsg = document.getElementById("descriptionMsg");
         const categoryMsg = document.getElementById("categoryMsg");
 
@@ -543,9 +576,6 @@
         let isPrimaryFormValid = true;
 
         if (!validateInputBox(name, productNameMsg, (!name.value.trim() || !nameRegex.test(name.value)), "Field required. Minimum 3 characters containing letters.")) {
-            isPrimaryFormValid = false;
-        }
-        if (!validateInputBox(discount, discountMsg, (discount.value.trim() === "" || isNaN(discount.value) || parseFloat(discount.value) < 0 || parseFloat(discount.value) > 100), "Discount must be between 0 and 100.")) {
             isPrimaryFormValid = false;
         }
         if (!validateInputBox(description, descriptionMsg, (!description.value.trim() || !descriptionRegex.test(description.value)), "Provide a valid description with minimum 2 letters.")) {
@@ -590,7 +620,6 @@
             const subTypes = card.querySelectorAll('.attr-type');
             const subVals = card.querySelectorAll('.attr-val');
             
-            // Build temporary array to sort properties uniformly
             let pairs = [];
             subTypes.forEach((typeInput, idx) => {
                 const k = typeInput.value.trim().toLowerCase();
@@ -599,7 +628,6 @@
                 pairs.push(`${k}:${v}`);
             });
             
-            // Sort to handle cases where attributes are written in different row order
             pairs.sort();
             const comboIdentifier = pairs.join('|');
 
@@ -638,7 +666,6 @@
 
         const dataPayload = new FormData();
         dataPayload.append('name', name.value.trim());
-        dataPayload.append('discount', discount.value.trim());
         dataPayload.append('description', description.value.trim());
         dataPayload.append('category', category.value);
         dataPayload.append('brand', 'Apple');

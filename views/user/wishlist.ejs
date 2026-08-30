@@ -29,15 +29,22 @@
             cursor: pointer;
         }
         .btn-proceed {
-            background-color: #111;
+            background-color: #0071e3 !important;
+            color: #ffffff !important;
             border: none;
-            padding: 0.75rem 2rem;
+            padding: 0.75rem 1.5rem;
             font-weight: 600;
-            border-radius: 4px;
-            transition: background 0.2s ease;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            opacity: 1 !important;
         }
         .btn-proceed:hover {
-            background-color: #2b2b2b;
+            background-color: #0077ed !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+        .btn-proceed * {
+            color: #ffffff !important;
         }
         .navbar {
             padding: 0.8rem 1rem;
@@ -75,8 +82,8 @@
         <div class="main-content">
             <div class="container py-5">
                 <h3 class="fw-bold text-dark mb-4"><i class="bi bi-heart me-2"></i>Favored Configurations</h3>
-                <div class="row g-4">
-                    <div class="col-lg-9">
+                <div class="row g-4 align-items-start">
+                    <div class="col-lg-8 col-xl-9">
                         <div class="bg-white rounded-3 shadow-sm border overflow-hidden">
                             <div class="table-responsive">
                                 <table class="table table-borderless align-middle mb-0">
@@ -96,7 +103,7 @@
                                                const isSystemGhost = !prod || typeof prod !== 'object';
                                                const isBlockedOrDeleted = !isSystemGhost && (prod.isBlocked || prod.isDeleted);
                                                const primaryVariant = (!isSystemGhost && prod.variants && prod.variants.length > 0) ? prod.variants[0] : null;
-                                               const totalStock = primaryVariant ? primaryVariant.quantity : (prod ? prod.stock : 0);
+                                               const totalStock = primaryVariant ? primaryVariant.quantity : (prod ? (prod.stock || 0) : 0);
                                                const isOutOfStock = totalStock < 1;
                                                
                                                // Consolidated functional status flags
@@ -149,6 +156,13 @@
                                                           let color = primaryVariant.attributes.color || primaryVariant.attributes.Color || 'Silver';
                                                         %>
                                                         <%= ram %> | <%= storage %> | <%= color %>
+                                                    <% } else if (!isSystemGhost && prod.attributes) { %>
+                                                        <% 
+                                                          let ram = prod.attributes.ram || prod.attributes.RAM || 'Standard';
+                                                          let storage = prod.attributes.storage || prod.attributes.Storage || 'Default';
+                                                          let color = prod.attributes.color || prod.attributes.Color || 'White';
+                                                        %>
+                                                        <%= ram %> | <%= storage %> | <%= color %>
                                                     <% } else { %>
                                                         <span class="text-muted text-opacity-50">—</span>
                                                     <% } %>
@@ -170,8 +184,9 @@
                                                 </td>
                                                 <td class="text-center pe-4">
                                                     <div class="d-flex align-items-center justify-content-center gap-3">
-                                                        <% if (!isCurrentlyUnavailable && primaryVariant) { %>
-                                                            <button class="btn btn-dark btn-sm px-3 py-2 rounded shadow-sm" onclick='addToCart("<%= primaryVariant._id %>")'>
+                                                        <% if (!isCurrentlyUnavailable) { %>
+                                                            <% const cartTargetId = primaryVariant ? primaryVariant._id : prod._id; %>
+                                                            <button class="btn btn-dark btn-sm px-3 py-2 rounded shadow-sm" onclick='addToCart("<%= cartTargetId %>")'>
                                                                 <i class="bi bi-cart-plus me-1"></i> Add to Cart
                                                             </button>
                                                         <% } else { %>
@@ -192,10 +207,10 @@
                         </div>
                     </div>
 
-                    <div class="col-lg-3">
-                        <div class="bg-white p-4 rounded-3 border shadow-sm sticky-top" style="top: 20px;">
-                            <h5 class="fw-bold text-dark mb-3">Bulk Allocation</h5>
-                            <p class="text-muted small mb-4">Migrate all selectable hardware profiles matching available inventory layouts into your cart layout.</p>
+                    <div class="col-lg-4 col-xl-3">
+                        <div class="bg-white p-4 rounded-3 border shadow-sm sticky-top" style="top: 20px; z-index: 10;">
+                            <h5 class="fw-bold text-dark mb-3">Move all to cart</h5>
+                            <p class="text-muted small mb-4">Move all selected products to your cart at once.</p>
                             
                             <% 
                               let validVariantIds = [];
@@ -203,17 +218,22 @@
                                   const prod = item.productId;
                                   if (prod && typeof prod === 'object' && !prod.isBlocked && !prod.isDeleted && !item.isOrphaned) {
                                       const variant = (prod.variants && prod.variants.length > 0) ? prod.variants[0] : null;
-                                      if (variant && variant._id && variant.quantity > 0) {
-                                          validVariantIds.push(String(variant._id));
+                                      const currentStock = variant ? variant.quantity : (prod.stock || 0);
+                                      
+                                      if (currentStock > 0) {
+                                          const idToPush = (variant && variant._id) ? String(variant._id) : String(prod._id);
+                                          validVariantIds.push(idToPush);
                                       }
                                   }
                               });
                             %>
                             
-                            <button class="btn btn-proceed text-white w-100 py-2.5 d-flex align-items-center justify-content-center gap-2" 
-                                    <%= validVariantIds.length === 0 ? 'disabled style=opacity:0.5;' : '' %>
+                            <button type="button"
+                                    class="btn btn-proceed w-100 py-2.5 d-flex align-items-center justify-content-center gap-2 shadow-sm" 
+                                    <%= validVariantIds.length === 0 ? 'disabled style="opacity:0.4 !important; cursor:not-allowed;"' : '' %>
                                     onclick='moveAllToCart(<%- JSON.stringify(validVariantIds) %>)'>
-                                <i class="bi bi-box-arrow-in-right"></i> Move all to Cart
+                                <i class="bi bi-box-arrow-in-right fs-5"></i> 
+                                <span>Move all to Cart</span>
                             </button>
                         </div>
                     </div>
@@ -272,7 +292,6 @@
                             window.location.reload();
                         }
                     } else {
-                        // Fallback structural page sync if localized DOM manipulation drops bounds
                         window.location.reload();
                     }
                 } catch (err) {

@@ -1,18 +1,23 @@
-const User = require('../models/userModel');
+const User = require('../../models/userModel');
 const bcrypt = require('bcrypt');
+const walletService = require('./walletService');
 
-// Finds a user by their email address
+const generateReferralCode = () => {
+    return 'IZ' + Math.random().toString(36).substring(2, 8).toUpperCase();
+};
+
 const findUserByEmail = async (email) => {
     return await User.findOne({ email: email });
 };
 
-// Check if an email is already taken by a DIFFERENT user
 const isEmailTakenByAnother = async (email, currentUserId) => {
-    const user = await User.findOne({ email: email, _id: { $ne: currentUserId } });
-    return !!user; 
+    const user = await User.findOne({
+        email: email,
+        _id: { $ne: currentUserId }
+    });
+    return !!user;
 };
 
-// Specialized function to update only the email after OTP verification
 const updateUserEmail = async (userId, newEmail) => {
     return await User.findByIdAndUpdate(
         userId,
@@ -21,111 +26,205 @@ const updateUserEmail = async (userId, newEmail) => {
     );
 };
 
-// Hashes password and creates a new user in the database
 const registerUser = async (userData) => {
-    const { username, email, phone, password } = userData;
+    const { username, email, phone, password, confirmPassword, referralCode } = userData;
+
+    if (confirmPassword && password !== confirmPassword) {
+        throw new Error('Passwords do not match.');
+    }
+
+    let referrer = null;
+    if (referralCode) {
+        referrer = await User.findOne({ referralCode: referralCode.trim().toUpperCase() });
+        if (!referrer) {
+            throw new Error('Invalid referral code provided.');
+        }
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
+    let newReferralCode = generateReferralCode();
+    while (await User.findOne({ referralCode: newReferralCode })) {
+        newReferralCode = generateReferralCode();
+    }
+
     const newUser = new User({
         username,
         email,
         phone,
-        password: hashedPassword
+        password: hashedPassword,
+        referralCode: newReferralCode,
+        referredBy: referrer ? referrer._id : null
     });
 
-    return await newUser.save();
+    const savedUser = await newUser.save();
+
+    if (referrer) {
+        const REFERRAL_REWARD = 20;
+
+        await walletService.creditWallet({
+            userId: referrer._id,
+            amount: REFERRAL_REWARD,
+            purpose: 'referral_bonus',
+            description: `Referral bonus credited for inviting ${savedUser.username}.`
+        });
+
+        await walletService.creditWallet({
+            userId: savedUser._id,
+            amount: REFERRAL_REWARD,
+            purpose: 'signup_referral_bonus',
+            description: `Welcome bonus credited using referral code ${referralCode.toUpperCase()}.`
+        });
+    }
+
+    return savedUser;
 };
 
-// Fetches a single user by their ID
 const getUserById = async (userId) => {
     return await User.findById(userId);
 };
 
-// Updates the user's details (Used for Name and Phone)
 const updateUserDetails = async (userId, updateData) => {
-    try {
-        return await User.findByIdAndUpdate(
-            userId,
-            { $set: updateData },
-            { returnDocument: 'after', runValidators: true }
-        );
-    } catch (error) {
-        throw new Error("Service Error: Unable to update user");
-    }
+    return await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        {
+            returnDocument: 'after',
+            runValidators: true
+        }
+    );
 };
 
-// Updates the user's profile image path
 const updateProfileImage = async (userId, imagePath) => {
     return await User.findByIdAndUpdate(
-        userId, 
-        { profileImage: imagePath }, 
+        userId,
+        { profileImage: imagePath },
         { returnDocument: 'after' }
     );
 };
 
-// Adds a new address object to the user's addresses array
 const addAddress = async (userId, addressData) => {
     return await User.findByIdAndUpdate(
         userId,
-        { $push: { addresses: addressData } },
+        {
+            $push: {
+                addresses: addressData
+            }
+        },
         { returnDocument: 'after' }
     );
 };
 
-// Removes an address from the array using its unique _id
 const removeAddress = async (userId, addressId) => {
     return await User.findByIdAndUpdate(
         userId,
-        { $pull: { addresses: { _id: addressId } } },
+        {
+            $pull: {
+                addresses: { _id: addressId }
+            }
+        },
         { returnDocument: 'after' }
     );
 };
 
 const setDefaultAddress = async (userId, addressId) => {
-    try {
-        await User.updateOne(
-            { _id: userId },
-            { $set: { "addresses.$[].isSelected": false } }
-        );
+    await User.updateOne(
+        { _id: userId },
+        {
+            $set: {
+                "addresses.$[].isSelected": false
+            }
+        }
+    );
 
-        const result = await User.updateOne(
-            { _id: userId, "addresses._id": addressId },
-            { $set: { "addresses.$.isSelected": true } }
-        );
+    const result = await User.updateOne(
+        {
+            _id: userId,
+            "addresses._id": addressId
+        },
+        {
+            $set: {
+                "addresses.$.isSelected": true
+            }
+        }
+    );
 
-        return result.modifiedCount > 0;
-    } catch (error) {
-        throw new Error("Service Error: Unable to set default address");
-    }
+    return result.modifiedCount > 0;
 };
 
 const updatePassword = async (email, password) => {
-    try {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(
+        password,
+        salt
+    );
 
-        const result = await User.updateOne(
-            { email: email },
-            { $set: { password: hashedPassword } }
-        );
-        
-        return result;
-    } catch (error) {
-        console.error("Service Error updating password:", error);
-        throw error;
-    }
-}
+    return await User.updateOne(
+        { email: email },
+        {
+            $set: {
+                password: hashedPassword
+            }
+        }
+    );
+};
+
+const changeUserPassword = async (
+    userId,
+    hashedPassword
+) => {
+    return await User.updateOne(
+        { _id: userId },
+        {
+            $set: {
+                password: hashedPassword
+            }
+        }
+    );
+};
+
+const updateAddress = async (
+    userId,
+    addressId,
+    addressData
+) => {
+    return await User.updateOne(
+        {
+            _id: userId,
+            "addresses._id": addressId
+        },
+        {
+            $set: {
+                "addresses.$": addressData
+            }
+        }
+    );
+};
+
+const removeProfileImage = async (userId) => {
+    return await User.updateOne(
+        { _id: userId },
+        {
+            $set: {
+                profileImage: null
+            }
+        }
+    );
+};
 
 module.exports = {
     findUserByEmail,
-    isEmailTakenByAnother, 
-    updateUserEmail,       
+    isEmailTakenByAnother,
+    updateUserEmail,
     registerUser,
     getUserById,
     updateUserDetails,
     updateProfileImage,
-    addAddress,    
+    addAddress,
     removeAddress,
     setDefaultAddress,
-    updatePassword
+    updatePassword,
+    changeUserPassword,
+    updateAddress,
+    removeProfileImage
 };

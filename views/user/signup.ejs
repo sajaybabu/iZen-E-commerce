@@ -128,23 +128,19 @@
       font-size: 0.7rem;
       color: #dc3545;
       display: block;
-      min-height: 16px;
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .validation-hint {
       font-size: 0.65rem;
       color: #dc3545;
-      margin-top: 5px;
-      display: block;
-      line-height: 1.3;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
+      margin-top: 3px;
+      display: none; /* Controlled cleanly via JS display state */
+      line-height: 1.25;
     }
 
     .validation-hint.visible {
-      opacity: 1;
+      display: block;
     }
 
     .btn-create-account {
@@ -195,7 +191,7 @@
     }
 
     .mb-custom {
-      margin-bottom: 1rem;
+      margin-bottom: 0.75rem;
     }
   </style>
 </head>
@@ -250,6 +246,12 @@
                   </small>
                 </div>
 
+                <div class="mb-custom password-wrapper">
+                  <input type="password" class="form-control" name="confirmPassword" id="confirmPassword" placeholder="Confirm Password">
+                  <i class="bi bi-eye toggle-password" id="toggleConfirmPassword"></i>
+                  <small id="confirmPasswordError" class="error-msg"></small>
+                </div>
+
                 <div class="mb-custom">
                   <input type="text" class="form-control text-uppercase" name="referralCode" id="referralCode" placeholder="Referral Code (Optional)">
                   <small id="referralCodeError" class="error-msg"></small>
@@ -274,21 +276,29 @@
     document.addEventListener("DOMContentLoaded", function () {
       const form = document.getElementById('registerForm');
       const passwordInput = document.getElementById('password');
+      const confirmPasswordInput = document.getElementById('confirmPassword');
       const togglePassword = document.getElementById('togglePassword');
+      const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
       const passHint = document.getElementById('passHint');
       const referralInput = document.getElementById('referralCode');
 
-      // Auto-fill referral code from query params (e.g., /signup?ref=IZ8A3K9)
       const urlParams = new URLSearchParams(window.location.search);
       const refParam = urlParams.get('ref');
       if (refParam) {
         referralInput.value = refParam.toUpperCase();
       }
 
-      // Password Toggle
+      // Password Toggles
       togglePassword.addEventListener('click', function () {
         const isPassword = passwordInput.getAttribute('type') === 'password';
         passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+        this.classList.toggle('bi-eye');
+        this.classList.toggle('bi-eye-slash');
+      });
+
+      toggleConfirmPassword.addEventListener('click', function () {
+        const isPassword = confirmPasswordInput.getAttribute('type') === 'password';
+        confirmPasswordInput.setAttribute('type', isPassword ? 'text' : 'password');
         this.classList.toggle('bi-eye');
         this.classList.toggle('bi-eye-slash');
       });
@@ -305,6 +315,25 @@
           this.classList.remove('input-error');
           document.getElementById('passwordError').innerText = "";
         }
+
+        if (confirmPasswordInput.value.length > 0 && confirmPasswordInput.value !== this.value) {
+          document.getElementById('confirmPasswordError').innerText = "Passwords do not match";
+          confirmPasswordInput.classList.add('input-error');
+        } else if (confirmPasswordInput.value === this.value) {
+          document.getElementById('confirmPasswordError').innerText = "";
+          confirmPasswordInput.classList.remove('input-error');
+        }
+      });
+
+      // Dynamic Confirm Password Matching Check
+      confirmPasswordInput.addEventListener('input', function () {
+        if (this.value !== passwordInput.value) {
+          document.getElementById('confirmPasswordError').innerText = "Passwords do not match";
+          this.classList.add('input-error');
+        } else {
+          document.getElementById('confirmPasswordError').innerText = "";
+          this.classList.remove('input-error');
+        }
       });
 
       // Form Submit Validation
@@ -315,32 +344,27 @@
         const phone = document.getElementById('phone');
         const strongPasswordRegex = /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{8,})/;
 
-        // Reset errors
         document.querySelectorAll('.error-msg').forEach(el => el.innerText = "");
         document.querySelectorAll('.form-control').forEach(el => el.classList.remove('input-error'));
 
-        // Username
         if (username.value.trim() === "") {
           document.getElementById('usernameError').innerText = "Name is required";
           username.classList.add('input-error');
           isValid = false;
         }
 
-        // Email
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
           document.getElementById('emailError').innerText = "Enter a valid email address";
           email.classList.add('input-error');
           isValid = false;
         }
 
-        // Phone
         if (!/^\d{10}$/.test(phone.value.trim())) {
           document.getElementById('phoneError').innerText = "Enter a valid 10-digit phone number";
           phone.classList.add('input-error');
           isValid = false;
         }
 
-        // Strong Password
         if (!strongPasswordRegex.test(passwordInput.value)) {
           document.getElementById('passwordError').innerText = "Security requirements not met.";
           passwordInput.classList.add('input-error');
@@ -348,15 +372,26 @@
           isValid = false;
         }
 
+        if (confirmPasswordInput.value.trim() === "") {
+          document.getElementById('confirmPasswordError').innerText = "Please confirm your password";
+          confirmPasswordInput.classList.add('input-error');
+          isValid = false;
+        } else if (passwordInput.value !== confirmPasswordInput.value) {
+          document.getElementById('confirmPasswordError').innerText = "Passwords do not match";
+          confirmPasswordInput.classList.add('input-error');
+          isValid = false;
+        }
+
         if (!isValid) e.preventDefault();
       });
 
-      // Clear errors as user types
       document.querySelectorAll('.form-control').forEach(input => {
         input.addEventListener('input', function() {
-          this.classList.remove('input-error');
-          const errorId = this.id + "Error";
-          if(document.getElementById(errorId)) document.getElementById(errorId).innerText = "";
+          if (this.id !== 'password' && this.id !== 'confirmPassword') {
+            this.classList.remove('input-error');
+            const errorId = this.id + "Error";
+            if(document.getElementById(errorId)) document.getElementById(errorId).innerText = "";
+          }
         });
       });
     });

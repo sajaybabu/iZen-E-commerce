@@ -74,10 +74,10 @@
         <% if (locals.user) { %>
           <!-- User Profile Dropdown Menu Structure -->
           <div class="dropdown d-inline-block">
-            <!-- Changed href="#" to href="javascript:void(0);" -->
             <a class="text-light dropdown-toggle d-flex align-items-center justify-content-center text-decoration-none" href="javascript:void(0);" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <% if (user.image) { %>
-                <img src="/<%= user.image %>" class="nav-avatar me-2" alt="Profile">
+              <% const userAvatar = user.image || user.profileImage; %>
+              <% if (userAvatar) { %>
+                <img src="<%= userAvatar.startsWith('/') ? userAvatar : '/' + userAvatar %>" class="nav-avatar me-2" alt="Profile">
               <% } else { %>
                 <i class="bi bi-person-circle fs-5 me-2"></i>
               <% } %>
